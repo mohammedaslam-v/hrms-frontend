@@ -1,126 +1,115 @@
 import { useCallback, useEffect, useState } from 'react'
-import { employeesApi } from './api/employees'
-import { EmployeeFormModal } from './components/EmployeeFormModal'
-import { EmployeeTable } from './components/EmployeeTable'
-import type { Employee } from './types/employee'
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { authApi } from './api/auth'
+import { AppShell } from './components/AppShell'
+import { ChangePasswordForm } from './components/ChangePasswordForm'
+import { LeaveApprovalsPage } from './components/LeaveApprovalsPage'
+import { LoginPage } from './components/LoginPage'
+import { MyLeavePage } from './components/MyLeavePage'
+import { PlaceholderPage } from './components/PlaceholderPage'
+import { ALL_NAV_ITEMS, canAccess, homePathFor } from './nav/navigation'
+import type { AuthenticatedEmployee } from './types/auth'
+
+type Status = 'booting' | 'signed-out' | 'signed-in'
 
 function App() {
-  const [employees, setEmployees] = useState<Employee[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [modalOpen, setModalOpen] = useState(false)
-  const [editing, setEditing] = useState<Employee | null>(null)
+  const [status, setStatus] = useState<Status>('booting')
+  const [employee, setEmployee] = useState<AuthenticatedEmployee | null>(null)
+  const [changingPassword, setChangingPassword] = useState(false)
 
-  const loadEmployees = useCallback(async () => {
-    setError(null)
-    try {
-      setEmployees(await employeesApi.list())
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load employees')
-    } finally {
-      setLoading(false)
-    }
+  // The access token lives in memory, so a reload restores the session from the
+  // httpOnly refresh cookie rather than from anything the page can read.
+  useEffect(() => {
+    authApi
+      .refresh()
+      .then((session) => {
+        setEmployee(session.employee)
+        setStatus('signed-in')
+      })
+      .catch(() => setStatus('signed-out'))
   }, [])
 
-  useEffect(() => {
-    void loadEmployees()
-  }, [loadEmployees])
+  const handleSignedIn = useCallback((signedIn: AuthenticatedEmployee) => {
+    setEmployee(signedIn)
+    setStatus('signed-in')
+  }, [])
 
-  const openCreate = () => {
-    setEditing(null)
-    setModalOpen(true)
+  const signOut = useCallback(async () => {
+    await authApi.logout()
+    setEmployee(null)
+    setChangingPassword(false)
+    setStatus('signed-out')
+  }, [])
+
+  if (status === 'booting') return <div className="boot">Loading…</div>
+
+  if (status === 'signed-out' || !employee) {
+    return <LoginPage onSignedIn={handleSignedIn} />
   }
 
-  const openEdit = (employee: Employee) => {
-    setEditing(employee)
-    setModalOpen(true)
-  }
-
-  const handleSaved = () => {
-    setModalOpen(false)
-    setEditing(null)
-    void loadEmployees()
-  }
-
-  const handleDelete = async (employee: Employee) => {
-    const name = `${employee.firstName} ${employee.lastName}`
-    if (!window.confirm(`Delete ${name} (${employee.employeeCode})? This cannot be undone.`)) {
-      return
-    }
-    try {
-      await employeesApi.remove(employee.id)
-      void loadEmployees()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete employee')
-    }
-  }
-
-  const activeCount = employees.filter((employee) => employee.status === 'active').length
+  const home = homePathFor(employee.defaultTier)
 
   return (
-    <div className="app">
-      <header className="topbar">
-        <div className="brand">
-          <span className="brand-mark">HR</span>
-          <div>
-            <h1>HRMS</h1>
-            <p className="brand-sub">Human Resource Management</p>
-          </div>
-        </div>
-        <button className="btn btn-primary" onClick={openCreate}>
-          + Add Employee
-        </button>
-      </header>
+    <BrowserRouter>
+      <Routes>
+        <Route
+          element={
+            <AppShell
+              employee={employee}
+              onSignOut={() => void signOut()}
+              onChangePassword={() => setChangingPassword(true)}
+            />
+          }
+        >
+          {/* Land on the highest tier's home rather than a padlocked screen. */}
+          <Route index element={<Navigate to={home} replace />} />
 
-      <main className="content">
-        <section className="stats">
-          <div className="stat-card">
-            <p className="stat-label">Total Employees</p>
-            <p className="stat-value">{loading ? '…' : employees.length}</p>
-          </div>
-          <div className="stat-card">
-            <p className="stat-label">Active</p>
-            <p className="stat-value stat-active">{loading ? '…' : activeCount}</p>
-          </div>
-          <div className="stat-card">
-            <p className="stat-label">Inactive</p>
-            <p className="stat-value stat-inactive">
-              {loading ? '…' : employees.length - activeCount}
-            </p>
-          </div>
-        </section>
+          {ALL_NAV_ITEMS.map((item) => (
+            <Route
+              key={item.key}
+              path={item.path}
+              element={
+                // Routes are gated as well as the rail — typing a URL is not a way in.
+                // The API enforces the same rules again; this is only convenience.
+                !canAccess(item.tier, employee.tiers) ? (
+                  <Navigate to={home} replace />
+                ) : changingPassword ? (
+                  <ChangePasswordPanel
+                    onDone={() => void signOut()}
+                    onCancel={() => setChangingPassword(false)}
+                  />
+                ) : item.key === 'myleave' ? (
+                  <MyLeavePage />
+                ) : item.key === 'leave' ? (
+                  <LeaveApprovalsPage />
+                ) : (
+                  <PlaceholderPage item={item} />
+                )
+              }
+            />
+          ))}
 
-        {error && (
-          <div className="error-banner">
-            <span>{error}</span>
-            <button className="btn" onClick={() => void loadEmployees()}>
-              Retry
-            </button>
-          </div>
-        )}
+          <Route path="*" element={<Navigate to={home} replace />} />
+        </Route>
+      </Routes>
+    </BrowserRouter>
+  )
+}
 
-        <section className="panel">
-          <div className="panel-header">
-            <h2>Employees</h2>
-          </div>
-          {loading ? (
-            <div className="empty-state">
-              <p className="empty-title">Loading employees…</p>
-            </div>
-          ) : (
-            <EmployeeTable employees={employees} onEdit={openEdit} onDelete={handleDelete} />
-          )}
-        </section>
-      </main>
-
-      {modalOpen && (
-        <EmployeeFormModal
-          key={editing?.id ?? 'new'}
-          employee={editing}
-          onClose={() => setModalOpen(false)}
-          onSaved={handleSaved}
-        />
-      )}
+function ChangePasswordPanel({
+  onDone,
+  onCancel,
+}: {
+  onDone: () => void
+  onCancel: () => void
+}) {
+  return (
+    <div className="page narrow">
+      <div className="card">
+        <h3>Change password</h3>
+        {/* Every session is revoked server-side, so there is nothing to keep. */}
+        <ChangePasswordForm onChanged={onDone} onCancel={onCancel} />
+      </div>
     </div>
   )
 }
