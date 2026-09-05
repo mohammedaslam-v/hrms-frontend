@@ -826,6 +826,8 @@ input:disabled {
 }
 
 .g2 { grid-template-columns: repeat(2, 1fr); }
+.g3 { grid-template-columns: repeat(3, 1fr); }
+.g23 { grid-template-columns: 2fr 1fr; }
 .g32 { grid-template-columns: 1fr 2fr; }
 .mt { margin-top: 14px; }
 .mt8 { margin-top: 8px; }
@@ -1213,6 +1215,104 @@ tfoot td {
   font-size: 12.5px;
 }
 
+/* =====================================================================
+   MY PAGE
+   Ported from the design file's #v-me — the profile header, label/value
+   rows, the day clock and the progress bar.
+   ===================================================================== */
+
+.phead {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+}
+.phead h2 { font-size: 20px; }
+.phead .sub {
+  color: var(--muted2);
+  font-size: 12.5px;
+  margin-top: 3px;
+}
+.phead .avatar {
+  width: 54px;
+  height: 54px;
+  font-size: 19px;
+  border-radius: 15px;
+  margin: 0;
+}
+
+.avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font: 700 11px 'Plus Jakarta Sans', 'Inter', sans-serif;
+  color: #fff;
+  margin-right: 9px;
+  vertical-align: middle;
+  flex: none;
+}
+
+/* Label on the left, value on the right — the whole Personal details card. */
+.kv {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--line2);
+  font-size: 13px;
+}
+.kv b {
+  font-weight: 500;
+  color: var(--muted2);
+  white-space: nowrap;
+}
+.kv span {
+  text-align: right;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.kv:last-child { border-bottom: 0; }
+
+.clock {
+  font: 800 31px 'Plus Jakarta Sans', 'Inter', sans-serif;
+  letter-spacing: -0.03em;
+}
+
+.bar {
+  height: 7px;
+  background: var(--line2);
+  border-radius: 99px;
+  overflow: hidden;
+}
+.bar i {
+  display: block;
+  height: 100%;
+  border-radius: 99px;
+  transition: width 0.25s;
+}
+
+.fb {
+  padding: 12px 14px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  margin-bottom: 9px;
+}
+.fb .who { font-weight: 700; font-size: 12.5px; }
+.fb .when { color: var(--muted2); font-size: 11px; margin-left: 6px; }
+.fb p { margin-top: 4px; font-size: 12.5px; color: var(--ink2); }
+
+.c-wfh { background: var(--blue-soft); color: var(--blue); }
+.c-wfo { background: var(--amber-soft); color: var(--amber); }
+
 /* A grid child defaults to min-width:auto, so it grows to fit its widest
    content — which defeats the overflow container inside it. */
 .grid > * {
@@ -1226,6 +1326,7 @@ tfoot td {
    ===================================================================== */
 
 @media (max-width: 1000px) {
+  .g3 { grid-template-columns: repeat(2, 1fr); }
   .g32,
   .g23 { grid-template-columns: 1fr; }
 }
@@ -1307,6 +1408,8 @@ tfoot td {
     background: #fff;
     box-shadow: -8px 0 10px -8px rgba(28, 22, 14, 0.18);
   }
+
+  .g3 { grid-template-columns: 1fr; }
 
   /* Twelve months at full width would be hairline bars */
   .weekbars { min-width: 480px; }
