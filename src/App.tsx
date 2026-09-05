@@ -6,6 +6,7 @@ import { ChangePasswordForm } from './components/ChangePasswordForm'
 import { LeaveApprovalsPage } from './components/LeaveApprovalsPage'
 import { LoginPage } from './components/LoginPage'
 import { MyLeavePage } from './components/MyLeavePage'
+import { MyPage } from './components/MyPage'
 import { PlaceholderPage } from './components/PlaceholderPage'
 import { ALL_NAV_ITEMS, canAccess, homePathFor } from './nav/navigation'
 import type { AuthenticatedEmployee } from './types/auth'
@@ -82,12 +83,18 @@ function App() {
                   <MyLeavePage />
                 ) : item.key === 'leave' ? (
                   <LeaveApprovalsPage />
+                ) : item.key === 'me' ? (
+                  <MyPage />
                 ) : (
                   <PlaceholderPage item={item} />
                 )
               }
             />
           ))}
+
+          {/* The same page for a team member. Who may open it is decided by the
+              API against the reporting tree, so there is no tier gate here. */}
+          <Route path="/me/:id" element={<MyPage />} />
 
           <Route path="*" element={<Navigate to={home} replace />} />
         </Route>
