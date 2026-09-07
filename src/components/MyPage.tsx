@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { profileApi } from '../api/profile'
+import { TodayCard } from './TodayCard'
+import { WeekCard } from './WeekCard'
 import { WORK_MODE_CLASS, type PendingBlock, type ProfileView } from '../types/profile'
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
@@ -135,10 +137,7 @@ export function MyPage() {
       )}
 
       <div className="grid g3">
-        <div className="card">
-          <h3>Today</h3>
-          <Waiting reason={reasonFor('today')} />
-        </div>
+        <TodayCard isSelf={view.isSelf} />
 
         <div className="card">
           <h3>Personal details</h3>
@@ -162,10 +161,7 @@ export function MyPage() {
       </div>
 
       <div className="grid g23 mt">
-        <div className="card">
-          <h3>Active hours · this week</h3>
-          <Waiting reason={reasonFor('week')} />
-        </div>
+        <WeekCard isSelf={view.isSelf} reason={reasonFor('week')} />
         <div className="card">
           <h3>Goals</h3>
           <Waiting reason={reasonFor('goals')} />

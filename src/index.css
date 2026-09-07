@@ -1055,6 +1055,12 @@ td.num-col {
   white-space: nowrap;
 }
 
+/* A day off reads as a paler trough rather than an empty gap, so the week
+   still has seven columns. */
+.wb.off .col { background: #efe9e0; }
+.wb.today .col i { background: var(--green); }
+.wb.today span { color: var(--ink); font-weight: 600; }
+
 /* ---- form controls used inside cards/modals ---- */
 
 .f { margin-bottom: 0; }
