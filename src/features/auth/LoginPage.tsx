@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
-import { authApi } from '../api/auth'
-import type { AuthenticatedEmployee, OtpChallenge } from '../types/auth'
+import { authApi } from './auth.api'
+import type { AuthenticatedEmployee, OtpChallenge } from '../../types/auth'
 import { AuthCard } from './AuthCard'
 import { ForgotPasswordPage } from './ForgotPasswordPage'
 import { OtpFields } from './OtpFields'

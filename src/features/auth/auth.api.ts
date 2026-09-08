@@ -1,5 +1,5 @@
-import type { AuthenticatedEmployee, OtpChallenge, SessionResponse } from '../types/auth'
-import { request, setAccessToken } from './client'
+import type { AuthenticatedEmployee, OtpChallenge, SessionResponse } from '../../types/auth'
+import { request, setAccessToken } from '../../api/client'
 
 const keepToken = (session: SessionResponse): SessionResponse => {
   setAccessToken(session.accessToken)

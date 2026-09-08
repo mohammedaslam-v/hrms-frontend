@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { leaveApi } from '../api/leave'
-import type { HalfDaySession, LeavePreview, LeaveType, MyLeaveView } from '../types/leave'
+import { leaveApi } from './leave.api'
+import type { HalfDaySession, LeavePreview, LeaveType, MyLeaveView } from './leave.types'
 
 interface LeaveApplyModalProps {
   onApplied: (view: MyLeaveView) => void

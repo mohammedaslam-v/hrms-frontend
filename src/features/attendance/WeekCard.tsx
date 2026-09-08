@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
-import { attendanceApi } from '../api/attendance'
-import type { WeekBar } from '../types/attendance'
+import { attendanceApi } from './attendance.api'
+import type { WeekBar } from './attendance.types'
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 

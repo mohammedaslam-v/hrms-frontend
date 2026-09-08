@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
-import { authApi } from '../api/auth'
-import type { OtpChallenge } from '../types/auth'
+import { authApi } from './auth.api'
+import type { OtpChallenge } from '../../types/auth'
 import { AuthCard } from './AuthCard'
 import { OtpFields } from './OtpFields'
 

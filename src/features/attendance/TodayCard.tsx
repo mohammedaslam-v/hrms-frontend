@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { attendanceApi } from '../api/attendance'
-import { STATUS_CLASS, type TodayView } from '../types/attendance'
+import { attendanceApi } from './attendance.api'
+import { STATUS_CLASS, type TodayView } from './attendance.types'
 
 const minutesOf = (time: string): number => {
   const [h, m] = time.split(':').map(Number)

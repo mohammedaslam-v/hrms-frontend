@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
-import { employeesApi } from '../api/employees'
-import type { Employee, EmployeeStatus } from '../types/employee'
+import { employeesApi } from './employees.api'
+import type { Employee, EmployeeStatus } from './employee.types'
 
 interface EmployeeFormModalProps {
   employee: Employee | null

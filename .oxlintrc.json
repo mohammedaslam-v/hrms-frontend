@@ -1,8 +1,37 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
+  "plugins": [
+    "react",
+    "typescript",
+    "oxc",
+    "import"
+  ],
   "rules": {
     "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
+    "react/only-export-components": [
+      "warn",
+      {
+        "allowConstantExport": true
+      }
+    ],
+    "import/no-cycle": "error",
+    "no-restricted-imports": [
+      "error",
+      {
+        "patterns": [
+          {
+            "group": [
+              "../features/**",
+              "../../features/**"
+            ],
+            "message": "The shared UI kit (components/), nav/ and api/ must not depend on a feature \u2014 that inverts the dependency and turns the kit into feature code. Move the shared piece down, or lift the feature's own piece up. A FEATURE importing another feature's component (e.g. profile's MyPage using attendance's TodayCard) is fine and uses a different path."
+          }
+        ]
+      }
+    ]
+  },
+  "ignorePatterns": [
+    "dist",
+    "node_modules"
+  ]
 }

@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { authApi } from '../api/auth'
+import { authApi } from './auth.api'
 
 interface ChangePasswordFormProps {
   /** Changing the password revokes every session, so the app must sign out after. */
