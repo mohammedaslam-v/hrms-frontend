@@ -1,3 +1,7 @@
+import type { FeedbackRecord } from '../feedback/feedback.types'
+import type { GoalView } from '../goals/goals.types'
+import type { ProjectRecord } from '../projects/projects.types'
+
 export type WorkMode = 'WFH' | 'WFO' | 'Hybrid'
 
 /** Why the viewer is being shown this page — decided by the server, not the UI. */
@@ -65,6 +69,13 @@ export interface ProfileView {
    */
   compensation: CompensationView | null
   canSeeCompensation: boolean
+
+  /** Not gated the way pay is — a goal is work, and a manager should see it. */
+  goals: GoalView[]
+
+  projects: ProjectRecord[]
+  /** Already filtered by the server — restricted notes never reach the subject. */
+  feedback: FeedbackRecord[]
   pending: PendingBlock[]
 }
 

@@ -1049,6 +1049,17 @@ td.num-col {
   border-radius: 7px;
 }
 
+.goal { margin-bottom: 15px; }
+.goal:last-child { margin-bottom: 0; }
+
+.g-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 13px;
+  margin-bottom: 7px;
+}
+
 .wb span {
   font-size: 10.5px;
   color: var(--muted2);

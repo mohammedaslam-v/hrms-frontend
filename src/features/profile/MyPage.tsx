@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { profileApi } from './profile.api'
+import { FeedbackCard } from '../feedback/FeedbackCard'
+import { GoalsCard } from '../goals/GoalsCard'
+import { ProjectsCard } from '../projects/ProjectsCard'
 import { CompensationCard } from './CompensationCard'
 import { TodayCard } from '../attendance/TodayCard'
 import { WeekCard } from '../attendance/WeekCard'
@@ -47,20 +50,6 @@ function Row({ label, value }: { label: string; value: string | null }) {
   )
 }
 
-/**
- * A card the design draws that has nothing behind it yet. The reason comes from
- * the server, so it stays accurate as each phase lands instead of going stale
- * here.
- */
-function Waiting({ reason }: { reason: string }) {
-  return (
-    <div className="empty">
-      <b>Nothing here yet</b>
-      {reason}
-    </div>
-  )
-}
-
 export function MyPage() {
   // The same screen serves your own profile and a team member's.
   const { id } = useParams<{ id: string }>()
@@ -101,6 +90,10 @@ export function MyPage() {
 
   const reasonFor = (block: string): string =>
     view.pending.find((p: PendingBlock) => p.block === block)?.reason ?? 'Not available yet.'
+
+  // Mirrors the server's rule: a manager or admin, and never on their own record.
+  // The server refuses regardless — this only decides whether a button is offered.
+  const canRecord = view.access === 'manager' || view.access === 'admin'
 
   const color = (view.department && DEPT_COLOR[view.department]) || 'var(--muted2)'
   const reportsTo = view.managerName ? `reports to ${view.managerName}` : 'reports to the board'
@@ -160,21 +153,26 @@ export function MyPage() {
 
       <div className="grid g23 mt">
         <WeekCard isSelf={view.isSelf} reason={reasonFor('week')} />
-        <div className="card">
-          <h3>Goals</h3>
-          <Waiting reason={reasonFor('goals')} />
-        </div>
+        <GoalsCard goals={view.goals} isSelf={view.isSelf} />
       </div>
 
       <div className="grid g3 mt">
-        <div className="card">
-          <h3>Projects &amp; achievements</h3>
-          <Waiting reason={reasonFor('projects')} />
-        </div>
-        <div className="card">
-          <h3>Feedback from manager</h3>
-          <Waiting reason={reasonFor('feedback')} />
-        </div>
+        <ProjectsCard
+          projects={view.projects}
+          isSelf={view.isSelf}
+          canRecord={canRecord}
+          employeeId={view.employeeId}
+          employeeName={view.fullName}
+          onChange={(projects) => setView({ ...view, projects })}
+        />
+        <FeedbackCard
+          feedback={view.feedback}
+          isSelf={view.isSelf}
+          canRecord={canRecord}
+          employeeId={view.employeeId}
+          employeeName={view.fullName}
+          onChange={(feedback) => setView({ ...view, feedback })}
+        />
         <div className="card">
           <h3>Documents</h3>
           {view.documents.length === 0 ? (
