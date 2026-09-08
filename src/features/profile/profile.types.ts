@@ -15,6 +15,19 @@ export interface PendingBlock {
   reason: string
 }
 
+/** Pay, for a viewer entitled to see it. Assembled and gated on the server. */
+export interface CompensationView {
+  effectiveFrom: string
+  ctc: number
+  variablePay: number
+  bonus: number
+  esopUnits: number
+  esopVestedPct: number
+  /** Units actually held today. Computed server-side — the card never does pay arithmetic. */
+  esopVestedUnits: number
+  revisionNote: string | null
+}
+
 export interface ProfileView {
   access: ProfileAccess
   isSelf: boolean
@@ -44,6 +57,14 @@ export interface ProfileView {
 
   documents: ProfileDocument[]
   leaveBalance: number
+
+  /**
+   * Null means one of two things, and `canSeeCompensation` tells them apart:
+   * this viewer may not see pay, or nobody has loaded it yet. The card says
+   * something different in each case.
+   */
+  compensation: CompensationView | null
+  canSeeCompensation: boolean
   pending: PendingBlock[]
 }
 
