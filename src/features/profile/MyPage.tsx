@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { profileApi } from './profile.api'
+import { CompensationCard } from './CompensationCard'
 import { TodayCard } from '../attendance/TodayCard'
 import { WeekCard } from '../attendance/WeekCard'
 import { WORK_MODE_CLASS, type PendingBlock, type ProfileView } from './profile.types'
@@ -154,10 +155,7 @@ export function MyPage() {
           <Row label="Leave balance" value={`${view.leaveBalance} days`} />
         </div>
 
-        <div className="card">
-          <h3>Compensation</h3>
-          <Waiting reason={reasonFor('compensation')} />
-        </div>
+        <CompensationCard canSee={view.canSeeCompensation} compensation={view.compensation} />
       </div>
 
       <div className="grid g23 mt">
