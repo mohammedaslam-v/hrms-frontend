@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
-import { approvalsApi } from '../api/leave'
+import { approvalsApi } from './leave.api'
 import {
   HALF_DAY_LABEL,
   type ApprovalsView,
   type LeaveStatus,
   type PendingApproval,
-} from '../types/leave'
+} from './leave.types'
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 

@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { profileApi } from '../api/profile'
-import { TodayCard } from './TodayCard'
-import { WeekCard } from './WeekCard'
-import { WORK_MODE_CLASS, type PendingBlock, type ProfileView } from '../types/profile'
+import { profileApi } from './profile.api'
+import { TodayCard } from '../attendance/TodayCard'
+import { WeekCard } from '../attendance/WeekCard'
+import { WORK_MODE_CLASS, type PendingBlock, type ProfileView } from './profile.types'
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 

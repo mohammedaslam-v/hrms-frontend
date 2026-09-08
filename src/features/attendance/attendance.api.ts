@@ -1,5 +1,5 @@
-import type { TodayView, WeekBar } from '../types/attendance'
-import { request } from './client'
+import type { TodayView, WeekBar } from './attendance.types'
+import { request } from '../../api/client'
 
 /**
  * Attendance is always your own — there is no id in any of these paths, because

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
-import { leaveApi } from '../api/leave'
-import { HALF_DAY_LABEL, type LeaveStatus, type MyLeaveView } from '../types/leave'
+import { leaveApi } from './leave.api'
+import { HALF_DAY_LABEL, type LeaveStatus, type MyLeaveView } from './leave.types'
 import { LeaveApplyModal } from './LeaveApplyModal'
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
