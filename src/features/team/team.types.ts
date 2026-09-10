@@ -1,4 +1,4 @@
-import type { WorkMode } from '../profile/profile.types'
+import type { WorkMode } from '../profile'
 
 export interface DirectoryMember {
   id: number

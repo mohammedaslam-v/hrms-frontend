@@ -1,4 +1,4 @@
-import { request } from '../../api/client'
+import { request } from '../../shared/api/client'
 import type { FeedbackRecord, FeedbackVisibility } from './feedback.types'
 
 export interface AddFeedbackPayload {

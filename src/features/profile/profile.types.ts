@@ -1,6 +1,6 @@
-import type { FeedbackRecord } from '../feedback/feedback.types'
-import type { GoalView } from '../goals/goals.types'
-import type { ProjectRecord } from '../projects/projects.types'
+import type { FeedbackRecord } from '../feedback'
+import type { GoalView } from '../goals'
+import type { ProjectRecord } from '../projects'
 
 export type WorkMode = 'WFH' | 'WFO' | 'Hybrid'
 

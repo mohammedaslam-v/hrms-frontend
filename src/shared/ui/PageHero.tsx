@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { ALL_NAV_ITEMS } from '../nav/navigation'
+import { ALL_NAV_ITEMS } from '../../navigation/nav-items'
 
 /**
  * The band at the top of every page: the module's coloured icon, its title, a

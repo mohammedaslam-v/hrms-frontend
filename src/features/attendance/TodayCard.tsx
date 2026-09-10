@@ -1,13 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { attendanceApi } from './attendance.api'
 import { STATUS_CLASS, type TodayView } from './attendance.types'
-
-/** 8.75 → "8h 45m". The card's headline figure, so it reads as time, not a decimal. */
-const asHours = (hours: number): string => {
-  const total = Math.max(0, Math.round(hours * 60))
-  return `${Math.floor(total / 60)}h ${String(total % 60).padStart(2, '0')}m`
-}
-
+import { asHours } from '../../shared/lib/format'
 
 const minutesOf = (time: string): number => {
   const [h, m] = time.split(':').map(Number)

@@ -1,4 +1,4 @@
-import { TIER_NAME, type NavItem } from '../nav/navigation'
+import { TIER_NAME, type NavItem } from '../../navigation/nav-items'
 
 /**
  * Stands in for a nav destination that is routed and permitted but not yet built,

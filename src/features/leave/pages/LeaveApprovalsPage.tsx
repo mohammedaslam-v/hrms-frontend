@@ -1,21 +1,14 @@
 import { useCallback, useEffect, useState } from 'react'
-import { PageHero } from '../../components/PageHero'
-import { Pagination, usePage } from '../../components/Pagination'
-import { approvalsApi } from './leave.api'
+import { PageHero } from '../../../shared/ui/PageHero'
+import { Pagination, usePage } from '../../../shared/ui/Pagination'
+import { approvalsApi } from '../leave.api'
 import {
   HALF_DAY_LABEL,
   type ApprovalsView,
   type LeaveStatus,
   type PendingApproval,
-} from './leave.types'
-
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-
-const fmtShort = (iso: string): string => {
-  const [, m, d] = iso.split('-')
-  return `${d} ${MONTHS[Number(m) - 1]}`
-}
-
+} from '../leave.types'
+import { fmtShort } from '../../../shared/lib/date'
 
 const STATUS_CLASS: Record<LeaveStatus, string> = {
   Approved: 'c-in',

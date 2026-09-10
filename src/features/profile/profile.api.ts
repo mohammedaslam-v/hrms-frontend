@@ -1,5 +1,5 @@
 import type { ProfileView } from './profile.types'
-import { request } from '../../api/client'
+import { request } from '../../shared/api/client'
 
 export const profileApi = {
   /** Your own page. The server scopes this to the session. */

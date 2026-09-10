@@ -6,7 +6,7 @@ import type {
   LeaveType,
   MyLeaveView,
 } from './leave.types'
-import { request } from '../../api/client'
+import { request } from '../../shared/api/client'
 
 export const leaveApi = {
   getMine: () => request<MyLeaveView>('/leave/me'),

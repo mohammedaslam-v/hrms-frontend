@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { OtpChallenge } from '../../types/auth'
+import type { OtpChallenge } from '../auth.types'
 
 interface OtpFieldsProps {
   challenge: OtpChallenge

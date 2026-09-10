@@ -1,26 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { PageHero } from '../../components/PageHero'
-import { Pagination, usePage } from '../../components/Pagination'
-import { WORK_MODE_CLASS } from '../profile/profile.types'
+import { PageHero } from '../../shared/ui/PageHero'
+import { Pagination, usePage } from '../../shared/ui/Pagination'
+import { WORK_MODE_CLASS } from '../profile'
 import { teamApi } from './team.api'
 import type { DirectoryMember, DirectoryView } from './team.types'
-
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-
-const fmtDate = (iso: string): string => {
-  const [y, m, d] = iso.split('-')
-  return `${d} ${MONTHS[Number(m) - 1]} ${y.slice(2)}`
-}
-
-const initials = (name: string): string =>
-  name
-    .split(' ')
-    .map((w) => w[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase()
-
+import { fmtDateShortYear } from '../../shared/lib/date'
+import { initials } from '../../shared/lib/format'
 
 /** Department colours from the design. Unset falls back to neutral, not random. */
 const DEPT_COLOR: Record<string, string> = {
@@ -108,7 +94,7 @@ function Row({
         {member.shiftStart}–{member.shiftEnd}
       </td>
       <td className="hide-lg">{member.weeklyOff.length ? member.weeklyOff.join(' + ') : '—'}</td>
-      <td className="hide-md">{fmtDate(member.dateOfJoining)}</td>
+      <td className="hide-md">{fmtDateShortYear(member.dateOfJoining)}</td>
       {canSeePay && (
         <td className="num-col">
           {member.ctc == null ? <span style={{ color: 'var(--muted2)' }}>—</span> : lakh(member.ctc)}

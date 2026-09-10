@@ -1,31 +1,15 @@
 import { useCallback, useEffect, useState } from 'react'
-import { PageHero } from '../../components/PageHero'
+import { PageHero } from '../../../shared/ui/PageHero'
 import { useParams } from 'react-router-dom'
-import { profileApi } from './profile.api'
-import { FeedbackCard } from '../feedback/FeedbackCard'
-import { GoalsCard } from '../goals/GoalsCard'
-import { ProjectsCard } from '../projects/ProjectsCard'
-import { CompensationCard } from './CompensationCard'
-import { TodayCard } from '../attendance/TodayCard'
-import { WeekCard } from '../attendance/WeekCard'
-import { WORK_MODE_CLASS, type ProfileView } from './profile.types'
-
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-
-const fmtDate = (iso: string): string => {
-  const [y, m, d] = iso.split('-')
-  return `${d} ${MONTHS[Number(m) - 1]} ${y}`
-}
-
-/** Initials for the avatar — two letters at most, as in the design. */
-const initials = (name: string): string =>
-  name
-    .split(' ')
-    .map((word) => word[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase()
-
+import { profileApi } from '../profile.api'
+import { FeedbackCard } from '../../feedback'
+import { GoalsCard } from '../../goals'
+import { ProjectsCard } from '../../projects'
+import { CompensationCard } from '../components/CompensationCard'
+import { TodayCard, WeekCard } from '../../attendance'
+import { WORK_MODE_CLASS, type ProfileView } from '../profile.types'
+import { fmtDate } from '../../../shared/lib/date'
+import { initials } from '../../../shared/lib/format'
 
 /**
  * Department colours from the design. A person with no department falls back to

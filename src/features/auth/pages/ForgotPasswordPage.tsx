@@ -1,8 +1,9 @@
 import { useState, type FormEvent } from 'react'
-import { authApi } from './auth.api'
-import type { OtpChallenge } from '../../types/auth'
-import { AuthCard } from './AuthCard'
-import { OtpFields } from './OtpFields'
+import { authApi } from '../auth.api'
+import { messageOf } from '../../../shared/api/errors'
+import type { OtpChallenge } from '../auth.types'
+import { AuthCard } from '../components/AuthCard'
+import { OtpFields } from '../components/OtpFields'
 
 interface ForgotPasswordPageProps {
   initialEmail: string
@@ -13,9 +14,6 @@ interface ForgotPasswordPageProps {
 type Step = 'email' | 'otp' | 'password'
 
 const MIN_PASSWORD_LENGTH = 8
-
-const messageOf = (err: unknown, fallback: string) =>
-  err instanceof Error ? err.message : fallback
 
 export function ForgotPasswordPage({
   initialEmail,

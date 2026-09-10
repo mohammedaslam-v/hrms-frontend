@@ -1,10 +1,10 @@
 import { Fragment } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
-import { canAccess, NAV_SECTIONS, TIER_NAME, type NavItem } from '../nav/navigation'
-import type { AccessTier } from '../types/auth'
+import { NAV_SECTIONS, TIER_NAME, type NavItem } from '../navigation/nav-items'
+import { canAccess } from '../navigation/access'
+import { useAuth } from '../app/auth-context'
 
 interface RailProps {
-  tiers: AccessTier[]
   /** Unread counts keyed by nav key — wired to real endpoints as pages land. */
   badges?: Record<string, number>
   onLocked: (item: NavItem) => void
@@ -16,7 +16,9 @@ interface RailProps {
  * Locked modules stay visible behind a padlock rather than disappearing, so staff
  * can see a feature exists and ask for access instead of assuming it does not.
  */
-export function Rail({ tiers, badges = {}, onLocked }: RailProps) {
+export function Rail({ badges = {}, onLocked }: RailProps) {
+  const { employee } = useAuth()
+  const tiers = employee.tiers
   const navigate = useNavigate()
 
   const renderItem = (item: NavItem) => {

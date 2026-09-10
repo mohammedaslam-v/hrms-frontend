@@ -1,22 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
-import { PageHero } from '../../components/PageHero'
-import { Pagination, usePage } from '../../components/Pagination'
-import { leaveApi } from './leave.api'
-import { HALF_DAY_LABEL, type LeaveStatus, type MyLeaveView } from './leave.types'
-import { LeaveApplyModal } from './LeaveApplyModal'
-
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-
-const fmtShort = (iso: string): string => {
-  const [, m, d] = iso.split('-')
-  return `${d} ${MONTHS[Number(m) - 1]}`
-}
-
-const monthLabel = (key: string): string => {
-  const [y, m] = key.split('-')
-  return `${MONTHS[Number(m) - 1]} ${y}`
-}
-
+import { PageHero } from '../../../shared/ui/PageHero'
+import { Pagination, usePage } from '../../../shared/ui/Pagination'
+import { leaveApi } from '../leave.api'
+import { HALF_DAY_LABEL, type LeaveStatus, type MyLeaveView } from '../leave.types'
+import { LeaveApplyModal } from '../components/LeaveApplyModal'
+import { MONTHS, fmtShort, fmtMonth } from '../../../shared/lib/date'
 
 const STATUS_CLASS: Record<LeaveStatus, string> = {
   Approved: 'c-in',
@@ -170,7 +158,7 @@ export function MyLeavePage() {
                   month-by-month running total. */}
               {ledger.rows.map((row) => (
                 <div className="r" key={row.month}>
-                  <span>{monthLabel(row.month)} · monthly credit</span>
+                  <span>{fmtMonth(row.month)} · monthly credit</span>
                   <b style={{ color: 'var(--green)' }}>+{row.credit.toFixed(1)}</b>
                 </div>
               ))}
@@ -287,7 +275,7 @@ export function MyLeavePage() {
             <div className="scroll">
               <div className="weekbars">
               {monthlyTaken.map((m) => (
-                <div className="wb" key={m.month} title={`${monthLabel(m.month)} · ${m.days} day(s)`}>
+                <div className="wb" key={m.month} title={`${fmtMonth(m.month)} · ${m.days} day(s)`}>
                   <div className="col">
                     <i style={{ height: `${(m.days / chartMax) * 100}%` }} />
                   </div>

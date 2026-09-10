@@ -1,4 +1,4 @@
-import { request } from '../../api/client'
+import { request } from '../../shared/api/client'
 import type { ProjectRecord, ProjectStatus } from './projects.types'
 
 export interface AddProjectPayload {

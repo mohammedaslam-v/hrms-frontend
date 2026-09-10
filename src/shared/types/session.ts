@@ -1,3 +1,12 @@
+/**
+ * Who is signed in, and what they may reach.
+ *
+ * This sits in `shared/` rather than in `features/auth/` on purpose. Auth is only
+ * what *produces* a session; navigation, the layouts and the router all *consume*
+ * one. Putting the type inside the auth feature would make the rail and the shell
+ * depend on a feature, which is the dependency the boundary rule exists to stop.
+ */
+
 /** Tiers stack: everyone is an employee, anyone with reports is also a manager. */
 export type AccessTier = 'employee' | 'manager' | 'admin'
 
@@ -11,20 +20,6 @@ export interface AuthenticatedEmployee {
   dateOfJoining: string
   tiers: AccessTier[]
   defaultTier: AccessTier
-}
-
-export interface SessionResponse {
-  employee: AuthenticatedEmployee
-  accessToken: string
-  accessTokenExpiresAt: string
-}
-
-/** Returned by the password step and by forgot-password. Never a session. */
-export interface OtpChallenge {
-  challengeId: string
-  sentTo: string
-  expiresAt: string
-  resendAvailableAt: string
 }
 
 export const TIER_LABEL: Record<AccessTier, string> = {

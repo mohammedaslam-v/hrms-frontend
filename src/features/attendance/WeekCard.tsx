@@ -1,19 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import { attendanceApi } from './attendance.api'
 import type { WeekBar } from './attendance.types'
-
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-
-const fmtShort = (iso: string): string => {
-  const [, m, d] = iso.split('-')
-  return `${d} ${MONTHS[Number(m) - 1]}`
-}
-
-const asHours = (hours: number): string => {
-  const total = Math.round(hours * 60)
-  return `${Math.floor(total / 60)}h ${String(total % 60).padStart(2, '0')}m`
-}
-
+import { fmtShort } from '../../shared/lib/date'
+import { asHours } from '../../shared/lib/format'
 
 /** Days that were never meant to be worked draw as a paler trough. */
 const isOffDay = (bar: WeekBar): boolean =>

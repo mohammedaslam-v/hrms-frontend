@@ -1,26 +1,25 @@
 import { useEffect, useRef, useState } from 'react'
 import { Outlet, useNavigate } from 'react-router-dom'
-import { TIER_NAME, type NavItem } from '../nav/navigation'
-import { TIER_LABEL, type AuthenticatedEmployee } from '../types/auth'
-import { Toast, type ToastMessage } from './Toast'
 import { Rail } from './Rail'
+import { useAuth } from '../app/auth-context'
+import { TIER_NAME, type NavItem } from '../navigation/nav-items'
+import { TIER_LABEL } from '../shared/types/session'
+import { Toast, type ToastMessage } from '../shared/ui/Toast'
+import { ChangePasswordForm } from '../features/auth'
+import { initials } from '../shared/lib/format'
 
-interface AppShellProps {
-  employee: AuthenticatedEmployee
-  onSignOut: () => void
-  onChangePassword: () => void
-}
-
-const initials = (name: string): string =>
-  name
-    .split(' ')
-    .map((w) => w[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase()
-
-export function AppShell({ employee, onSignOut, onChangePassword }: AppShellProps) {
+/**
+ * The frame every signed-in screen sits in: the rail down the left, the top bar,
+ * and the routed page in the middle.
+ *
+ * It reads the session from context rather than taking it as a prop, so a new
+ * screen that needs to know who is looking does not have to be threaded through
+ * here first.
+ */
+export function AppShell() {
+  const { employee, signOut } = useAuth()
   const [menuOpen, setMenuOpen] = useState(false)
+  const [changingPassword, setChangingPassword] = useState(false)
   const [toast, setToast] = useState<ToastMessage | null>(null)
   const menuRef = useRef<HTMLDivElement>(null)
   const navigate = useNavigate()
@@ -51,7 +50,7 @@ export function AppShell({ employee, onSignOut, onChangePassword }: AppShellProp
 
   return (
     <div className="app">
-      <Rail tiers={employee.tiers} onLocked={handleLocked} />
+      <Rail onLocked={handleLocked} />
 
       <div className="shell">
         <header className="topbar">
@@ -92,12 +91,12 @@ export function AppShell({ employee, onSignOut, onChangePassword }: AppShellProp
                     role="menuitem"
                     onClick={() => {
                       setMenuOpen(false)
-                      onChangePassword()
+                      setChangingPassword(true)
                     }}
                   >
                     Change password
                   </button>
-                  <button className="menu-item" role="menuitem" onClick={onSignOut}>
+                  <button className="menu-item" role="menuitem" onClick={signOut}>
                     Sign out
                   </button>
                 </div>
@@ -106,8 +105,24 @@ export function AppShell({ employee, onSignOut, onChangePassword }: AppShellProp
           </div>
         </header>
 
+        {/* Changing a password takes over the page area rather than opening a
+            dialog, because succeeding at it ends the session — there would be
+            nothing left underneath to return to. */}
         <main className="main">
-          <Outlet />
+          {changingPassword ? (
+            <div className="page narrow">
+              <div className="card">
+                <h3>Change password</h3>
+                {/* Every session is revoked server-side, so there is nothing to keep. */}
+                <ChangePasswordForm
+                  onChanged={signOut}
+                  onCancel={() => setChangingPassword(false)}
+                />
+              </div>
+            </div>
+          ) : (
+            <Outlet />
+          )}
         </main>
       </div>
 

@@ -1,18 +1,17 @@
 import { useState, type FormEvent } from 'react'
-import { authApi } from './auth.api'
-import type { AuthenticatedEmployee, OtpChallenge } from '../../types/auth'
-import { AuthCard } from './AuthCard'
+import { authApi } from '../auth.api'
+import { messageOf } from '../../../shared/api/errors'
+import type { AuthenticatedEmployee } from '../../../shared/types/session'
+import type { OtpChallenge } from '../auth.types'
+import { AuthCard } from '../components/AuthCard'
 import { ForgotPasswordPage } from './ForgotPasswordPage'
-import { OtpFields } from './OtpFields'
+import { OtpFields } from '../components/OtpFields'
 
 interface LoginPageProps {
   onSignedIn: (employee: AuthenticatedEmployee) => void
 }
 
 type Step = 'credentials' | 'otp' | 'forgot'
-
-const messageOf = (err: unknown, fallback: string) =>
-  err instanceof Error ? err.message : fallback
 
 export function LoginPage({ onSignedIn }: LoginPageProps) {
   const [step, setStep] = useState<Step>('credentials')

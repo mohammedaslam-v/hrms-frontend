@@ -1,13 +1,7 @@
 import { useState } from 'react'
 import { AddFeedbackModal } from './AddFeedbackModal'
 import type { FeedbackRecord } from './feedback.types'
-
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-
-const fmtDate = (iso: string): string => {
-  const [y, m, d] = iso.split('-')
-  return `${d} ${MONTHS[Number(m) - 1]} ${y}`
-}
+import { fmtDate } from '../../shared/lib/date'
 
 /**
  * Feedback from a manager.

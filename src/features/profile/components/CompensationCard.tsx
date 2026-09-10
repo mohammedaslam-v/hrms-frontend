@@ -1,6 +1,5 @@
-import type { CompensationView } from './profile.types'
-
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+import type { CompensationView } from '../profile.types'
+import { fmtDate } from '../../../shared/lib/date'
 
 /** Indian grouping — ₹11,00,000, not ₹1,100,000. Whole rupees; pay has no paise. */
 const inr = (amount: number): string =>
@@ -9,11 +8,6 @@ const inr = (amount: number): string =>
     currency: 'INR',
     maximumFractionDigits: 0,
   }).format(amount)
-
-const fmtDate = (iso: string): string => {
-  const [y, m, d] = iso.split('-')
-  return `${d} ${MONTHS[Number(m) - 1]} ${y}`
-}
 
 function Row({ label, value, muted }: { label: string; value: string; muted?: boolean }) {
   return (
