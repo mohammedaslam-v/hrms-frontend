@@ -1049,6 +1049,17 @@ td.num-col {
   border-radius: 7px;
 }
 
+.goal { margin-bottom: 15px; }
+.goal:last-child { margin-bottom: 0; }
+
+.g-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 13px;
+  margin-bottom: 7px;
+}
+
 .wb span {
   font-size: 10.5px;
   color: var(--muted2);
@@ -1221,6 +1232,71 @@ tfoot td {
   font-size: 12.5px;
 }
 
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding-top: 12px;
+  margin-top: 12px;
+  border-top: 1px solid var(--line2);
+}
+.pager-nav {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* =====================================================================
+   TEAM DIRECTORY
+   The filter bar and the table's own cells, ported from the design.
+   ===================================================================== */
+
+.filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(158px, 1fr));
+  gap: 13px;
+  align-items: end;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 15px 17px;
+  margin-bottom: 14px;
+}
+.filters input,
+.filters select { width: 100%; min-width: 0; }
+.filters .btn { align-self: end; }
+
+/* A department reads as a colour plus a word, so the table can be scanned
+   by colour without the colour being the only signal. */
+.dept {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 99px;
+  display: inline-block;
+  flex: none;
+}
+
+.avatar.sm {
+  width: 26px;
+  height: 26px;
+  font-size: 10px;
+  border-radius: 8px;
+  margin-right: 8px;
+}
+
+tr.row { cursor: pointer; }
+tr.row:hover td { background: var(--panel); }
+tr.row:focus-visible { outline: 2px solid var(--blue); outline-offset: -2px; }
+
 /* =====================================================================
    MY PAGE
    Ported from the design file's #v-me — the profile header, label/value
@@ -1331,6 +1407,21 @@ tfoot td {
    so the page body itself never scrolls sideways.
    ===================================================================== */
 
+/* Table columns drop by usefulness as the screen narrows, rather than every
+   table scrolling sideways forever. A directory row is worth reading on a
+   phone; ten columns of it are not.
+     hide-lg  goes first — weekly off, shift
+     hide-md  next        — joined, department
+     hide-sm  last        — manager, work mode
+   What survives at the smallest size is who someone is and what they do. */
+@media (max-width: 1200px) {
+  .hide-lg { display: none; }
+}
+
+@media (max-width: 980px) {
+  .hide-md { display: none; }
+}
+
 @media (max-width: 1000px) {
   .g3 { grid-template-columns: repeat(2, 1fr); }
   .g32,
@@ -1402,6 +1493,9 @@ tfoot td {
 
   /* Tables keep their columns and scroll, rather than squeezing to nothing */
   .scroll table { min-width: 720px; }
+
+  /* …except one that has already dropped six of its ten columns, which fits. */
+  .scroll table.table-narrows { min-width: 0; }
 
   /* The hero already carries a full-width Apply button at this size */
   .hide-sm { display: none; }

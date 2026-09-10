@@ -1,16 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { attendanceApi } from './attendance.api'
 import { STATUS_CLASS, type TodayView } from './attendance.types'
+import { asHours } from '../../shared/lib/format'
 
 const minutesOf = (time: string): number => {
   const [h, m] = time.split(':').map(Number)
   return h * 60 + m
-}
-
-/** 8.75 → "8h 45m". The card's headline figure, so it reads as time, not a decimal. */
-const asHours = (hours: number): string => {
-  const total = Math.max(0, Math.round(hours * 60))
-  return `${Math.floor(total / 60)}h ${String(total % 60).padStart(2, '0')}m`
 }
 
 /**
@@ -21,10 +16,16 @@ const asHours = (hours: number): string => {
  * local time is only ever used to measure how long the page has been open since
  * that reading. A viewer with a wrong clock therefore sees the right number.
  */
-export function TodayCard({ isSelf }: { isSelf: boolean }) {
+interface TodayCardProps {
+  employeeId: number
+  isSelf: boolean
+  /** First name, for the wording when this is somebody else's day. */
+  employeeName: string
+}
+
+export function TodayCard({ employeeId, isSelf, employeeName }: TodayCardProps) {
   const [view, setView] = useState<TodayView | null>(null)
-  // A manager viewing a report never fetches, so it is never loading for them.
-  const [loading, setLoading] = useState(isSelf)
+  const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -49,25 +50,27 @@ export function TodayCard({ isSelf }: { isSelf: boolean }) {
 
   const load = useCallback(async () => {
     try {
-      apply(await attendanceApi.getToday())
+      apply(isSelf ? await attendanceApi.getToday() : await attendanceApi.getTodayFor(employeeId))
       setError(null)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not load today’s attendance.')
     } finally {
       setLoading(false)
     }
-  }, [apply])
+  }, [apply, isSelf, employeeId])
 
   useEffect(() => {
-    if (!isSelf) return
     // oxlint-disable-next-line react/set-state-in-effect
     void load()
-  }, [isSelf, load])
+  }, [load])
 
   // The clock only runs while a day is open, and restarting it on every tick
   // would be pointless churn — so the effect keys off whether it should run,
   // not off the value it produces.
-  const isRunning = elapsed !== null
+  // The clock only ticks on your own page. Watching a colleague's minutes count
+  // up in real time is surveillance, not information — a manager sees the same
+  // figures, settled.
+  const isRunning = isSelf && elapsed !== null
 
   // One minute is the smallest unit the card shows, so that is the interval.
   // The figure is recomputed from the anchor rather than incremented, so a
@@ -93,18 +96,6 @@ export function TodayCard({ isSelf }: { isSelf: boolean }) {
     } finally {
       setBusy(false)
     }
-  }
-
-  if (!isSelf) {
-    return (
-      <div className="card">
-        <h3>Today</h3>
-        <div className="empty">
-          <b>Not shown here</b>
-          Attendance is recorded by each person on their own page.
-        </div>
-      </div>
-    )
   }
 
   if (loading) {
@@ -173,6 +164,13 @@ export function TodayCard({ isSelf }: { isSelf: boolean }) {
         </div>
       )}
 
+      {/* Only the person themselves can punch. A manager sees the record; they
+          cannot check somebody in, and there is no endpoint that would let them. */}
+      {!isSelf ? (
+        <div className="hint" style={{ marginTop: 14 }}>
+          {employeeName.split(' ')[0]} records this on their own page.
+        </div>
+      ) : (
       <div style={{ marginTop: 14 }}>
         {view.canCheckIn && (
           <button className="btn success" onClick={() => void act('in')} disabled={busy}>
@@ -188,6 +186,7 @@ export function TodayCard({ isSelf }: { isSelf: boolean }) {
           <div className="hint">Your day is recorded. Nothing more to do.</div>
         )}
       </div>
+      )}
     </div>
   )
 }

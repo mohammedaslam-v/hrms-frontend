@@ -3,7 +3,7 @@ import type {
   Employee,
   UpdateEmployeePayload,
 } from './employee.types'
-import { request } from '../../api/client'
+import { request } from '../../shared/api/client'
 
 export const employeesApi = {
   list: () => request<Employee[]>('/employees'),

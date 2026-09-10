@@ -1,3 +1,7 @@
+import type { FeedbackRecord } from '../feedback'
+import type { GoalView } from '../goals'
+import type { ProjectRecord } from '../projects'
+
 export type WorkMode = 'WFH' | 'WFO' | 'Hybrid'
 
 /** Why the viewer is being shown this page — decided by the server, not the UI. */
@@ -7,12 +11,6 @@ export interface ProfileDocument {
   key: string
   label: string
   path: string
-}
-
-/** A card the design draws that has no data behind it yet, and the reason. */
-export interface PendingBlock {
-  block: string
-  reason: string
 }
 
 /** Pay, for a viewer entitled to see it. Assembled and gated on the server. */
@@ -65,7 +63,13 @@ export interface ProfileView {
    */
   compensation: CompensationView | null
   canSeeCompensation: boolean
-  pending: PendingBlock[]
+
+  /** Not gated the way pay is — a goal is work, and a manager should see it. */
+  goals: GoalView[]
+
+  projects: ProjectRecord[]
+  /** Already filtered by the server — restricted notes never reach the subject. */
+  feedback: FeedbackRecord[]
 }
 
 export const WORK_MODE_CLASS: Record<WorkMode, string> = {

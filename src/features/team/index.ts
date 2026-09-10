@@ -1,0 +1,1 @@
+export { TeamDirectoryPage } from './TeamDirectoryPage'
