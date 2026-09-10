@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { PageHero } from '../../components/PageHero'
 import { useParams } from 'react-router-dom'
 import { profileApi } from './profile.api'
 import { FeedbackCard } from '../feedback/FeedbackCard'
@@ -7,7 +8,7 @@ import { ProjectsCard } from '../projects/ProjectsCard'
 import { CompensationCard } from './CompensationCard'
 import { TodayCard } from '../attendance/TodayCard'
 import { WeekCard } from '../attendance/WeekCard'
-import { WORK_MODE_CLASS, type PendingBlock, type ProfileView } from './profile.types'
+import { WORK_MODE_CLASS, type ProfileView } from './profile.types'
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
@@ -24,6 +25,7 @@ const initials = (name: string): string =>
     .join('')
     .slice(0, 2)
     .toUpperCase()
+
 
 /**
  * Department colours from the design. A person with no department falls back to
@@ -88,9 +90,6 @@ export function MyPage() {
     )
   }
 
-  const reasonFor = (block: string): string =>
-    view.pending.find((p: PendingBlock) => p.block === block)?.reason ?? 'Not available yet.'
-
   // Mirrors the server's rule: a manager or admin, and never on their own record.
   // The server refuses regardless — this only decides whether a button is offered.
   const canRecord = view.access === 'manager' || view.access === 'admin'
@@ -100,6 +99,12 @@ export function MyPage() {
 
   return (
     <div className="page">
+      <PageHero
+        navKey="me"
+        title={view.isSelf ? undefined : view.fullName}
+        eyebrow={[view.employeeCode, view.department].filter(Boolean).join(' · ')}
+      />
+
       <div className="phead">
         <span className="avatar" style={{ background: color }}>
           {initials(view.fullName)}
@@ -131,7 +136,7 @@ export function MyPage() {
       )}
 
       <div className="grid g3">
-        <TodayCard isSelf={view.isSelf} />
+        <TodayCard employeeId={view.employeeId} isSelf={view.isSelf} employeeName={view.fullName} />
 
         <div className="card">
           <h3>Personal details</h3>
@@ -152,7 +157,7 @@ export function MyPage() {
       </div>
 
       <div className="grid g23 mt">
-        <WeekCard isSelf={view.isSelf} reason={reasonFor('week')} />
+        <WeekCard employeeId={view.employeeId} isSelf={view.isSelf} />
         <GoalsCard goals={view.goals} isSelf={view.isSelf} />
       </div>
 

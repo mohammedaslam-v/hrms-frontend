@@ -13,12 +13,6 @@ export interface ProfileDocument {
   path: string
 }
 
-/** A card the design draws that has no data behind it yet, and the reason. */
-export interface PendingBlock {
-  block: string
-  reason: string
-}
-
 /** Pay, for a viewer entitled to see it. Assembled and gated on the server. */
 export interface CompensationView {
   effectiveFrom: string
@@ -76,7 +70,6 @@ export interface ProfileView {
   projects: ProjectRecord[]
   /** Already filtered by the server — restricted notes never reach the subject. */
   feedback: FeedbackRecord[]
-  pending: PendingBlock[]
 }
 
 export const WORK_MODE_CLASS: Record<WorkMode, string> = {

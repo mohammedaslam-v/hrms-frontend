@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
+import { PageHero } from '../../components/PageHero'
+import { Pagination, usePage } from '../../components/Pagination'
 import { approvalsApi } from './leave.api'
 import {
   HALF_DAY_LABEL,
@@ -13,6 +15,7 @@ const fmtShort = (iso: string): string => {
   const [, m, d] = iso.split('-')
   return `${d} ${MONTHS[Number(m) - 1]}`
 }
+
 
 const STATUS_CLASS: Record<LeaveStatus, string> = {
   Approved: 'c-in',
@@ -64,6 +67,11 @@ export function LeaveApprovalsPage() {
     }
   }
 
+  // Called before the early returns below — hooks cannot sit behind a branch.
+  const pendingPage = usePage(view?.pending ?? [])
+  const balancesPage = usePage(view?.balances ?? [])
+  const logPage = usePage(view?.log ?? [])
+
   if (loading) return <div className="boot">Loading approvals…</div>
 
   if (!view) {
@@ -78,14 +86,10 @@ export function LeaveApprovalsPage() {
 
   return (
     <div className="page">
-      <div className="hero">
-        <div className="hero-txt">
-          <h2>Leave approvals</h2>
-          <div className="eyebrow">
-            {pending.length} awaiting your decision · {teamSize} in your team
-          </div>
-        </div>
-      </div>
+      <PageHero
+        navKey="leave"
+        eyebrow={`${pending.length} awaiting your decision · ${teamSize} in your team`}
+      />
 
       {error && (
         <div className="notice bad" style={{ marginBottom: 16 }} role="alert">
@@ -141,7 +145,7 @@ export function LeaveApprovalsPage() {
                     </td>
                   </tr>
                 ) : (
-                  pending.map((p) => (
+                  pendingPage.items.map((p) => (
                     <tr key={p.id}>
                       <td>
                         <div className="stack">
@@ -209,6 +213,7 @@ export function LeaveApprovalsPage() {
               </tbody>
             </table>
           </div>
+          <Pagination page={pendingPage} unit="requests" />
           <div className="notice blue mt">
             Every employee is credited {policy.leavePerMonth} leaves on the 1st of each month —{' '}
             {policy.annualEntitlement} for the year {policy.leaveYear}, covering festivals and
@@ -240,7 +245,7 @@ export function LeaveApprovalsPage() {
                 </tr>
               </thead>
               <tbody>
-                {balances.map((b) => (
+                {balancesPage.items.map((b) => (
                   <tr key={b.employeeId}>
                     <td>
                       <span className="tag">{b.employeeCode}</span>
@@ -278,6 +283,7 @@ export function LeaveApprovalsPage() {
               </tfoot>
             </table>
           </div>
+          <Pagination page={balancesPage} unit="people" />
         </div>
       )}
 
@@ -360,7 +366,7 @@ export function LeaveApprovalsPage() {
                     </td>
                   </tr>
                 ) : (
-                  log.map((r) => (
+                  logPage.items.map((r) => (
                     <tr key={r.id}>
                       <td>
                         <span className="tag">{r.ref}</span>
@@ -381,6 +387,7 @@ export function LeaveApprovalsPage() {
               </tbody>
             </table>
           </div>
+          <Pagination page={logPage} unit="requests" />
         </div>
       )}
     </div>

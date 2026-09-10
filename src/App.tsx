@@ -7,6 +7,7 @@ import { LeaveApprovalsPage } from './features/leave/LeaveApprovalsPage'
 import { LoginPage } from './features/auth/LoginPage'
 import { MyLeavePage } from './features/leave/MyLeavePage'
 import { MyPage } from './features/profile/MyPage'
+import { TeamDirectoryPage } from './features/team/TeamDirectoryPage'
 import { PlaceholderPage } from './components/PlaceholderPage'
 import { ALL_NAV_ITEMS, canAccess, homePathFor } from './nav/navigation'
 import type { AuthenticatedEmployee } from './types/auth'
@@ -85,6 +86,8 @@ function App() {
                   <LeaveApprovalsPage />
                 ) : item.key === 'me' ? (
                   <MyPage />
+                ) : item.key === 'team' ? (
+                  <TeamDirectoryPage />
                 ) : (
                   <PlaceholderPage item={item} />
                 )

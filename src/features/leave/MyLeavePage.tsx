@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
+import { PageHero } from '../../components/PageHero'
+import { Pagination, usePage } from '../../components/Pagination'
 import { leaveApi } from './leave.api'
 import { HALF_DAY_LABEL, type LeaveStatus, type MyLeaveView } from './leave.types'
 import { LeaveApplyModal } from './LeaveApplyModal'
@@ -14,6 +16,7 @@ const monthLabel = (key: string): string => {
   const [y, m] = key.split('-')
   return `${MONTHS[Number(m) - 1]} ${y}`
 }
+
 
 const STATUS_CLASS: Record<LeaveStatus, string> = {
   Approved: 'c-in',
@@ -62,6 +65,9 @@ export function MyLeavePage() {
     }
   }
 
+  // Above the early returns — hooks cannot sit behind a branch.
+  const requestsPage = usePage(view?.requests ?? [])
+
   if (loading) return <div className="boot">Loading your leave…</div>
 
   if (!view) {
@@ -77,20 +83,19 @@ export function MyLeavePage() {
 
   return (
     <div className="page">
-      <div className="hero">
-        <div className="hero-txt">
-          <h2>My leave</h2>
-          <div className="eyebrow">
+      <PageHero
+        navKey="myleave"
+        eyebrow={
+          <>
             {ledger.balance} day{ledger.balance === 1 ? '' : 's'} available ·{' '}
             {ledger.taken} taken this year
-          </div>
-        </div>
-        <div className="hero-actions">
-          <button className="btn primary" onClick={() => setApplying(true)}>
-            Apply for leave
-          </button>
-        </div>
-      </div>
+          </>
+        }
+      >
+        <button className="btn primary" onClick={() => setApplying(true)}>
+          Apply for leave
+        </button>
+      </PageHero>
 
       {error && (
         <div className="notice bad" style={{ marginBottom: 16 }} role="alert">
@@ -237,7 +242,7 @@ export function MyLeavePage() {
                       </td>
                     </tr>
                   ) : (
-                    requests.map((r) => (
+                    requestsPage.items.map((r) => (
                       <tr key={r.id}>
                         <td>
                           <span className="tag">{r.ref}</span>
@@ -272,6 +277,7 @@ export function MyLeavePage() {
                 </tbody>
               </table>
             </div>
+            <Pagination page={requestsPage} unit="requests" />
           </div>
 
           <div className="card mt">

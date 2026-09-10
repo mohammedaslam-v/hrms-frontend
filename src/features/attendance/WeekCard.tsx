@@ -14,6 +14,7 @@ const asHours = (hours: number): string => {
   return `${Math.floor(total / 60)}h ${String(total % 60).padStart(2, '0')}m`
 }
 
+
 /** Days that were never meant to be worked draw as a paler trough. */
 const isOffDay = (bar: WeekBar): boolean =>
   bar.status === 'Weekly off' || bar.status === 'Holiday' || bar.status === 'Leave'
@@ -25,37 +26,28 @@ const isOffDay = (bar: WeekBar): boolean =>
  * whose longest day was four hours would draw a full-height bar and read like a
  * normal week.
  */
-export function WeekCard({ isSelf, reason }: { isSelf: boolean; reason: string }) {
+export function WeekCard({ employeeId, isSelf }: { employeeId: number; isSelf: boolean }) {
   const [bars, setBars] = useState<WeekBar[] | null>(null)
-  const [loading, setLoading] = useState(isSelf)
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     try {
-      setBars(await attendanceApi.getWeek())
+      setBars(isSelf ? await attendanceApi.getWeek() : await attendanceApi.getWeekFor(employeeId))
       setError(null)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not load this week.')
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [isSelf, employeeId])
 
   useEffect(() => {
-    if (!isSelf) return
     // oxlint-disable-next-line react/set-state-in-effect
     void load()
-  }, [isSelf, load])
+  }, [load])
 
   const body = () => {
-    if (!isSelf) {
-      return (
-        <div className="empty">
-          <b>Not shown here</b>
-          {reason}
-        </div>
-      )
-    }
     if (loading) return <div className="empty">Loading…</div>
     if (error || !bars) {
       return (
