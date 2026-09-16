@@ -6,6 +6,7 @@ import { FeedbackCard } from '../../feedback'
 import { GoalsCard } from '../../goals'
 import { ProjectsCard } from '../../projects'
 import { CompensationCard } from '../components/CompensationCard'
+import { DocumentsCard } from '../components/DocumentsCard'
 import { TodayCard, WeekCard } from '../../attendance'
 import { WORK_MODE_CLASS, type ProfileView } from '../profile.types'
 import { fmtDate } from '../../../shared/lib/date'
@@ -162,24 +163,13 @@ export function MyPage() {
           employeeName={view.fullName}
           onChange={(feedback) => setView({ ...view, feedback })}
         />
-        <div className="card">
-          <h3>Documents</h3>
-          {view.documents.length === 0 ? (
-            <div className="empty">
-              <b>No documents on file</b>
-              {view.isSelf || view.access === 'admin'
-                ? 'Onboarding paperwork uploaded through the admin portal appears here.'
-                : 'Documents are visible to the employee and HR only.'}
-            </div>
-          ) : (
-            view.documents.map((doc) => (
-              <div className="doc" key={doc.key}>
-                <span style={{ flex: 1 }}>📄 {doc.label}</span>
-                <span className="tag">On file</span>
-              </div>
-            ))
-          )}
-        </div>
+        <DocumentsCard
+          documents={view.documents}
+          isSelf={view.isSelf}
+          access={view.access}
+          employeeId={view.employeeId}
+          onRefresh={load}
+        />
       </div>
     </div>
   )

@@ -7,10 +7,25 @@ export type WorkMode = 'WFH' | 'WFO' | 'Hybrid'
 /** Why the viewer is being shown this page — decided by the server, not the UI. */
 export type ProfileAccess = 'self' | 'manager' | 'admin'
 
+export type DocumentKey =
+  | 'pan'
+  | 'aadhaar'
+  | 'resume'
+  | 'permanentAddress'
+  | 'temporaryAddress'
+
 export interface ProfileDocument {
-  key: string
+  key: DocumentKey | string
   label: string
   path: string
+  docNumber?: string | null
+}
+
+export interface UploadDocumentPayload {
+  key: DocumentKey
+  fileName?: string
+  fileBase64?: string
+  docNumber?: string
 }
 
 /** Pay, for a viewer entitled to see it. Assembled and gated on the server. */

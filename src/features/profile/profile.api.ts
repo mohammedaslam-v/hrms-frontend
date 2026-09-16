@@ -1,5 +1,5 @@
-import type { ProfileView } from './profile.types'
-import { request } from '../../shared/api/client'
+import type { DocumentKey, ProfileDocument, ProfileView, UploadDocumentPayload } from './profile.types'
+import { fetchBlob, getAccessToken, request } from '../../shared/api/client'
 
 export const profileApi = {
   /** Your own page. The server scopes this to the session. */
@@ -7,4 +7,43 @@ export const profileApi = {
 
   /** Someone else's — allowed only for your reporting line, or as an admin. */
   getOne: (employeeId: number) => request<ProfileView>(`/profile/${employeeId}`),
+
+  /** Upload or update a document and/or its document number. */
+  uploadDocument: (payload: UploadDocumentPayload, employeeId?: number) => {
+    const path = employeeId ? `/profile/${employeeId}/documents` : '/profile/me/documents'
+    return request<ProfileDocument>(path, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+  },
+
+  /** URL for viewing/opening the document file directly in a new tab. */
+  getDocumentDownloadUrl: (key: DocumentKey | string, employeeId?: number): string => {
+    const token = getAccessToken()
+    const base = employeeId
+      ? `/api/v1/profile/${employeeId}/documents/${key}/file`
+      : `/api/v1/profile/me/documents/${key}/file`
+    return token ? `${base}?token=${encodeURIComponent(token)}` : base
+  },
+
+  /** Download document directly as a file. */
+  downloadDocumentFile: async (
+    key: DocumentKey | string,
+    employeeId?: number,
+    fileName?: string,
+  ): Promise<void> => {
+    const path = employeeId
+      ? `/profile/${employeeId}/documents/${key}/file`
+      : `/profile/me/documents/${key}/file`
+    const blob = await fetchBlob(path)
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    if (fileName) link.download = fileName
+    else link.target = '_blank'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    setTimeout(() => URL.revokeObjectURL(url), 10000)
+  },
 }
