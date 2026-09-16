@@ -110,57 +110,59 @@ export function FeedbackCard({
           )}
         </div>
       ) : (
-        feedback.map((note) => (
-          <div className="fb" key={note.id}>
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                marginBottom: 6,
-              }}
-            >
-              <div>
-                <span className="who">{note.authorName ?? 'Someone who has left'}</span>
-                <span className="when">{fmtDate(note.givenOn)}</span>
+        <div className="fb-scroll">
+          {feedback.map((note) => (
+            <div className="fb" key={note.id}>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginBottom: 6,
+                }}
+              >
+                <div>
+                  <span className="who">{note.authorName ?? 'Someone who has left'}</span>
+                  <span className="when">{fmtDate(note.givenOn)}</span>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  {note.visibility === 'managers_only' && (
+                    <span
+                      className="chip c-abs"
+                      style={{ fontSize: 10.5, padding: '1px 7px' }}
+                      title="This note is confidential and hidden from the employee"
+                    >
+                      🔒 Managers only
+                    </span>
+                  )}
+
+                  {canDelete(note) && (
+                    <button
+                      type="button"
+                      className="btn ghost sm"
+                      onClick={() => handleDelete(note.id)}
+                      disabled={deletingId === note.id}
+                      style={{
+                        padding: '2px 6px',
+                        fontSize: 11,
+                        color: 'var(--red)',
+                        borderColor: 'transparent',
+                      }}
+                      title="Delete note"
+                    >
+                      {deletingId === note.id ? '…' : '✕'}
+                    </button>
+                  )}
+                </div>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                {note.visibility === 'managers_only' && (
-                  <span
-                    className="chip c-abs"
-                    style={{ fontSize: 10.5, padding: '1px 7px' }}
-                    title="This note is confidential and hidden from the employee"
-                  >
-                    🔒 Managers only
-                  </span>
-                )}
-
-                {canDelete(note) && (
-                  <button
-                    type="button"
-                    className="btn ghost sm"
-                    onClick={() => handleDelete(note.id)}
-                    disabled={deletingId === note.id}
-                    style={{
-                      padding: '2px 6px',
-                      fontSize: 11,
-                      color: 'var(--red)',
-                      borderColor: 'transparent',
-                    }}
-                    title="Delete note"
-                  >
-                    {deletingId === note.id ? '…' : '✕'}
-                  </button>
-                )}
-              </div>
+              <p style={{ margin: 0, whiteSpace: 'pre-wrap', lineHeight: 1.5, color: 'var(--ink2)' }}>
+                {note.body}
+              </p>
             </div>
-
-            <p style={{ margin: 0, whiteSpace: 'pre-wrap', lineHeight: 1.5, color: 'var(--ink2)' }}>
-              {note.body}
-            </p>
-          </div>
-        ))
+          ))}
+        </div>
       )}
 
       {writing && (

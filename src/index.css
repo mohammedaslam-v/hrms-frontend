@@ -1433,6 +1433,25 @@ tr.row:focus-visible { outline: 2px solid var(--blue); outline-offset: -2px; }
   transition: width 0.25s;
 }
 
+.fb-scroll {
+  max-height: 350px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.fb-scroll::-webkit-scrollbar {
+  width: 5px;
+}
+.fb-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.fb-scroll::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border-radius: 99px;
+}
+.fb-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--muted2);
+}
+
 .fb {
   padding: 12px 14px;
   background: var(--panel);
