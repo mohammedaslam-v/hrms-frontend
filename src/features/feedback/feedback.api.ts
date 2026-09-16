@@ -12,4 +12,9 @@ export const feedbackApi = {
       method: 'POST',
       body: JSON.stringify(payload),
     }),
+
+  delete: (feedbackId: number) =>
+    request<FeedbackRecord[]>(`/feedback/${feedbackId}`, {
+      method: 'DELETE',
+    }),
 }
