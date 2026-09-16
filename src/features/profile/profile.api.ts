@@ -26,6 +26,14 @@ export const profileApi = {
     return token ? `${base}?token=${encodeURIComponent(token)}` : base
   },
 
+  /** Fetch document file as a raw Blob for in-app preview rendering. */
+  fetchDocumentBlob: (key: DocumentKey | string, employeeId?: number): Promise<Blob> => {
+    const path = employeeId
+      ? `/profile/${employeeId}/documents/${key}/file`
+      : `/profile/me/documents/${key}/file`
+    return fetchBlob(path)
+  },
+
   /** Download document directly as a file. */
   downloadDocumentFile: async (
     key: DocumentKey | string,

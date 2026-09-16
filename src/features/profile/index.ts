@@ -1,5 +1,6 @@
 export { MyPage } from './pages/MyPage'
 export { DocumentsCard } from './components/DocumentsCard'
 export { UploadDocumentModal } from './components/UploadDocumentModal'
+export { DocumentViewerModal, type DocumentViewerTarget } from './components/DocumentViewerModal'
 export { WORK_MODE_CLASS } from './profile.types'
 export type { WorkMode, DocumentKey, ProfileDocument, UploadDocumentPayload } from './profile.types'

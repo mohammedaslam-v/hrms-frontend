@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { profileApi } from '../profile.api'
 import type { DocumentKey, ProfileAccess, ProfileDocument } from '../profile.types'
 import { DOCUMENT_OPTIONS, UploadDocumentModal } from './UploadDocumentModal'
+import { DocumentViewerModal, type DocumentViewerTarget } from './DocumentViewerModal'
 
 interface DocumentsCardProps {
   documents: ProfileDocument[]
@@ -27,6 +27,8 @@ export function DocumentsCard({
     key: 'pan',
     docNumber: '',
   })
+
+  const [viewingDoc, setViewingDoc] = useState<DocumentViewerTarget | null>(null)
 
   // Can upload or update: the employee themselves, or an HR/admin
   const canUpload = isSelf || access === 'admin'
@@ -99,20 +101,33 @@ export function DocumentsCard({
             const hasFile = Boolean(found?.path)
             const hasNumber = Boolean(found?.docNumber)
             const isOnFile = hasFile || hasNumber
-            const viewUrl = hasFile
-              ? profileApi.getDocumentDownloadUrl(opt.key, isSelf ? undefined : employeeId)
-              : null
+
+            const handleRowClick = () => {
+              if (hasFile) {
+                setViewingDoc({
+                  key: opt.key,
+                  label: opt.label,
+                  icon: opt.icon,
+                  docNumber: found?.docNumber,
+                  path: found?.path,
+                })
+              } else if (canUpload) {
+                openUpload(opt.key, found?.docNumber || '')
+              }
+            }
 
             return (
               <div
-                className="doc"
+                className={`doc ${hasFile || canUpload ? 'doc-clickable' : ''}`}
                 key={opt.key}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 10,
-                  padding: '9px 0',
-                }}
+                onClick={handleRowClick}
+                title={
+                  hasFile
+                    ? `Click to view ${opt.label}`
+                    : canUpload
+                      ? `Click to upload ${opt.label}`
+                      : undefined
+                }
               >
                 <span style={{ fontSize: 18, lineHeight: 1, flexShrink: 0 }}>{opt.icon}</span>
 
@@ -180,21 +195,28 @@ export function DocumentsCard({
                     flexShrink: 0,
                   }}
                 >
-                  {viewUrl && (
-                    <a
-                      href={viewUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                  {hasFile && (
+                    <button
+                      type="button"
                       className="btn ghost sm"
                       style={{
-                        textDecoration: 'none',
                         padding: '3px 8px',
                         fontSize: 11,
                       }}
-                      title={`Open ${opt.label} in new tab`}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setViewingDoc({
+                          key: opt.key,
+                          label: opt.label,
+                          icon: opt.icon,
+                          docNumber: found?.docNumber,
+                          path: found?.path,
+                        })
+                      }}
+                      title={`Open ${opt.label}`}
                     >
                       View
-                    </a>
+                    </button>
                   )}
 
                   {canUpload && (
@@ -202,7 +224,10 @@ export function DocumentsCard({
                       type="button"
                       className="btn ghost sm"
                       style={{ padding: '3px 8px', fontSize: 11 }}
-                      onClick={() => openUpload(opt.key, found?.docNumber || '')}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        openUpload(opt.key, found?.docNumber || '')
+                      }}
                     >
                       {isOnFile ? 'Update' : 'Upload'}
                     </button>
@@ -214,20 +239,26 @@ export function DocumentsCard({
 
           {/* Any additional documents attached in record */}
           {extraDocs.map((doc) => {
-            const viewUrl = doc.path
-              ? profileApi.getDocumentDownloadUrl(doc.key, isSelf ? undefined : employeeId)
-              : null
+            const hasFile = Boolean(doc.path)
+
+            const handleExtraRowClick = () => {
+              if (hasFile) {
+                setViewingDoc({
+                  key: doc.key,
+                  label: doc.label,
+                  icon: '📄',
+                  docNumber: doc.docNumber,
+                  path: doc.path,
+                })
+              }
+            }
 
             return (
               <div
-                className="doc"
+                className={`doc ${hasFile ? 'doc-clickable' : ''}`}
                 key={doc.key}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 10,
-                  padding: '9px 0',
-                }}
+                onClick={handleExtraRowClick}
+                title={hasFile ? `Click to view ${doc.label}` : undefined}
               >
                 <span style={{ fontSize: 18, lineHeight: 1, flexShrink: 0 }}>📄</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -253,20 +284,27 @@ export function DocumentsCard({
                     On file
                   </span>
 
-                  {viewUrl && (
-                    <a
-                      href={viewUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                  {hasFile && (
+                    <button
+                      type="button"
                       className="btn ghost sm"
                       style={{
-                        textDecoration: 'none',
                         padding: '3px 8px',
                         fontSize: 11,
                       }}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setViewingDoc({
+                          key: doc.key,
+                          label: doc.label,
+                          icon: '📄',
+                          docNumber: doc.docNumber,
+                          path: doc.path,
+                        })
+                      }}
                     >
                       View
-                    </a>
+                    </button>
                   )}
                 </div>
               </div>
@@ -275,6 +313,7 @@ export function DocumentsCard({
         </>
       )}
 
+      {/* Upload/Update Document Modal */}
       {modalState.open && (
         <UploadDocumentModal
           employeeId={isSelf ? undefined : employeeId}
@@ -284,6 +323,26 @@ export function DocumentsCard({
           onSuccess={() => {
             onRefresh()
           }}
+        />
+      )}
+
+      {/* Interactive Document Viewer Modal */}
+      {viewingDoc && (
+        <DocumentViewerModal
+          document={viewingDoc}
+          employeeId={isSelf ? undefined : employeeId}
+          isSelf={isSelf}
+          onClose={() => setViewingDoc(null)}
+          onUpdate={
+            canUpload
+              ? () => {
+                  const targetKey = viewingDoc.key as DocumentKey
+                  const targetNum = viewingDoc.docNumber || ''
+                  setViewingDoc(null)
+                  openUpload(targetKey, targetNum)
+                }
+              : undefined
+          }
         />
       )}
     </div>

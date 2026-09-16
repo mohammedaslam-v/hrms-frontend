@@ -1007,6 +1007,22 @@ td.num-col {
   font-size: 13px;
 }
 
+.doc.doc-clickable {
+  cursor: pointer;
+  padding: 10px 8px;
+  margin: 0 -8px;
+  border-radius: 9px;
+  transition: background-color 0.15s ease, transform 0.1s ease;
+}
+
+.doc.doc-clickable:hover {
+  background-color: var(--panel);
+}
+
+.doc.doc-clickable:active {
+  transform: scale(0.995);
+}
+
 .doc:last-child {
   border-bottom: 0;
 }
