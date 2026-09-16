@@ -15,22 +15,30 @@ interface DocumentViewerModalProps {
   document: DocumentViewerTarget
   employeeId?: number
   isSelf?: boolean
+  canDelete?: boolean
   onClose: () => void
   onUpdate?: () => void
+  onDelete?: () => void
 }
 
 export function DocumentViewerModal({
   document: doc,
   employeeId,
   isSelf = true,
+  canDelete = false,
   onClose,
   onUpdate,
+  onDelete,
 }: DocumentViewerModalProps) {
   const [blobUrl, setBlobUrl] = useState<string | null>(null)
   const [mimeType, setMimeType] = useState<string>('')
   const [fileSize, setFileSize] = useState<number | null>(null)
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
+
+  const [confirmingDelete, setConfirmingDelete] = useState<boolean>(false)
+  const [deleting, setDeleting] = useState<boolean>(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   const directViewUrl = profileApi.getDocumentDownloadUrl(
     doc.key,
@@ -79,12 +87,16 @@ export function DocumentViewerModal({
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        onClose()
+        if (confirmingDelete) {
+          setConfirmingDelete(false)
+        } else {
+          onClose()
+        }
       }
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [onClose])
+  }, [onClose, confirmingDelete])
 
   const handleDownload = () => {
     const ext = mimeType.includes('pdf')
@@ -100,6 +112,21 @@ export function DocumentViewerModal({
       isSelf ? undefined : employeeId,
       fileName,
     )
+  }
+
+  const handleDelete = async () => {
+    setDeleting(true)
+    setDeleteError(null)
+    try {
+      await profileApi.deleteDocument(doc.key, isSelf ? undefined : employeeId)
+      setDeleting(false)
+      setConfirmingDelete(false)
+      onClose()
+      onDelete?.()
+    } catch (err) {
+      setDeleteError(messageOf(err, 'Could not remove document. Please try again.'))
+      setDeleting(false)
+    }
   }
 
   const isImage =
@@ -259,6 +286,26 @@ export function DocumentViewerModal({
                 title="Upload a replacement document or change number"
               >
                 Update
+              </button>
+            )}
+
+            {canDelete && (
+              <button
+                type="button"
+                className="btn ghost sm"
+                onClick={() => setConfirmingDelete(true)}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  padding: '5px 10px',
+                  fontSize: 11.5,
+                  color: 'var(--red, #dc3e43)',
+                  borderColor: 'rgba(220, 62, 67, 0.3)',
+                }}
+                title="Delete or remove this document from profile"
+              >
+                <span>🗑️</span> Remove
               </button>
             )}
 
@@ -444,6 +491,75 @@ export function DocumentViewerModal({
           </button>
         </div>
       </div>
+
+      {/* Confirmation Sub-modal for Document Deletion */}
+      {confirmingDelete && (
+        <div
+          className="modal on"
+          style={{
+            zIndex: 1100,
+            backgroundColor: 'rgba(15, 23, 41, 0.8)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !deleting) {
+              setConfirmingDelete(false)
+            }
+          }}
+        >
+          <div className="box" style={{ maxWidth: 440, padding: 22 }}>
+            <div className="mh">
+              <h3 style={{ margin: 0, fontSize: 16 }}>Remove Document?</h3>
+              <button
+                type="button"
+                className="x"
+                onClick={() => setConfirmingDelete(false)}
+                disabled={deleting}
+              >
+                ✕
+              </button>
+            </div>
+
+            {deleteError && (
+              <div className="notice bad" style={{ marginBottom: 12 }}>
+                {deleteError}
+              </div>
+            )}
+
+            <p
+              style={{
+                fontSize: 13,
+                color: 'var(--ink2, #344054)',
+                margin: '14px 0 20px',
+                lineHeight: 1.5,
+              }}
+            >
+              Are you sure you want to remove <b>{doc.label}</b>? This will permanently delete the uploaded file and clear any stored document number.
+            </p>
+
+            <div className="mfoot">
+              <button
+                type="button"
+                className="btn ghost"
+                onClick={() => setConfirmingDelete(false)}
+                disabled={deleting}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn danger"
+                onClick={handleDelete}
+                disabled={deleting}
+              >
+                {deleting ? 'Removing…' : 'Yes, Remove Document'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

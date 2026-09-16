@@ -51,16 +51,20 @@ interface UploadDocumentModalProps {
   employeeId?: number
   initialKey?: DocumentKey
   initialDocNumber?: string
+  isOnFile?: boolean
   onClose: () => void
   onSuccess: (saved: ProfileDocument) => void
+  onDelete?: () => void
 }
 
 export function UploadDocumentModal({
   employeeId,
   initialKey = 'pan',
   initialDocNumber = '',
+  isOnFile = false,
   onClose,
   onSuccess,
+  onDelete,
 }: UploadDocumentModalProps) {
   const [selectedKey, setSelectedKey] = useState<DocumentKey>(initialKey)
   const [docNumber, setDocNumber] = useState<string>(initialDocNumber)
@@ -69,6 +73,8 @@ export function UploadDocumentModal({
   const [dragging, setDragging] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -190,24 +196,84 @@ export function UploadDocumentModal({
     }
   }
 
+  const handleDelete = async () => {
+    setDeleting(true)
+    setError(null)
+    try {
+      await profileApi.deleteDocument(selectedKey, employeeId)
+      setDeleting(false)
+      onDelete?.()
+      onClose()
+    } catch (err) {
+      setError(messageOf(err, 'Could not remove document. Please try again.'))
+      setDeleting(false)
+    }
+  }
+
   return (
     <Modal
       title={`${currentOption.icon} Upload / Update ${currentOption.label}`}
       onClose={onClose}
       onSubmit={submit}
-      busy={saving}
+      busy={saving || deleting}
       error={error}
       maxWidth={520}
       confirm={
-        <button
-          className="btn primary"
-          type="submit"
-          disabled={saving || (!fileBase64 && !docNumber.trim())}
-        >
-          {saving ? 'Uploading…' : 'Save Document'}
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {isOnFile && (
+            <button
+              type="button"
+              className="btn danger"
+              onClick={() => setConfirmingDelete(true)}
+              disabled={saving || deleting}
+              style={{
+                background: '#dc3e43',
+                borderColor: '#dc3e43',
+                color: '#ffffff',
+                fontSize: 12,
+              }}
+            >
+              {deleting ? 'Removing…' : 'Delete Document'}
+            </button>
+          )}
+          <button
+            className="btn primary"
+            type="submit"
+            disabled={saving || deleting || (!fileBase64 && !docNumber.trim())}
+          >
+            {saving ? 'Uploading…' : 'Save Document'}
+          </button>
+        </div>
       }
     >
+      {confirmingDelete && (
+        <div className="notice bad" style={{ marginBottom: 14 }}>
+          <div style={{ fontWeight: 600, marginBottom: 4 }}>
+            Remove {currentOption.label}?
+          </div>
+          <div style={{ fontSize: 12, marginBottom: 10 }}>
+            This will delete the uploaded file and clear stored information from your profile.
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              type="button"
+              className="btn ghost sm"
+              onClick={() => setConfirmingDelete(false)}
+              disabled={deleting}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="btn danger sm"
+              onClick={handleDelete}
+              disabled={deleting}
+            >
+              {deleting ? 'Removing…' : 'Yes, Delete'}
+            </button>
+          </div>
+        </div>
+      )}
       <div className="f">
         <label htmlFor="docTypeSelect">Document Type</label>
         <select

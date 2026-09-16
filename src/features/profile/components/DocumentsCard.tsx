@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { messageOf } from '../../../shared/api/errors'
+import { profileApi } from '../profile.api'
 import type { DocumentKey, ProfileAccess, ProfileDocument } from '../profile.types'
 import { DOCUMENT_OPTIONS, UploadDocumentModal } from './UploadDocumentModal'
 import { DocumentViewerModal, type DocumentViewerTarget } from './DocumentViewerModal'
@@ -29,8 +31,14 @@ export function DocumentsCard({
   })
 
   const [viewingDoc, setViewingDoc] = useState<DocumentViewerTarget | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<{
+    key: DocumentKey | string
+    label: string
+  } | null>(null)
+  const [deleting, setDeleting] = useState<boolean>(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
-  // Can upload or update: the employee themselves, or an HR/admin
+  // Can upload, update or delete: the employee themselves, or an HR/admin
   const canUpload = isSelf || access === 'admin'
   const isManagerViewingReport = !isSelf && access === 'manager'
 
@@ -40,6 +48,24 @@ export function DocumentsCard({
 
   const closeUpload = () => {
     setModalState((prev) => ({ ...prev, open: false }))
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return
+    setDeleting(true)
+    setDeleteError(null)
+    try {
+      await profileApi.deleteDocument(
+        deleteTarget.key,
+        isSelf ? undefined : employeeId,
+      )
+      setDeleting(false)
+      setDeleteTarget(null)
+      onRefresh()
+    } catch (err) {
+      setDeleteError(messageOf(err, 'Failed to remove document. Please try again.'))
+      setDeleting(false)
+    }
   }
 
   // Count how many documents are on file
@@ -228,8 +254,32 @@ export function DocumentsCard({
                         e.stopPropagation()
                         openUpload(opt.key, found?.docNumber || '')
                       }}
+                      title={isOnFile ? 'Replace file or change number' : 'Upload document'}
                     >
                       {isOnFile ? 'Update' : 'Upload'}
+                    </button>
+                  )}
+
+                  {isOnFile && canUpload && (
+                    <button
+                      type="button"
+                      className="btn ghost sm"
+                      style={{
+                        padding: '3px 8px',
+                        fontSize: 11,
+                        color: 'var(--red, #dc3e43)',
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setDeleteError(null)
+                        setDeleteTarget({
+                          key: opt.key,
+                          label: opt.label,
+                        })
+                      }}
+                      title={`Remove ${opt.label}`}
+                    >
+                      Remove
                     </button>
                   )}
                 </div>
@@ -240,6 +290,7 @@ export function DocumentsCard({
           {/* Any additional documents attached in record */}
           {extraDocs.map((doc) => {
             const hasFile = Boolean(doc.path)
+            const isOnFile = hasFile || Boolean(doc.docNumber)
 
             const handleExtraRowClick = () => {
               if (hasFile) {
@@ -306,6 +357,29 @@ export function DocumentsCard({
                       View
                     </button>
                   )}
+
+                  {isOnFile && canUpload && (
+                    <button
+                      type="button"
+                      className="btn ghost sm"
+                      style={{
+                        padding: '3px 8px',
+                        fontSize: 11,
+                        color: 'var(--red, #dc3e43)',
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setDeleteError(null)
+                        setDeleteTarget({
+                          key: doc.key,
+                          label: doc.label,
+                        })
+                      }}
+                      title={`Remove ${doc.label}`}
+                    >
+                      Remove
+                    </button>
+                  )}
                 </div>
               </div>
             )
@@ -319,8 +393,15 @@ export function DocumentsCard({
           employeeId={isSelf ? undefined : employeeId}
           initialKey={modalState.key}
           initialDocNumber={modalState.docNumber}
+          isOnFile={Boolean(
+            documents.find((d) => d.key === modalState.key)?.path ||
+            documents.find((d) => d.key === modalState.key)?.docNumber,
+          )}
           onClose={closeUpload}
           onSuccess={() => {
+            onRefresh()
+          }}
+          onDelete={() => {
             onRefresh()
           }}
         />
@@ -332,7 +413,9 @@ export function DocumentsCard({
           document={viewingDoc}
           employeeId={isSelf ? undefined : employeeId}
           isSelf={isSelf}
+          canDelete={canUpload}
           onClose={() => setViewingDoc(null)}
+          onDelete={() => onRefresh()}
           onUpdate={
             canUpload
               ? () => {
@@ -344,6 +427,75 @@ export function DocumentsCard({
               : undefined
           }
         />
+      )}
+
+      {/* Confirmation Modal for Document Deletion from List */}
+      {deleteTarget && (
+        <div
+          className="modal on"
+          style={{
+            zIndex: 1100,
+            backgroundColor: 'rgba(15, 23, 41, 0.75)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !deleting) {
+              setDeleteTarget(null)
+            }
+          }}
+        >
+          <div className="box" style={{ maxWidth: 440, padding: 22 }}>
+            <div className="mh">
+              <h3 style={{ margin: 0, fontSize: 16 }}>Remove Document?</h3>
+              <button
+                type="button"
+                className="x"
+                onClick={() => setDeleteTarget(null)}
+                disabled={deleting}
+              >
+                ✕
+              </button>
+            </div>
+
+            {deleteError && (
+              <div className="notice bad" style={{ marginBottom: 12 }}>
+                {deleteError}
+              </div>
+            )}
+
+            <p
+              style={{
+                fontSize: 13,
+                color: 'var(--ink2, #344054)',
+                margin: '14px 0 20px',
+                lineHeight: 1.5,
+              }}
+            >
+              Are you sure you want to remove <b>{deleteTarget.label}</b>? This will delete the uploaded file and clear stored information from this employee profile.
+            </p>
+
+            <div className="mfoot">
+              <button
+                className="btn ghost"
+                type="button"
+                onClick={() => setDeleteTarget(null)}
+                disabled={deleting}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn danger"
+                type="button"
+                onClick={handleConfirmDelete}
+                disabled={deleting}
+              >
+                {deleting ? 'Removing…' : 'Yes, Remove Document'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

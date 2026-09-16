@@ -54,4 +54,14 @@ export const profileApi = {
     document.body.removeChild(link)
     setTimeout(() => URL.revokeObjectURL(url), 10000)
   },
+
+  /** Delete/remove document and its associated record. */
+  deleteDocument: (key: DocumentKey | string, employeeId?: number) => {
+    const path = employeeId
+      ? `/profile/${employeeId}/documents/${key}`
+      : `/profile/me/documents/${key}`
+    return request<{ success: boolean }>(path, {
+      method: 'DELETE',
+    })
+  },
 }
