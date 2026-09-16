@@ -1434,7 +1434,7 @@ tr.row:focus-visible { outline: 2px solid var(--blue); outline-offset: -2px; }
 }
 
 .fb-scroll {
-  max-height: 350px;
+  max-height: 175px;
   overflow-y: auto;
   padding-right: 4px;
 }
@@ -1458,6 +1458,9 @@ tr.row:focus-visible { outline: 2px solid var(--blue); outline-offset: -2px; }
   border: 1px solid var(--line);
   border-radius: 12px;
   margin-bottom: 9px;
+}
+.fb:last-child {
+  margin-bottom: 0;
 }
 .fb .who { font-weight: 700; font-size: 12.5px; }
 .fb .when { color: var(--muted2); font-size: 11px; margin-left: 6px; }
