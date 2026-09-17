@@ -58,6 +58,7 @@ export function AppRouter() {
           {/* The same page for a team member. Who may open it is decided by the
               API against the reporting tree, so there is no tier gate here. */}
           <Route path="/me/:id" element={<MyPage />} />
+          <Route path="/leave/:id" element={<MyLeavePage />} />
 
           <Route path="*" element={<Navigate to={home} replace />} />
         </Route>

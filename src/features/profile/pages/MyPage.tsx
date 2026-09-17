@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { PageHero } from '../../../shared/ui/PageHero'
-import { useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { profileApi } from '../profile.api'
 import { FeedbackCard } from '../../feedback'
 import { GoalsCard } from '../../goals'
@@ -40,6 +40,7 @@ function Row({ label, value }: { label: string; value: string | null }) {
 export function MyPage() {
   // The same screen serves your own profile and a team member's.
   const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
   const [view, setView] = useState<ProfileView | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -113,10 +114,45 @@ export function MyPage() {
       {/* A manager is looking at someone else's record — say so, so nobody
           mistakes a report's page for their own. */}
       {!view.isSelf && (
-        <div className="notice blue" style={{ marginBottom: 14 }}>
-          You are viewing <b>{view.fullName}</b>’s page
-          {view.access === 'manager' && ' as their manager'}. Pay and personal documents are not
-          shown.
+        <div
+          className="notice blue"
+          style={{
+            marginBottom: 14,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: 10,
+          }}
+        >
+          <div>
+            You are viewing <b>{view.fullName}</b>’s page
+            {view.access === 'manager' && ' as their manager'}. Pay and personal documents are not
+            shown.
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              type="button"
+              className="btn sm"
+              onClick={() => navigate(`/leave/${view.employeeId}`)}
+              style={{
+                background: 'var(--blue)',
+                color: '#ffffff',
+                border: 'none',
+                fontWeight: 500,
+              }}
+            >
+              📅 View Leave & Apply
+            </button>
+            <button
+              type="button"
+              className="btn sm ghost"
+              onClick={() => navigate('/me')}
+              style={{ background: '#ffffff' }}
+            >
+              Switch to my page
+            </button>
+          </div>
         </div>
       )}
 
@@ -136,6 +172,16 @@ export function MyPage() {
           <Row label="Date of joining" value={fmtDate(view.dateOfJoining)} />
           <Row label="Work location" value={view.workState} />
           <Row label="Leave balance" value={`${view.leaveBalance} days`} />
+          <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--line2)' }}>
+            <button
+              type="button"
+              className="btn ghost sm"
+              onClick={() => navigate(view.isSelf ? '/leave' : `/leave/${view.employeeId}`)}
+              style={{ width: '100%', justifyContent: 'center', fontSize: 11.5 }}
+            >
+              {view.isSelf ? 'View My Leave →' : `View ${view.fullName.split(' ')[0]}’s Leave & Apply →`}
+            </button>
+          </div>
         </div>
 
         <CompensationCard canSee={view.canSeeCompensation} compensation={view.compensation} />

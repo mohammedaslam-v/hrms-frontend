@@ -1,5 +1,5 @@
 import { Fragment } from 'react'
-import { NavLink, useNavigate } from 'react-router-dom'
+import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { NAV_SECTIONS, TIER_NAME, type NavItem } from '../navigation/nav-items'
 import { canAccess } from '../navigation/access'
 import { useAuth } from '../app/auth-context'
@@ -20,6 +20,11 @@ export function Rail({ badges = {}, onLocked }: RailProps) {
   const { employee } = useAuth()
   const tiers = employee.tiers
   const navigate = useNavigate()
+  const location = useLocation()
+
+  // Track if we are currently looking at a team member's page or leave
+  const employeeMatch = location.pathname.match(/^\/(me|leave)\/(\d+)/)
+  const activeEmployeeId = employeeMatch ? employeeMatch[2] : null
 
   const renderItem = (item: NavItem) => {
     const allowed = canAccess(item.tier, tiers)
@@ -53,17 +58,37 @@ export function Rail({ badges = {}, onLocked }: RailProps) {
       )
     }
 
+    // Dynamic destination based on current employee context
+    const targetPath =
+      activeEmployeeId && item.key === 'myleave'
+        ? `/leave/${activeEmployeeId}`
+        : activeEmployeeId && item.key === 'me'
+          ? `/me/${activeEmployeeId}`
+          : item.path
+
+    const isCurrentActive =
+      activeEmployeeId && item.key === 'myleave'
+        ? location.pathname === `/leave/${activeEmployeeId}`
+        : activeEmployeeId && item.key === 'me'
+          ? location.pathname === `/me/${activeEmployeeId}`
+          : location.pathname === item.path
+
     return (
       <NavLink
         key={item.key}
-        to={item.path}
-        className={({ isActive }) => `rail-btn${isActive ? ' active' : ''}`}
+        to={targetPath}
+        className={`rail-btn${isCurrentActive ? ' active' : ''}`}
         style={{ '--c': item.color } as React.CSSProperties}
-        title={item.label}
+        title={
+          activeEmployeeId && (item.key === 'myleave' || item.key === 'me')
+            ? `${item.label} (team member)`
+            : item.label
+        }
         onClick={(e) => {
           // Keeps keyboard and mouse behaviour identical for the placeholder pages.
           if (e.metaKey || e.ctrlKey) return
-          navigate(item.path)
+          e.preventDefault()
+          navigate(targetPath)
         }}
       >
         {inner}
