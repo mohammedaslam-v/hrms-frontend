@@ -1,2 +1,7 @@
 export { GoalsCard } from './GoalsCard'
-export type { GoalView } from './goals.types'
+export { MyGoalsPage } from './MyGoalsPage'
+export { TeamGoalsPage } from './TeamGoalsPage'
+export { SetGoalModal } from './SetGoalModal'
+export { GoalItem } from './GoalItem'
+export * from './goals.types'
+export * from './goals.api'

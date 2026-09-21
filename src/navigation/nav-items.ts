@@ -41,7 +41,7 @@ export const NAV_SECTIONS: NavSection[] = [
     tier: 'all',
     items: [
       { key: 'myleave', path: '/leave', label: 'My leave', tier: 'all', color: '#0FA968', built: true, icon: icon.calendarTick },
-      { key: 'mygoals', path: '/goals', label: 'My goals', tier: 'all', color: '#DD8B08', icon: icon.target },
+      { key: 'mygoals', path: '/goals', label: 'My goals', tier: 'all', color: '#DD8B08', built: true, icon: icon.target },
       { key: 'mypay', path: '/pay', label: 'My salary & payslips', tier: 'all', color: '#0C8CD4', icon: icon.wallet },
       { key: 'mytax', path: '/tax', label: 'My tax & TDS', tier: 'all', color: '#DC3E43', icon: icon.percent },
       { key: 'me', path: '/me', label: 'My page', tier: 'all', color: '#EC4899', icon: icon.person },
@@ -54,7 +54,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { key: 'team', path: '/team', label: 'Team directory', tier: 'mgr', color: '#E8467C', icon: icon.people },
       { key: 'att', path: '/attendance', label: 'Attendance & activity', tier: 'mgr', color: '#EA6A18', icon: icon.clock },
       { key: 'leave', path: '/approvals', label: 'Leave approvals', tier: 'mgr', color: '#6D53F0', built: true, icon: icon.calendar },
-      { key: 'teamgoals', path: '/team-goals', label: 'Team goals', tier: 'mgr', color: '#DD8B08', icon: icon.crosshair },
+      { key: 'teamgoals', path: '/team-goals', label: 'Team goals', tier: 'mgr', color: '#DD8B08', built: true, icon: icon.crosshair },
       { key: 'reports', path: '/reports', label: 'Reports centre', tier: 'mgr', color: '#4F46E5', icon: icon.barChart },
     ],
   },

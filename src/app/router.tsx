@@ -9,6 +9,7 @@ import { LeaveApprovalsPage } from '../features/leave'
 import { MyLeavePage } from '../features/leave'
 import { MyPage } from '../features/profile'
 import { TeamDirectoryPage } from '../features/team'
+import { MyGoalsPage, TeamGoalsPage } from '../features/goals'
 
 /**
  * Which screen answers each rail entry.
@@ -20,7 +21,9 @@ import { TeamDirectoryPage } from '../features/team'
  */
 const PAGES: Record<string, ReactNode> = {
   myleave: <MyLeavePage />,
+  mygoals: <MyGoalsPage />,
   leave: <LeaveApprovalsPage />,
+  teamgoals: <TeamGoalsPage />,
   me: <MyPage />,
   team: <TeamDirectoryPage />,
 }
@@ -55,6 +58,7 @@ export function AppRouter() {
           {/* The same page for a team member. Who may open it is decided by the
               API against the reporting tree, so there is no tier gate here. */}
           <Route path="/me/:id" element={<MyPage />} />
+          <Route path="/leave/:id" element={<MyLeavePage />} />
 
           <Route path="*" element={<Navigate to={home} replace />} />
         </Route>

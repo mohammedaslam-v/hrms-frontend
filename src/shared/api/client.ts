@@ -27,6 +27,35 @@ export const setAccessToken = (token: string | null): void => {
   accessToken = token
 }
 
+export const getAccessToken = (): string | null => accessToken
+
+export async function fetchBlob(path: string): Promise<Blob> {
+  const headers: Record<string, string> = {}
+  if (accessToken) {
+    headers.Authorization = `Bearer ${accessToken}`
+  }
+
+  let response: Response
+  try {
+    response = await fetch(`${BASE_URL}${path}`, {
+      headers,
+      credentials: 'include',
+    })
+  } catch {
+    throw new ApiRequestError(0, 'Cannot reach the HRMS API. Is the backend running?')
+  }
+
+  if (!response.ok) {
+    const body = (await response.json().catch(() => null)) as ApiEnvelope<unknown> | null
+    throw new ApiRequestError(
+      response.status,
+      body?.message ?? `Request failed with status ${response.status}`,
+    )
+  }
+
+  return response.blob()
+}
+
 export async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',

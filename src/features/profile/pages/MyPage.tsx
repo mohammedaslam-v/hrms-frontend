@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useState } from 'react'
 import { PageHero } from '../../../shared/ui/PageHero'
-import { useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { profileApi } from '../profile.api'
 import { FeedbackCard } from '../../feedback'
 import { GoalsCard } from '../../goals'
 import { ProjectsCard } from '../../projects'
 import { CompensationCard } from '../components/CompensationCard'
+import { DocumentsCard } from '../components/DocumentsCard'
 import { TodayCard, WeekCard } from '../../attendance'
+import { AdminLifecycleControls } from '../components/AdminLifecycleControls'
 import { WORK_MODE_CLASS, type ProfileView } from '../profile.types'
 import { fmtDate } from '../../../shared/lib/date'
 import { initials } from '../../../shared/lib/format'
@@ -39,21 +41,22 @@ function Row({ label, value }: { label: string; value: string | null }) {
 export function MyPage() {
   // The same screen serves your own profile and a team member's.
   const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
   const [view, setView] = useState<ProfileView | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const load = useCallback(async () => {
-    setLoading(true)
+  const load = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true)
     try {
       const next = id ? await profileApi.getOne(Number(id)) : await profileApi.getMine()
       setView(next)
       setError(null)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not load this profile.')
-      setView(null)
+      if (!silent) setView(null)
     } finally {
-      setLoading(false)
+      if (!silent) setLoading(false)
     }
   }, [id])
 
@@ -99,11 +102,36 @@ export function MyPage() {
             {[view.designation, view.department, reportsTo].filter(Boolean).join(' · ')}
           </div>
         </div>
-        <span style={{ marginLeft: 'auto' }}>
+        <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
           <span className={`chip ${WORK_MODE_CLASS[view.workMode]}`}>{view.workMode}</span>
-          {view.dateOfLeaving && (
-            <span className="chip c-abs" style={{ marginLeft: 6 }}>
-              Exited {fmtDate(view.dateOfLeaving)}
+          {view.isContractor && (
+            <span
+              className="chip"
+              style={{ background: '#f3e8ff', color: '#7e22ce', borderColor: '#d8b4fe', fontWeight: 600 }}
+            >
+              📋 Contractor
+            </span>
+          )}
+          {view.isLoginDisabled && (
+            <span
+              className="chip"
+              style={{ background: '#fcebeb', color: 'var(--red)', borderColor: '#fad2d2', fontWeight: 600 }}
+            >
+              🔒 Login Disabled
+            </span>
+          )}
+          {!view.isContractor && view.isSalaryStopped && (
+            <span
+              className="chip"
+              style={{ background: '#fdf3e0', color: 'var(--amber)', borderColor: '#fae2b8', fontWeight: 600 }}
+            >
+              ⏸ Salary On Hold
+            </span>
+          )}
+          {(view.lastWorkingDay || view.dateOfLeaving) && (
+            <span className="chip c-abs" style={{ fontWeight: 600 }}>
+              {view.isContractor ? 'Contract Ended ' : 'Exited '}
+              {fmtDate(view.lastWorkingDay || view.dateOfLeaving!)}
             </span>
           )}
         </span>
@@ -112,11 +140,51 @@ export function MyPage() {
       {/* A manager is looking at someone else's record — say so, so nobody
           mistakes a report's page for their own. */}
       {!view.isSelf && (
-        <div className="notice blue" style={{ marginBottom: 14 }}>
-          You are viewing <b>{view.fullName}</b>’s page
-          {view.access === 'manager' && ' as their manager'}. Pay and personal documents are not
-          shown.
+        <div
+          className="notice blue"
+          style={{
+            marginBottom: 14,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: 10,
+          }}
+        >
+          <div>
+            You are viewing <b>{view.fullName}</b>’s page
+            {view.access === 'manager' && ' as their manager'}. Pay and personal documents are not
+            shown.
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              type="button"
+              className="btn sm"
+              onClick={() => navigate(`/leave/${view.employeeId}`)}
+              style={{
+                background: 'var(--blue)',
+                color: '#ffffff',
+                border: 'none',
+                fontWeight: 500,
+              }}
+            >
+              📅 View Leave & Apply
+            </button>
+            <button
+              type="button"
+              className="btn sm ghost"
+              onClick={() => navigate('/me')}
+              style={{ background: '#ffffff' }}
+            >
+              Switch to my page
+            </button>
+          </div>
         </div>
+      )}
+
+      {/* Admin Controls: Dismiss Employee, Stop Salary, Disable Login, Delete Employee */}
+      {!view.isSelf && view.access === 'admin' && (
+        <AdminLifecycleControls employee={view} onRefresh={() => load(true)} />
       )}
 
       <div className="grid g3">
@@ -135,6 +203,16 @@ export function MyPage() {
           <Row label="Date of joining" value={fmtDate(view.dateOfJoining)} />
           <Row label="Work location" value={view.workState} />
           <Row label="Leave balance" value={`${view.leaveBalance} days`} />
+          <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--line2)' }}>
+            <button
+              type="button"
+              className="btn ghost sm"
+              onClick={() => navigate(view.isSelf ? '/leave' : `/leave/${view.employeeId}`)}
+              style={{ width: '100%', justifyContent: 'center', fontSize: 11.5 }}
+            >
+              {view.isSelf ? 'View My Leave →' : `View ${view.fullName.split(' ')[0]}’s Leave & Apply →`}
+            </button>
+          </div>
         </div>
 
         <CompensationCard canSee={view.canSeeCompensation} compensation={view.compensation} />
@@ -162,24 +240,13 @@ export function MyPage() {
           employeeName={view.fullName}
           onChange={(feedback) => setView({ ...view, feedback })}
         />
-        <div className="card">
-          <h3>Documents</h3>
-          {view.documents.length === 0 ? (
-            <div className="empty">
-              <b>No documents on file</b>
-              {view.isSelf || view.access === 'admin'
-                ? 'Onboarding paperwork uploaded through the admin portal appears here.'
-                : 'Documents are visible to the employee and HR only.'}
-            </div>
-          ) : (
-            view.documents.map((doc) => (
-              <div className="doc" key={doc.key}>
-                <span style={{ flex: 1 }}>📄 {doc.label}</span>
-                <span className="tag">On file</span>
-              </div>
-            ))
-          )}
-        </div>
+        <DocumentsCard
+          documents={view.documents}
+          isSelf={view.isSelf}
+          access={view.access}
+          employeeId={view.employeeId}
+          onRefresh={load}
+        />
       </div>
     </div>
   )

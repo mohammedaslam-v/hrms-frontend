@@ -994,6 +994,81 @@ td.num-col {
   border-bottom: 0;
   margin-top: 6px;
   padding-top: 10px;
+  flex-shrink: 0;
+}
+
+.ledger-card {
+  height: 405px;
+  max-height: 405px;
+  display: flex;
+  flex-direction: column;
+}
+
+.ledger-scroll {
+  flex: 1;
+  min-height: 0;
+  max-height: 295px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
+}
+.ledger-scroll::-webkit-scrollbar {
+  width: 5px;
+}
+.ledger-scroll::-webkit-scrollbar:horizontal {
+  display: none;
+  height: 0;
+}
+.ledger-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.ledger-scroll::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border-radius: 99px;
+}
+.ledger-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--muted2);
+}
+
+.requests-card {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.requests-scroll {
+  flex: 1;
+  min-height: 0;
+  max-height: 440px;
+  overflow-y: auto;
+  overflow-x: auto;
+  padding-right: 2px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
+}
+.requests-scroll::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+.requests-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.requests-scroll::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border-radius: 99px;
+}
+.requests-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--muted2);
+}
+.requests-scroll table thead th {
+  position: sticky;
+  top: 0;
+  background: var(--card, #fff);
+  z-index: 2;
+  box-shadow: 0 1px 0 var(--line);
 }
 
 /* ---- holiday rows ---- */
@@ -1005,6 +1080,22 @@ td.num-col {
   padding: 10px 0;
   border-bottom: 1px solid var(--line2);
   font-size: 13px;
+}
+
+.doc.doc-clickable {
+  cursor: pointer;
+  padding: 10px 8px;
+  margin: 0 -8px;
+  border-radius: 9px;
+  transition: background-color 0.15s ease, transform 0.1s ease;
+}
+
+.doc.doc-clickable:hover {
+  background-color: var(--panel);
+}
+
+.doc.doc-clickable:active {
+  transform: scale(0.995);
 }
 
 .doc:last-child {
@@ -1071,6 +1162,57 @@ td.num-col {
 .wb.off .col { background: #efe9e0; }
 .wb.today .col i { background: var(--green); }
 .wb.today span { color: var(--ink); font-weight: 600; }
+
+/* The detail behind one bar. Rendered into <body> and positioned against the
+   viewport, so the chart's own horizontal scroll cannot clip it. */
+.wb { position: relative; cursor: default; border-radius: 8px; }
+.wb:focus-visible { outline: 2px solid var(--violet); outline-offset: 3px; }
+
+.wbpop {
+  position: fixed;
+  z-index: 60;
+  transform: translate(-50%, -100%);
+  min-width: 190px;
+  max-width: 260px;
+  padding: 12px 14px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: 0 10px 28px rgba(15, 23, 41, 0.14);
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.wbpop-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.wbpop-head b { font-size: 13px; white-space: nowrap; }
+
+.wbpop-total { font-size: 19px; font-weight: 600; letter-spacing: -0.01em; }
+
+.wbpop-runs {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 12.5px;
+  color: var(--ink2);
+  font-variant-numeric: tabular-nums;
+}
+
+.wbpop-note { font-size: 12px; color: var(--muted2); }
+
+.wbpop-source {
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-top: -4px;
+}
 
 /* ---- form controls used inside cards/modals ---- */
 
@@ -1164,6 +1306,10 @@ textarea:focus {
 
 @media (max-width: 1000px) {
   .g32 { grid-template-columns: 1fr; }
+  .ledger-card { height: auto; max-height: none; }
+  .ledger-scroll { max-height: 360px; }
+  .requests-card { height: auto; max-height: none; flex: initial; }
+  .requests-scroll { max-height: 320px; }
 }
 
 
@@ -1213,6 +1359,7 @@ textarea:focus {
 .row-actions { display: flex; gap: 6px; flex-wrap: wrap; }
 
 .btn.success { background: var(--green); color: #fff; }
+.btn.danger { background: var(--red); color: #fff; }
 
 .c-leave { background: var(--violet-soft); color: var(--violet); }
 
@@ -1381,12 +1528,100 @@ tr.row:focus-visible { outline: 2px solid var(--blue); outline-offset: -2px; }
   transition: width 0.25s;
 }
 
+.fb-scroll {
+  flex: 1;
+  min-height: 0;
+  max-height: 270px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
+}
+.fb-scroll::-webkit-scrollbar {
+  width: 5px;
+}
+.fb-scroll::-webkit-scrollbar:horizontal {
+  display: none;
+  height: 0;
+}
+.fb-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.fb-scroll::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border-radius: 99px;
+}
+.fb-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--muted2);
+}
+
+.projects-scroll {
+  max-height: 220px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 4px;
+}
+.projects-scroll::-webkit-scrollbar {
+  width: 5px;
+}
+.projects-scroll::-webkit-scrollbar:horizontal {
+  display: none;
+  height: 0;
+}
+.projects-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.projects-scroll::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border-radius: 99px;
+}
+.projects-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--muted2);
+}
+
+.docs-scroll {
+  max-height: 220px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
+}
+.docs-scroll .doc.doc-clickable {
+  margin-left: 0;
+  margin-right: 0;
+}
+.docs-scroll::-webkit-scrollbar {
+  width: 5px;
+}
+.docs-scroll::-webkit-scrollbar:horizontal {
+  display: none;
+  height: 0;
+}
+.docs-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.docs-scroll::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border-radius: 99px;
+}
+.docs-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--muted2);
+}
+
+
+
+
 .fb {
   padding: 12px 14px;
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 12px;
   margin-bottom: 9px;
+}
+.fb:last-child {
+  margin-bottom: 0;
 }
 .fb .who { font-weight: 700; font-size: 12.5px; }
 .fb .when { color: var(--muted2); font-size: 11px; margin-left: 6px; }

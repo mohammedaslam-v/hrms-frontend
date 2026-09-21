@@ -5,6 +5,8 @@ import { messageOf } from '../../../shared/api/errors'
 import type { HalfDaySession, LeavePreview, LeaveType, MyLeaveView } from '../leave.types'
 
 interface LeaveApplyModalProps {
+  employeeId?: number
+  employeeName?: string
   onApplied: (view: MyLeaveView) => void
   onClose: () => void
 }
@@ -23,7 +25,12 @@ const TYPES: { value: LeaveType; label: string }[] = [
   { value: 'Unpaid', label: 'Unpaid — loss of pay' },
 ]
 
-export function LeaveApplyModal({ onApplied, onClose }: LeaveApplyModalProps) {
+export function LeaveApplyModal({
+  employeeId,
+  employeeName,
+  onApplied,
+  onClose,
+}: LeaveApplyModalProps) {
   const [leaveType, setLeaveType] = useState<LeaveType>('Earned')
   const [fromDate, setFromDate] = useState(tomorrow)
   const [toDate, setToDate] = useState(tomorrow)
@@ -41,7 +48,7 @@ export function LeaveApplyModal({ onApplied, onClose }: LeaveApplyModalProps) {
     let cancelled = false
     const timer = setTimeout(() => {
       leaveApi
-        .preview(fromDate, toDate, leaveType, isHalfDay)
+        .preview(fromDate, toDate, leaveType, isHalfDay, employeeId)
         .then((p) => {
           if (!cancelled) setPreview(p)
         })
@@ -53,24 +60,27 @@ export function LeaveApplyModal({ onApplied, onClose }: LeaveApplyModalProps) {
       cancelled = true
       clearTimeout(timer)
     }
-  }, [fromDate, toDate, leaveType, isHalfDay])
+  }, [fromDate, toDate, leaveType, isHalfDay, employeeId])
 
   const submit = async (event: FormEvent) => {
     event.preventDefault()
     setError(null)
     setSubmitting(true)
     try {
-      const view = await leaveApi.apply({
-        leaveType,
-        fromDate,
-        toDate,
-        isHalfDay,
-        halfDaySession: isHalfDay ? halfDaySession : null,
-        reason,
-      })
+      const view = await leaveApi.apply(
+        {
+          leaveType,
+          fromDate,
+          toDate,
+          isHalfDay,
+          halfDaySession: isHalfDay ? halfDaySession : null,
+          reason,
+        },
+        employeeId,
+      )
       onApplied(view)
     } catch (err) {
-      setError(messageOf(err, 'Could not submit your request.'))
+      setError(messageOf(err, 'Could not submit leave request.'))
       setSubmitting(false)
     }
   }
@@ -80,7 +90,7 @@ export function LeaveApplyModal({ onApplied, onClose }: LeaveApplyModalProps) {
 
   return (
     <Modal
-      title="Apply for leave"
+      title={employeeName ? `Apply for leave on behalf of ${employeeName}` : 'Apply for leave'}
       onClose={onClose}
       onSubmit={submit}
       busy={submitting}
@@ -91,10 +101,14 @@ export function LeaveApplyModal({ onApplied, onClose }: LeaveApplyModalProps) {
           type="submit"
           disabled={submitting || !preview?.canSubmit || !reason.trim()}
         >
-        {submitting ? 'Sending…' : 'Send for approval'}
-      </button>
-    }
-  >
+          {submitting
+            ? 'Sending…'
+            : employeeId
+              ? 'Submit request for employee'
+              : 'Send for approval'}
+        </button>
+      }
+    >
 
       <div className="grid g2">
         <div className="f">

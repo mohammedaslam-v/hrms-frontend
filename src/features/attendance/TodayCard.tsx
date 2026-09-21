@@ -11,6 +11,10 @@ const minutesOf = (time: string): number => {
 /**
  * Today — the check-in card.
  *
+ * Every employee gets it, whatever their role: this card is always the person's
+ * own declaration. Observed portal activity feeds the WEEK chart instead, and
+ * never this one, so nothing here is ever inferred on somebody's behalf.
+ *
  * The clock ticks in the browser, but it never reads the browser's wall clock.
  * The elapsed span comes from the server (`serverTime` minus `loginAt`), and
  * local time is only ever used to measure how long the page has been open since

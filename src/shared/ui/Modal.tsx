@@ -21,9 +21,9 @@ export function Modal({
 }: {
   title: ReactNode
   onClose: () => void
-  onSubmit: (event: FormEvent) => void
+  onSubmit?: (event: FormEvent) => void
   /** The action button. Cancel is supplied here; only the affirmative differs. */
-  confirm: ReactNode
+  confirm?: ReactNode
   error?: string | null
   /** While a submit is in flight, Escape stops closing the dialog under it. */
   busy?: boolean
@@ -38,31 +38,46 @@ export function Modal({
     return () => document.removeEventListener('keydown', onKey)
   }, [onClose, busy])
 
-  return (
-    <div className="modal on" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <form className="box" onSubmit={onSubmit} style={maxWidth ? { maxWidth } : undefined}>
-        <div className="mh">
-          <h3>{title}</h3>
-          <button className="x" type="button" onClick={onClose} aria-label="Close">
-            ✕
-          </button>
+  const content = (
+    <>
+      <div className="mh">
+        <h3>{title}</h3>
+        <button className="x" type="button" onClick={onClose} aria-label="Close">
+          ✕
+        </button>
+      </div>
+
+      {error && (
+        <div className="notice bad" style={{ marginBottom: 14 }} role="alert">
+          {error}
         </div>
+      )}
 
-        {error && (
-          <div className="notice bad" style={{ marginBottom: 14 }} role="alert">
-            {error}
-          </div>
-        )}
+      {children}
 
-        {children}
-
+      {(confirm !== undefined || onSubmit !== undefined) && (
         <div className="mfoot">
           <button className="btn ghost" type="button" onClick={onClose} disabled={busy}>
             Cancel
           </button>
           {confirm}
         </div>
-      </form>
+      )}
+    </>
+  )
+
+  return (
+    <div className="modal on" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      {onSubmit ? (
+        <form className="box" onSubmit={onSubmit} style={maxWidth ? { maxWidth } : undefined}>
+          {content}
+        </form>
+      ) : (
+        <div className="box" style={maxWidth ? { maxWidth } : undefined}>
+          {content}
+        </div>
+      )}
     </div>
   )
 }
+

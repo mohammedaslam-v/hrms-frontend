@@ -7,11 +7,28 @@ export type WorkMode = 'WFH' | 'WFO' | 'Hybrid'
 /** Why the viewer is being shown this page — decided by the server, not the UI. */
 export type ProfileAccess = 'self' | 'manager' | 'admin'
 
+export type DocumentKey =
+  | 'pan'
+  | 'aadhaar'
+  | 'resume'
+  | 'permanentAddress'
+  | 'temporaryAddress'
+
 export interface ProfileDocument {
-  key: string
+  key: DocumentKey | string
   label: string
   path: string
+  docNumber?: string | null
 }
+
+export interface UploadDocumentPayload {
+  key: DocumentKey | string
+  label?: string
+  fileName?: string
+  fileBase64?: string
+  docNumber?: string
+}
+
 
 /** Pay, for a viewer entitled to see it. Assembled and gated on the server. */
 export interface CompensationView {
@@ -70,6 +87,36 @@ export interface ProfileView {
   projects: ProjectRecord[]
   /** Already filtered by the server — restricted notes never reach the subject. */
   feedback: FeedbackRecord[]
+
+  // ---- lifecycle & exit flags -------------------------------------------
+  employmentType?: string
+  isContractor?: boolean
+  isLoginDisabled?: boolean
+  loginDisabledAt?: string | null
+  isSalaryStopped?: boolean
+  salaryStoppedAt?: string | null
+  salaryStopReason?: string | null
+  resignationDate?: string | null
+  resignationReason?: string | null
+  isNoticeServing?: boolean
+  lastWorkingDay?: string | null
+  isRehireEligible?: boolean
+  exitNotes?: string | null
+  deletedAt?: string | null
+}
+
+export interface DismissEmployeePayload {
+  resignationDate: string | null
+  resignationReason: string
+  isNoticeServing: boolean
+  lastWorkingDay: string
+  isRehireEligible: boolean
+  exitNotes?: string
+}
+
+export interface ToggleSalaryPayload {
+  stopped: boolean
+  reason?: string
 }
 
 export const WORK_MODE_CLASS: Record<WorkMode, string> = {

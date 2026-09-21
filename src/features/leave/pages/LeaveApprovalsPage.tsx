@@ -26,7 +26,10 @@ export function LeaveApprovalsPage() {
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [decidingId, setDecidingId] = useState<number | null>(null)
-  const [confirming, setConfirming] = useState<PendingApproval | null>(null)
+  const [actionConfirmation, setActionConfirmation] = useState<{
+    item: PendingApproval
+    decision: 'Approved' | 'Rejected'
+  } | null>(null)
 
   const load = useCallback(async () => {
     try {
@@ -53,6 +56,7 @@ export function LeaveApprovalsPage() {
       setView(result.view)
       // The conversion to loss of pay is never silent — the approver is told.
       setNotice(result.message)
+      setActionConfirmation(null)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not record that decision.')
     } finally {
@@ -180,20 +184,14 @@ export function LeaveApprovalsPage() {
                         <div className="row-actions">
                           <button
                             className="btn success sm"
-                            // Approving beyond the balance costs the employee pay,
-                            // so it is the manager's call — confirmed, not one click.
-                            onClick={() =>
-                              p.createsLossOfPay
-                                ? setConfirming(p)
-                                : void decide(p.id, 'Approved')
-                            }
+                            onClick={() => setActionConfirmation({ item: p, decision: 'Approved' })}
                             disabled={decidingId === p.id}
                           >
                             {decidingId === p.id ? '…' : 'Approve'}
                           </button>
                           <button
                             className="btn ghost sm"
-                            onClick={() => void decide(p.id, 'Rejected')}
+                            onClick={() => setActionConfirmation({ item: p, decision: 'Rejected' })}
                             disabled={decidingId === p.id}
                           >
                             Reject
@@ -280,53 +278,124 @@ export function LeaveApprovalsPage() {
         </div>
       )}
 
-      {confirming && (
+      {actionConfirmation && (
         <div
           className="modal on"
-          onClick={(e) => e.target === e.currentTarget && setConfirming(null)}
+          onClick={(e) =>
+            e.target === e.currentTarget && !decidingId && setActionConfirmation(null)
+          }
         >
-          <div className="box" style={{ maxWidth: 480 }}>
+          <div className="box" style={{ maxWidth: 500 }}>
             <div className="mh">
-              <h3>Approve at a cost of pay?</h3>
-              <button className="x" type="button" onClick={() => setConfirming(null)}>
+              <h3>
+                {actionConfirmation.decision === 'Approved'
+                  ? actionConfirmation.item.createsLossOfPay
+                    ? 'Confirm approval (costs pay)?'
+                    : 'Confirm leave approval'
+                  : 'Confirm leave rejection'}
+              </h3>
+              <button
+                className="x"
+                type="button"
+                onClick={() => setActionConfirmation(null)}
+                disabled={Boolean(decidingId)}
+                aria-label="Close"
+              >
                 ✕
               </button>
             </div>
-            <div className="notice bad">
-              <b>{confirming.employeeName}</b> has {confirming.balanceNow} day
-              {confirming.balanceNow === 1 ? '' : 's'} and is asking for {confirming.days}.
-              Approving leaves the balance at <b>{confirming.balanceAfter}</b>
-              {confirming.unpaidDays > 0 ? (
+
+            {/* Request Summary Card */}
+            <div
+              style={{
+                background: 'var(--panel)',
+                border: '1px solid var(--line)',
+                borderRadius: 12,
+                padding: '14px 16px',
+                marginBottom: 14,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 8,
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div>
+                  <b style={{ fontSize: 15, color: 'var(--ink)' }}>{actionConfirmation.item.employeeName}</b>
+                  <div style={{ fontSize: 12, color: 'var(--muted)' }}>
+                    {actionConfirmation.item.designation ?? actionConfirmation.item.employeeCode}
+                  </div>
+                </div>
+                <span className={`chip ${actionConfirmation.item.leaveType === 'Unpaid' ? 'c-abs' : 'c-leave'}`}>
+                  {actionConfirmation.item.leaveType}
+                </span>
+              </div>
+
+              <div style={{ fontSize: 13, color: 'var(--ink2)', marginTop: 2 }}>
+                <b>Duration:</b> {actionConfirmation.item.days} day{actionConfirmation.item.days === 1 ? '' : 's'} (
+                {fmtShort(actionConfirmation.item.fromDate)} to {fmtShort(actionConfirmation.item.toDate)})
+                {actionConfirmation.item.isHalfDay && actionConfirmation.item.halfDaySession && (
+                  <span> · {HALF_DAY_LABEL[actionConfirmation.item.halfDaySession]}</span>
+                )}
+              </div>
+
+              {actionConfirmation.item.reason && (
+                <div style={{ fontSize: 12.5, color: 'var(--muted)', fontStyle: 'italic' }}>
+                  "{actionConfirmation.item.reason}"
+                </div>
+              )}
+
+              <div style={{ fontSize: 12, color: 'var(--muted2)', borderTop: '1px dashed var(--line)', paddingTop: 6 }}>
+                Current balance: <b>{actionConfirmation.item.balanceNow}</b> · Balance after approval:{' '}
+                <b>{actionConfirmation.item.balanceAfter}</b>
+              </div>
+            </div>
+
+            {/* Guidance & Alerts */}
+            {actionConfirmation.decision === 'Approved' ? (
+              actionConfirmation.item.createsLossOfPay ? (
                 <>
-                  {' '}
-                  and records{' '}
-                  <b>
-                    {confirming.unpaidDays} day{confirming.unpaidDays === 1 ? '' : 's'}
-                  </b>{' '}
-                  as loss of pay.
+                  <div className="notice bad" style={{ marginBottom: 10 }}>
+                    <b>Warning:</b> This request exceeds the available balance. Approving will record{' '}
+                    <b>
+                      {actionConfirmation.item.unpaidDays} day{actionConfirmation.item.unpaidDays === 1 ? '' : 's'}
+                    </b>{' '}
+                    as loss of pay, deducted from this month's salary.
+                  </div>
+                  <p className="hint">
+                    The shortfall is settled by this month's salary deduction, not carried forward — next month's credits are theirs in full.
+                  </p>
                 </>
               ) : (
-                '.'
-              )}
-            </div>
-            <p className="hint">
-              The shortfall is settled by this month's salary deduction, not carried forward — next
-              month's credits are theirs in full.
-            </p>
+                <div className="notice blue">
+                  Are you sure you want to approve this leave request? The requested {actionConfirmation.item.days} day{actionConfirmation.item.days === 1 ? '' : 's'} will be deducted from their leave balance.
+                </div>
+              )
+            ) : (
+              <div className="notice bad">
+                Are you sure you want to reject this leave request? The employee will be notified of the rejection.
+              </div>
+            )}
+
             <div className="mfoot">
-              <button className="btn ghost" type="button" onClick={() => setConfirming(null)}>
+              <button
+                className="btn ghost"
+                type="button"
+                onClick={() => setActionConfirmation(null)}
+                disabled={Boolean(decidingId)}
+              >
                 Cancel
               </button>
               <button
-                className="btn success"
+                className={`btn ${actionConfirmation.decision === 'Approved' ? 'success' : 'danger'}`}
                 type="button"
-                onClick={() => {
-                  const id = confirming.id
-                  setConfirming(null)
-                  void decide(id, 'Approved')
-                }}
+                onClick={() => void decide(actionConfirmation.item.id, actionConfirmation.decision)}
+                disabled={Boolean(decidingId)}
               >
-                Approve anyway
+                {decidingId === actionConfirmation.item.id
+                  ? 'Submitting…'
+                  : actionConfirmation.decision === 'Approved'
+                    ? 'Yes, Approve'
+                    : 'Yes, Reject'}
               </button>
             </div>
           </div>

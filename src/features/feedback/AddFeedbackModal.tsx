@@ -52,13 +52,19 @@ export function AddFeedbackModal({
       }
     >
       <div className="f">
-        <label htmlFor="feedbackBody">What you want to say</label>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+          <label htmlFor="feedbackBody" style={{ margin: 0 }}>What you want to say</label>
+          <span style={{ fontSize: 11, color: body.length > 900 ? 'var(--red)' : 'var(--muted2)' }}>
+            {body.length} / 1000
+          </span>
+        </div>
         <textarea
           id="feedbackBody"
           value={body}
           onChange={(e) => setBody(e.target.value)}
           placeholder="Specific and about the work — what went well, or what to aim at next"
           rows={5}
+          maxLength={1000}
           disabled={saving}
           required
         />
