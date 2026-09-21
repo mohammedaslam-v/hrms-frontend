@@ -1,4 +1,11 @@
-import type { DocumentKey, ProfileDocument, ProfileView, UploadDocumentPayload } from './profile.types'
+import type {
+  DismissEmployeePayload,
+  DocumentKey,
+  ProfileDocument,
+  ProfileView,
+  ToggleSalaryPayload,
+  UploadDocumentPayload,
+} from './profile.types'
 import { fetchBlob, getAccessToken, request } from '../../shared/api/client'
 
 export const profileApi = {
@@ -64,4 +71,48 @@ export const profileApi = {
       method: 'DELETE',
     })
   },
+
+  /** Admin: Toggle employee login (Disable / Enable). */
+  toggleLogin: (employeeId: number, disabled: boolean) =>
+    request<{ isLoginDisabled: boolean }>(
+      `/profile/${employeeId}/toggle-login`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ disabled }),
+      },
+    ),
+
+  /** Admin: Dismiss employee with exit/resignation form details. */
+  dismissEmployee: (employeeId: number, payload: DismissEmployeePayload) =>
+    request<unknown>(`/profile/${employeeId}/dismiss`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  /** Admin: Toggle salary disbursement hold (Stop / Resume). */
+  toggleSalary: (employeeId: number, payload: ToggleSalaryPayload) =>
+    request<{ isSalaryStopped: boolean }>(
+      `/profile/${employeeId}/toggle-salary`,
+      {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      },
+    ),
+
+  /** Admin: Update employee employment type (Full-time vs Contract). */
+  updateEmploymentType: (employeeId: number, employmentType: string) =>
+    request<{ employmentType: string; isContractor: boolean }>(
+      `/profile/${employeeId}/employment-type`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ employmentType }),
+      },
+    ),
+
+  /** Admin: Soft-delete employee from the directory and regular views. */
+  deleteEmployee: (employeeId: number) =>
+    request<unknown>(`/profile/${employeeId}`, {
+      method: 'DELETE',
+    }),
 }
+

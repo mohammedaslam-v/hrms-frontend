@@ -8,6 +8,7 @@ import { ProjectsCard } from '../../projects'
 import { CompensationCard } from '../components/CompensationCard'
 import { DocumentsCard } from '../components/DocumentsCard'
 import { TodayCard, WeekCard } from '../../attendance'
+import { AdminLifecycleControls } from '../components/AdminLifecycleControls'
 import { WORK_MODE_CLASS, type ProfileView } from '../profile.types'
 import { fmtDate } from '../../../shared/lib/date'
 import { initials } from '../../../shared/lib/format'
@@ -45,17 +46,17 @@ export function MyPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const load = useCallback(async () => {
-    setLoading(true)
+  const load = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true)
     try {
       const next = id ? await profileApi.getOne(Number(id)) : await profileApi.getMine()
       setView(next)
       setError(null)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not load this profile.')
-      setView(null)
+      if (!silent) setView(null)
     } finally {
-      setLoading(false)
+      if (!silent) setLoading(false)
     }
   }, [id])
 
@@ -101,11 +102,36 @@ export function MyPage() {
             {[view.designation, view.department, reportsTo].filter(Boolean).join(' · ')}
           </div>
         </div>
-        <span style={{ marginLeft: 'auto' }}>
+        <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
           <span className={`chip ${WORK_MODE_CLASS[view.workMode]}`}>{view.workMode}</span>
-          {view.dateOfLeaving && (
-            <span className="chip c-abs" style={{ marginLeft: 6 }}>
-              Exited {fmtDate(view.dateOfLeaving)}
+          {view.isContractor && (
+            <span
+              className="chip"
+              style={{ background: '#f3e8ff', color: '#7e22ce', borderColor: '#d8b4fe', fontWeight: 600 }}
+            >
+              📋 Contractor
+            </span>
+          )}
+          {view.isLoginDisabled && (
+            <span
+              className="chip"
+              style={{ background: '#fcebeb', color: 'var(--red)', borderColor: '#fad2d2', fontWeight: 600 }}
+            >
+              🔒 Login Disabled
+            </span>
+          )}
+          {!view.isContractor && view.isSalaryStopped && (
+            <span
+              className="chip"
+              style={{ background: '#fdf3e0', color: 'var(--amber)', borderColor: '#fae2b8', fontWeight: 600 }}
+            >
+              ⏸ Salary On Hold
+            </span>
+          )}
+          {(view.lastWorkingDay || view.dateOfLeaving) && (
+            <span className="chip c-abs" style={{ fontWeight: 600 }}>
+              {view.isContractor ? 'Contract Ended ' : 'Exited '}
+              {fmtDate(view.lastWorkingDay || view.dateOfLeaving!)}
             </span>
           )}
         </span>
@@ -154,6 +180,11 @@ export function MyPage() {
             </button>
           </div>
         </div>
+      )}
+
+      {/* Admin Controls: Dismiss Employee, Stop Salary, Disable Login, Delete Employee */}
+      {!view.isSelf && view.access === 'admin' && (
+        <AdminLifecycleControls employee={view} onRefresh={() => load(true)} />
       )}
 
       <div className="grid g3">
