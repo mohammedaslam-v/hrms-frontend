@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { projectsApi } from './projects.api'
-import type { ProjectRecord, ProjectStatus } from './projects.types'
+import type { ProjectRecord, ProjectStatus, ProjectType } from './projects.types'
 import { Modal } from '../../shared/ui/Modal'
 import { messageOf } from '../../shared/api/errors'
 
@@ -13,6 +13,7 @@ const STATUSES: { value: ProjectStatus; label: string }[] = [
 interface AddProjectModalProps {
   employeeId: number
   employeeName: string
+  isSelf?: boolean
   onAdded: (projects: ProjectRecord[]) => void
   onClose: () => void
 }
@@ -20,9 +21,11 @@ interface AddProjectModalProps {
 export function AddProjectModal({
   employeeId,
   employeeName,
+  isSelf = false,
   onAdded,
   onClose,
 }: AddProjectModalProps) {
+  const [type, setType] = useState<ProjectType>('project')
   const [title, setTitle] = useState('')
   const [status, setStatus] = useState<ProjectStatus>('In progress')
   const [startedOn, setStartedOn] = useState('')
@@ -37,8 +40,9 @@ export function AddProjectModal({
     try {
       onAdded(
         await projectsApi.add(employeeId, {
+          type,
           title,
-          status,
+          status: type === 'achievement' ? 'Done' : status,
           note: note.trim() || null,
           startedOn: startedOn || null,
         }),
@@ -52,7 +56,7 @@ export function AddProjectModal({
 
   return (
     <Modal
-      title={`Add a project for ${employeeName}`}
+      title={isSelf ? 'Add a project or achievement' : `Add for ${employeeName}`}
       onClose={onClose}
       onSubmit={submit}
       busy={saving}
@@ -60,40 +64,105 @@ export function AddProjectModal({
       maxWidth={520}
       confirm={
         <button className="btn primary" type="submit" disabled={saving || !title.trim()}>
-          {saving ? 'Saving…' : 'Add project'}
+          {saving ? 'Saving…' : type === 'achievement' ? 'Add achievement' : 'Add project'}
         </button>
       }
     >
+      {/* Type Selector Tabs */}
+      <div
+        style={{
+          display: 'flex',
+          gap: '8px',
+          background: 'var(--bg)',
+          padding: '4px',
+          borderRadius: '8px',
+          marginBottom: '16px',
+        }}
+      >
+        <button
+          type="button"
+          className={`btn sm ${type === 'project' ? 'primary' : 'ghost'}`}
+          style={{ flex: 1, textAlign: 'center', justifyContent: 'center' }}
+          onClick={() => {
+            setType('project')
+            setStatus('In progress')
+          }}
+        >
+          🚀 Project
+        </button>
+        <button
+          type="button"
+          className={`btn sm ${type === 'achievement' ? 'primary' : 'ghost'}`}
+          style={{ flex: 1, textAlign: 'center', justifyContent: 'center' }}
+          onClick={() => {
+            setType('achievement')
+            setStatus('Done')
+          }}
+        >
+          🏆 Key Achievement
+        </button>
+      </div>
+
       <div className="f">
-        <label htmlFor="projectTitle">What was the work</label>
+        <label htmlFor="projectTitle">
+          {type === 'achievement' ? 'What was the achievement / win' : 'What was the work'}
+        </label>
         <input
           id="projectTitle"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder="e.g. HRMS leave and attendance module"
+          placeholder={
+            type === 'achievement'
+              ? 'e.g. Cut blended CAC by 18% in one quarter'
+              : 'e.g. HRMS leave and attendance module'
+          }
           disabled={saving}
           required
         />
       </div>
 
       <div className="grid g2 mt">
+        {type === 'project' ? (
+          <div className="f">
+            <label htmlFor="projectStatus">Where it stands</label>
+            <select
+              id="projectStatus"
+              value={status}
+              onChange={(e) => setStatus(e.target.value as ProjectStatus)}
+              disabled={saving}
+            >
+              {STATUSES.map((s) => (
+                <option key={s.value} value={s.value}>
+                  {s.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : (
+          <div className="f">
+            <label htmlFor="achievementTag">Category</label>
+            <div
+              style={{
+                height: '38px',
+                display: 'flex',
+                alignItems: 'center',
+                padding: '0 10px',
+                background: 'var(--bg)',
+                borderRadius: '6px',
+                fontSize: '13px',
+                fontWeight: 600,
+                color: 'var(--amber)',
+              }}
+            >
+              🏆 Milestone Win
+            </div>
+          </div>
+        )}
+
         <div className="f">
-          <label htmlFor="projectStatus">Where it stands</label>
-          <select
-            id="projectStatus"
-            value={status}
-            onChange={(e) => setStatus(e.target.value as ProjectStatus)}
-            disabled={saving}
-          >
-            {STATUSES.map((s) => (
-              <option key={s.value} value={s.value}>
-                {s.label}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="f">
-          <label htmlFor="projectStarted">Started — optional</label>
+          <label htmlFor="projectStarted">
+            {type === 'achievement' ? 'Date achieved — optional' : 'Started — optional'}
+          </label>
           <input
             id="projectStarted"
             type="date"
@@ -105,19 +174,28 @@ export function AddProjectModal({
       </div>
 
       <div className="f mt">
-        <label htmlFor="projectNote">A line of context — optional</label>
+        <label htmlFor="projectNote">
+          {type === 'achievement' ? 'Impact & details — optional' : 'A line of context — optional'}
+        </label>
         <textarea
           id="projectNote"
           value={note}
           onChange={(e) => setNote(e.target.value)}
-          placeholder="What it involved, or why it mattered"
+          placeholder={
+            type === 'achievement'
+              ? 'Key results, metrics or why this made a difference'
+              : 'What it involved, or why it mattered'
+          }
           disabled={saving}
         />
       </div>
 
       <div className="hint mt8">
-        This appears on {employeeName}’s page with your name against it.
+        {isSelf
+          ? 'This will appear on your profile under Projects & achievements.'
+          : `This appears on ${employeeName}’s page with your name against it.`}
       </div>
     </Modal>
   )
 }
+
