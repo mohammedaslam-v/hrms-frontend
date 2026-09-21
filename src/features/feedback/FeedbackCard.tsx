@@ -53,13 +53,14 @@ export function FeedbackCard({
   }
 
   return (
-    <div className="card">
+    <div className="card" style={{ display: 'flex', flexDirection: 'column' }}>
       <div
         style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           marginBottom: 12,
+          flexShrink: 0,
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -89,7 +90,16 @@ export function FeedbackCard({
       </div>
 
       {feedback.length === 0 ? (
-        <div className="empty">
+        <div
+          className="empty"
+          style={{
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            alignItems: 'center',
+          }}
+        >
           <b>No feedback yet</b>
           {isSelf ? (
             <span>Notes and guidance your manager writes for you will appear here.</span>
@@ -110,7 +120,7 @@ export function FeedbackCard({
           )}
         </div>
       ) : (
-        <div className="fb-scroll">
+        <div className="fb-scroll" style={{ flex: 1 }}>
           {feedback.map((note) => (
             <div className="fb" key={note.id}>
               <div

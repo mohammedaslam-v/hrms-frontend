@@ -139,7 +139,7 @@ export function MyLeavePage() {
       )}
 
       <div className="grid g32">
-        <div>
+        <div style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
           <div className="card">
             <h3>{isSelf ? 'My balance' : `${personFirstName}’s balance`}</h3>
             <div className="lvbal">
@@ -173,62 +173,65 @@ export function MyLeavePage() {
                 <div className="l">Loss of pay</div>
               </div>
             </div>
-            <div className="hint mt8">
-              {policy.leavePerMonth} earned leaves are credited on the 1st of every month —{' '}
-              {policy.annualEntitlement} for the year, covering festivals and everything else. Leave
-              can only be taken from the accumulated balance; anything beyond it is recorded as
-              loss of pay and deducted from that month's salary. Each month stands on its own — a
-              loss of pay month does not eat into the credits that follow.
-            </div>
             <button className="btn primary mt hide-sm" onClick={() => setApplying(true)}>
               {isSelf ? 'Apply for leave' : 'Apply on behalf'}
             </button>
           </div>
 
-          <div className="card mt">
-            <h3>
+          <div className="card mt ledger-card">
+            <h3 style={{ flexShrink: 0 }}>
               Accrual ledger <span className="sub">· {policy.leaveYear}</span>
             </h3>
-            <div className="ledger">
-              <div className="r">
-                <span>Opening balance · 01 Jan {policy.leaveYear}</span>
-                <b>{ledger.opening.toFixed(1)}</b>
-              </div>
-
-              {ledger.rows.map((row) => (
-                <div className="r" key={row.month}>
-                  <span>{fmtMonth(row.month)} · monthly credit</span>
-                  <b style={{ color: 'var(--green)' }}>+{row.credit.toFixed(1)}</b>
+            <div
+              className="ledger"
+              style={{
+                flex: 1,
+                minHeight: 0,
+                display: 'flex',
+                flexDirection: 'column',
+              }}
+            >
+              <div className="ledger-scroll">
+                <div className="r">
+                  <span>Opening balance · 01 Jan {policy.leaveYear}</span>
+                  <b>{ledger.opening.toFixed(1)}</b>
                 </div>
-              ))}
 
-              {requests
-                .filter((r) => r.status === 'Approved')
-                .slice()
-                .sort((a, b) => (a.fromDate < b.fromDate ? -1 : 1))
-                .map((r) => (
-                  <div className="r" key={r.id}>
-                    <span>
-                      {fmtShort(r.fromDate)} · {r.leaveType}
-                      {r.isHalfDay && r.halfDaySession && ` · ${HALF_DAY_LABEL[r.halfDaySession]}`}
-                      {r.leaveType === 'Unpaid' && ' (loss of pay)'}
-                      {r.daysCounted < r.days && r.leaveType !== 'Unpaid' && (
-                        <span className="hint" style={{ display: 'inline', marginLeft: 4 }}>
-                          ({r.daysCounted} of {r.days} so far)
-                        </span>
-                      )}
-                    </span>
-                    <b
-                      style={{
-                        color: r.leaveType === 'Unpaid' ? 'var(--muted)' : 'var(--red)',
-                      }}
-                    >
-                      {r.leaveType === 'Unpaid' ? '0.0' : `−${r.daysCounted.toFixed(1)}`}
-                    </b>
+                {ledger.rows.map((row) => (
+                  <div className="r" key={row.month}>
+                    <span>{fmtMonth(row.month)} · monthly credit</span>
+                    <b style={{ color: 'var(--green)' }}>+{row.credit.toFixed(1)}</b>
                   </div>
                 ))}
 
-              <div className="r ledger-total">
+                {requests
+                  .filter((r) => r.status === 'Approved')
+                  .slice()
+                  .sort((a, b) => (a.fromDate < b.fromDate ? -1 : 1))
+                  .map((r) => (
+                    <div className="r" key={r.id}>
+                      <span>
+                        {fmtShort(r.fromDate)} · {r.leaveType}
+                        {r.isHalfDay && r.halfDaySession && ` · ${HALF_DAY_LABEL[r.halfDaySession]}`}
+                        {r.leaveType === 'Unpaid' && ' (loss of pay)'}
+                        {r.daysCounted < r.days && r.leaveType !== 'Unpaid' && (
+                          <span className="hint" style={{ display: 'inline', marginLeft: 4 }}>
+                            ({r.daysCounted} of {r.days} so far)
+                          </span>
+                        )}
+                      </span>
+                      <b
+                        style={{
+                          color: r.leaveType === 'Unpaid' ? 'var(--muted)' : 'var(--red)',
+                        }}
+                      >
+                        {r.leaveType === 'Unpaid' ? '0.0' : `−${r.daysCounted.toFixed(1)}`}
+                      </b>
+                    </div>
+                  ))}
+              </div>
+
+              <div className="r ledger-total" style={{ flexShrink: 0, marginTop: 6 }}>
                 <b>Balance</b>
                 <b style={{ color: 'var(--violet)' }}>{ledger.balance.toFixed(1)} days</b>
               </div>
@@ -236,10 +239,10 @@ export function MyLeavePage() {
           </div>
         </div>
 
-        <div>
-          <div className="card">
+        <div style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+          <div className="card requests-card">
             <h3>{isSelf ? 'My requests' : `${personFirstName}’s requests`}</h3>
-            <div className="scroll">
+            <div className="scroll requests-scroll">
               <table>
                 <thead>
                   <tr>
@@ -302,7 +305,7 @@ export function MyLeavePage() {
             <Pagination page={requestsPage} unit="requests" />
           </div>
 
-          <div className="card mt">
+          <div className="card mt" style={{ flexShrink: 0 }}>
             <h3>
               Leave taken <span className="sub">· by month, this leave year</span>
             </h3>
