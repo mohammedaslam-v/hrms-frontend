@@ -22,12 +22,16 @@ export function DocumentsCard({
 }: DocumentsCardProps) {
   const [modalState, setModalState] = useState<{
     open: boolean
-    key: DocumentKey
+    key: DocumentKey | string
+    label?: string
     docNumber: string
+    isCustom?: boolean
   }>({
     open: false,
     key: 'pan',
+    label: '',
     docNumber: '',
+    isCustom: false,
   })
 
   const [viewingDoc, setViewingDoc] = useState<DocumentViewerTarget | null>(null)
@@ -42,8 +46,12 @@ export function DocumentsCard({
   const canUpload = isSelf || access === 'admin'
   const isManagerViewingReport = !isSelf && access === 'manager'
 
-  const openUpload = (key: DocumentKey = 'pan', docNumber = '') => {
-    setModalState({ open: true, key, docNumber })
+  const openUpload = (key: DocumentKey | string = 'pan', docNumber = '', label = '', isCustom = false) => {
+    setModalState({ open: true, key, docNumber, label, isCustom })
+  }
+
+  const openUploadCustom = (key = '', label = '', docNumber = '') => {
+    setModalState({ open: true, key: key || 'custom', label, docNumber, isCustom: true })
   }
 
   const closeUpload = () => {
@@ -71,18 +79,19 @@ export function DocumentsCard({
   // Count how many documents are on file
   const onFileCount = documents.filter((d) => Boolean(d.path || d.docNumber)).length
 
-  // Find extra documents if any exist beyond the standard 5
+  // Find extra/custom documents beyond the standard 5
   const standardKeySet = new Set<string>(DOCUMENT_OPTIONS.map((opt) => opt.key))
   const extraDocs = documents.filter((d) => !standardKeySet.has(d.key))
 
   return (
-    <div className="card">
+    <div className="card" style={{ display: 'flex', flexDirection: 'column' }}>
       <div
         style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           marginBottom: 12,
+          flexShrink: 0,
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -102,7 +111,7 @@ export function DocumentsCard({
           )}
         </div>
 
-        {canUpload && (
+        {canUpload && !isManagerViewingReport && (
           <button
             type="button"
             className="btn ghost sm"
@@ -122,268 +131,313 @@ export function DocumentsCard({
         </div>
       ) : (
         <>
-          {DOCUMENT_OPTIONS.map((opt) => {
-            const found = documents.find((d) => d.key === opt.key)
-            const hasFile = Boolean(found?.path)
-            const hasNumber = Boolean(found?.docNumber)
-            const isOnFile = hasFile || hasNumber
+          <div className="docs-scroll">
+            {DOCUMENT_OPTIONS.map((opt) => {
+              const found = documents.find((d) => d.key === opt.key)
+              const hasFile = Boolean(found?.path)
+              const hasNumber = Boolean(found?.docNumber)
+              const isOnFile = hasFile || hasNumber
 
-            const handleRowClick = () => {
-              if (hasFile) {
-                setViewingDoc({
-                  key: opt.key,
-                  label: opt.label,
-                  icon: opt.icon,
-                  docNumber: found?.docNumber,
-                  path: found?.path,
-                })
-              } else if (canUpload) {
-                openUpload(opt.key, found?.docNumber || '')
-              }
-            }
-
-            return (
-              <div
-                className={`doc ${hasFile || canUpload ? 'doc-clickable' : ''}`}
-                key={opt.key}
-                onClick={handleRowClick}
-                title={
-                  hasFile
-                    ? `Click to view ${opt.label}`
-                    : canUpload
-                      ? `Click to upload ${opt.label}`
-                      : undefined
+              const handleRowClick = () => {
+                if (hasFile) {
+                  setViewingDoc({
+                    key: opt.key,
+                    label: opt.label,
+                    icon: opt.icon,
+                    docNumber: found?.docNumber,
+                    path: found?.path,
+                  })
+                } else if (canUpload) {
+                  openUpload(opt.key, found?.docNumber || '')
                 }
-              >
-                <span style={{ fontSize: 18, lineHeight: 1, flexShrink: 0 }}>{opt.icon}</span>
+              }
 
-                <div style={{ flex: 1, minWidth: 0 }}>
+              return (
+                <div
+                  className={`doc ${hasFile || canUpload ? 'doc-clickable' : ''}`}
+                  key={opt.key}
+                  onClick={handleRowClick}
+                  title={
+                    hasFile
+                      ? `Click to view ${opt.label}`
+                      : canUpload
+                        ? `Click to upload ${opt.label}`
+                        : undefined
+                  }
+                >
+                  <span style={{ fontSize: 18, lineHeight: 1, flexShrink: 0 }}>{opt.icon}</span>
+
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        flexWrap: 'wrap',
+                      }}
+                    >
+                      <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--ink)' }}>
+                        {opt.label}
+                      </span>
+
+                      {isOnFile ? (
+                        <span
+                          className="tag"
+                          style={{
+                            background: '#ecfdf5',
+                            color: '#059669',
+                            borderColor: '#a7f3d0',
+                            fontSize: 10.5,
+                            padding: '1px 6px',
+                          }}
+                        >
+                          ✓ On file
+                        </span>
+                      ) : (
+                        <span
+                          className="tag"
+                          style={{
+                            color: 'var(--muted2)',
+                            fontSize: 10.5,
+                            padding: '1px 6px',
+                          }}
+                        >
+                          Not provided
+                        </span>
+                      )}
+                    </div>
+
+                    {found?.docNumber && (
+                      <div
+                        className="hint"
+                        style={{
+                          fontFamily: 'monospace',
+                          letterSpacing: '0.04em',
+                          fontSize: 11,
+                          marginTop: 2,
+                        }}
+                      >
+                        {opt.key === 'pan' ? 'PAN' : opt.key === 'aadhaar' ? 'UID' : 'No.'}:{' '}
+                        <b style={{ color: 'var(--ink2)' }}>{found.docNumber}</b>
+                      </div>
+                    )}
+                  </div>
+
                   <div
                     style={{
                       display: 'flex',
                       alignItems: 'center',
                       gap: 6,
-                      flexWrap: 'wrap',
+                      flexShrink: 0,
                     }}
                   >
-                    <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--ink)' }}>
-                      {opt.label}
-                    </span>
+                    {hasFile && (
+                      <button
+                        type="button"
+                        className="btn ghost sm"
+                        style={{
+                          padding: '3px 8px',
+                          fontSize: 11,
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setViewingDoc({
+                            key: opt.key,
+                            label: opt.label,
+                            icon: opt.icon,
+                            docNumber: found?.docNumber,
+                            path: found?.path,
+                          })
+                        }}
+                        title={`Open ${opt.label}`}
+                      >
+                        View
+                      </button>
+                    )}
 
-                    {isOnFile ? (
-                      <span
-                        className="tag"
-                        style={{
-                          background: '#ecfdf5',
-                          color: '#059669',
-                          borderColor: '#a7f3d0',
-                          fontSize: 10.5,
-                          padding: '1px 6px',
+                    {canUpload && (
+                      <button
+                        type="button"
+                        className="btn ghost sm"
+                        style={{ padding: '3px 8px', fontSize: 11 }}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          openUpload(opt.key, found?.docNumber || '')
                         }}
+                        title={isOnFile ? 'Replace file or change number' : 'Upload document'}
                       >
-                        ✓ On file
-                      </span>
-                    ) : (
-                      <span
-                        className="tag"
+                        {isOnFile ? 'Update' : 'Upload'}
+                      </button>
+                    )}
+
+                    {isOnFile && canUpload && (
+                      <button
+                        type="button"
+                        className="btn ghost sm"
                         style={{
-                          color: 'var(--muted2)',
-                          fontSize: 10.5,
-                          padding: '1px 6px',
+                          padding: '3px 8px',
+                          fontSize: 11,
+                          color: 'var(--red, #dc3e43)',
                         }}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setDeleteError(null)
+                          setDeleteTarget({
+                            key: opt.key,
+                            label: opt.label,
+                          })
+                        }}
+                        title={`Remove ${opt.label}`}
                       >
-                        Not provided
-                      </span>
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+
+            {/* Custom / Extra documents added */}
+            {extraDocs.map((doc) => {
+              const hasFile = Boolean(doc.path)
+              const isOnFile = hasFile || Boolean(doc.docNumber)
+
+              const handleExtraRowClick = () => {
+                if (hasFile) {
+                  setViewingDoc({
+                    key: doc.key,
+                    label: doc.label,
+                    icon: '📄',
+                    docNumber: doc.docNumber,
+                    path: doc.path,
+                  })
+                } else if (canUpload) {
+                  openUploadCustom(doc.key, doc.label, doc.docNumber || '')
+                }
+              }
+
+              return (
+                <div
+                  className={`doc ${hasFile || canUpload ? 'doc-clickable' : ''}`}
+                  key={doc.key}
+                  onClick={handleExtraRowClick}
+                  title={hasFile ? `Click to view ${doc.label}` : canUpload ? `Click to edit ${doc.label}` : undefined}
+                >
+                  <span style={{ fontSize: 18, lineHeight: 1, flexShrink: 0 }}>📄</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                      <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--ink)' }}>{doc.label}</span>
+                      {isOnFile ? (
+                        <span
+                          className="tag"
+                          style={{
+                            background: '#ecfdf5',
+                            color: '#059669',
+                            borderColor: '#a7f3d0',
+                            fontSize: 10.5,
+                            padding: '1px 6px',
+                          }}
+                        >
+                          ✓ On file
+                        </span>
+                      ) : (
+                        <span
+                          className="tag"
+                          style={{
+                            color: 'var(--muted2)',
+                            fontSize: 10.5,
+                            padding: '1px 6px',
+                          }}
+                        >
+                          Not provided
+                        </span>
+                      )}
+                    </div>
+                    {doc.docNumber && (
+                      <div className="hint" style={{ fontFamily: 'monospace', fontSize: 11, marginTop: 2 }}>
+                        Ref:{' '}<b style={{ color: 'var(--ink2)' }}>{doc.docNumber}</b>
+                      </div>
                     )}
                   </div>
 
-                  {found?.docNumber && (
-                    <div
-                      className="hint"
-                      style={{
-                        fontFamily: 'monospace',
-                        letterSpacing: '0.04em',
-                        fontSize: 11,
-                        marginTop: 2,
-                      }}
-                    >
-                      {opt.key === 'pan' ? 'PAN' : opt.key === 'aadhaar' ? 'UID' : 'No.'}:{' '}
-                      <b style={{ color: 'var(--ink2)' }}>{found.docNumber}</b>
-                    </div>
-                  )}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                    {hasFile && (
+                      <button
+                        type="button"
+                        className="btn ghost sm"
+                        style={{
+                          padding: '3px 8px',
+                          fontSize: 11,
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setViewingDoc({
+                            key: doc.key,
+                            label: doc.label,
+                            icon: '📄',
+                            docNumber: doc.docNumber,
+                            path: doc.path,
+                          })
+                        }}
+                      >
+                        View
+                      </button>
+                    )}
+
+                    {canUpload && (
+                      <button
+                        type="button"
+                        className="btn ghost sm"
+                        style={{ padding: '3px 8px', fontSize: 11 }}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          openUploadCustom(doc.key, doc.label, doc.docNumber || '')
+                        }}
+                        title={isOnFile ? 'Update file or document reference' : `Upload ${doc.label}`}
+                      >
+                        {isOnFile ? 'Update' : 'Upload'}
+                      </button>
+                    )}
+
+                    {canUpload && (
+                      <button
+                        type="button"
+                        className="btn ghost sm"
+                        style={{
+                          padding: '3px 8px',
+                          fontSize: 11,
+                          color: 'var(--red, #dc3e43)',
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setDeleteError(null)
+                          setDeleteTarget({
+                            key: doc.key,
+                            label: doc.label,
+                          })
+                        }}
+                        title={`Remove ${doc.label}`}
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
                 </div>
+              )
+            })}
+          </div>
 
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 6,
-                    flexShrink: 0,
-                  }}
-                >
-                  {hasFile && (
-                    <button
-                      type="button"
-                      className="btn ghost sm"
-                      style={{
-                        padding: '3px 8px',
-                        fontSize: 11,
-                      }}
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        setViewingDoc({
-                          key: opt.key,
-                          label: opt.label,
-                          icon: opt.icon,
-                          docNumber: found?.docNumber,
-                          path: found?.path,
-                        })
-                      }}
-                      title={`Open ${opt.label}`}
-                    >
-                      View
-                    </button>
-                  )}
-
-                  {canUpload && (
-                    <button
-                      type="button"
-                      className="btn ghost sm"
-                      style={{ padding: '3px 8px', fontSize: 11 }}
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        openUpload(opt.key, found?.docNumber || '')
-                      }}
-                      title={isOnFile ? 'Replace file or change number' : 'Upload document'}
-                    >
-                      {isOnFile ? 'Update' : 'Upload'}
-                    </button>
-                  )}
-
-                  {isOnFile && canUpload && (
-                    <button
-                      type="button"
-                      className="btn ghost sm"
-                      style={{
-                        padding: '3px 8px',
-                        fontSize: 11,
-                        color: 'var(--red, #dc3e43)',
-                      }}
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        setDeleteError(null)
-                        setDeleteTarget({
-                          key: opt.key,
-                          label: opt.label,
-                        })
-                      }}
-                      title={`Remove ${opt.label}`}
-                    >
-                      Remove
-                    </button>
-                  )}
-                </div>
-              </div>
-            )
-          })}
-
-          {/* Any additional documents attached in record */}
-          {extraDocs.map((doc) => {
-            const hasFile = Boolean(doc.path)
-            const isOnFile = hasFile || Boolean(doc.docNumber)
-
-            const handleExtraRowClick = () => {
-              if (hasFile) {
-                setViewingDoc({
-                  key: doc.key,
-                  label: doc.label,
-                  icon: '📄',
-                  docNumber: doc.docNumber,
-                  path: doc.path,
-                })
-              }
-            }
-
-            return (
-              <div
-                className={`doc ${hasFile ? 'doc-clickable' : ''}`}
-                key={doc.key}
-                onClick={handleExtraRowClick}
-                title={hasFile ? `Click to view ${doc.label}` : undefined}
-              >
-                <span style={{ fontSize: 18, lineHeight: 1, flexShrink: 0 }}>📄</span>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 600, fontSize: 13 }}>{doc.label}</div>
-                  {doc.docNumber && (
-                    <div className="hint" style={{ fontFamily: 'monospace', fontSize: 11 }}>
-                      No.: <b>{doc.docNumber}</b>
-                    </div>
-                  )}
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                  <span
-                    className="tag"
-                    style={{
-                      background: '#ecfdf5',
-                      color: '#059669',
-                      borderColor: '#a7f3d0',
-                      fontSize: 10.5,
-                      padding: '1px 6px',
-                    }}
-                  >
-                    On file
-                  </span>
-
-                  {hasFile && (
-                    <button
-                      type="button"
-                      className="btn ghost sm"
-                      style={{
-                        padding: '3px 8px',
-                        fontSize: 11,
-                      }}
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        setViewingDoc({
-                          key: doc.key,
-                          label: doc.label,
-                          icon: '📄',
-                          docNumber: doc.docNumber,
-                          path: doc.path,
-                        })
-                      }}
-                    >
-                      View
-                    </button>
-                  )}
-
-                  {isOnFile && canUpload && (
-                    <button
-                      type="button"
-                      className="btn ghost sm"
-                      style={{
-                        padding: '3px 8px',
-                        fontSize: 11,
-                        color: 'var(--red, #dc3e43)',
-                      }}
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        setDeleteError(null)
-                        setDeleteTarget({
-                          key: doc.key,
-                          label: doc.label,
-                        })
-                      }}
-                      title={`Remove ${doc.label}`}
-                    >
-                      Remove
-                    </button>
-                  )}
-                </div>
-              </div>
-            )
-          })}
+          {/* Add New Custom Document Button */}
+          {canUpload && (
+            <button
+              type="button"
+              className="btn ghost sm mt"
+              onClick={() => openUploadCustom()}
+              style={{ width: '100%', justifyContent: 'center', marginTop: 'auto' }}
+            >
+              + Add new document
+            </button>
+          )}
         </>
       )}
 
@@ -392,7 +446,9 @@ export function DocumentsCard({
         <UploadDocumentModal
           employeeId={isSelf ? undefined : employeeId}
           initialKey={modalState.key}
+          initialLabel={modalState.label}
           initialDocNumber={modalState.docNumber}
+          isCustom={modalState.isCustom}
           isOnFile={Boolean(
             documents.find((d) => d.key === modalState.key)?.path ||
             documents.find((d) => d.key === modalState.key)?.docNumber,
@@ -419,80 +475,101 @@ export function DocumentsCard({
           onUpdate={
             canUpload
               ? () => {
-                  const targetKey = viewingDoc.key as DocumentKey
-                  const targetNum = viewingDoc.docNumber || ''
-                  setViewingDoc(null)
-                  openUpload(targetKey, targetNum)
+                  const isStd = DOCUMENT_OPTIONS.some((opt) => opt.key === viewingDoc.key)
+                  if (isStd) {
+                    openUpload(viewingDoc.key as DocumentKey, viewingDoc.docNumber || '')
+                  } else {
+                    openUploadCustom(viewingDoc.key, viewingDoc.label, viewingDoc.docNumber || '')
+                  }
                 }
               : undefined
           }
         />
       )}
 
-      {/* Confirmation Modal for Document Deletion from List */}
+      {/* Direct Delete Confirmation Dialog */}
       {deleteTarget && (
         <div
           className="modal on"
-          style={{
-            zIndex: 1100,
-            backgroundColor: 'rgba(15, 23, 41, 0.75)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
           onClick={(e) => {
             if (e.target === e.currentTarget && !deleting) {
               setDeleteTarget(null)
             }
           }}
+          style={{ zIndex: 1100 }}
         >
-          <div className="box" style={{ maxWidth: 440, padding: 22 }}>
+          <div className="box" style={{ maxWidth: 440 }}>
             <div className="mh">
-              <h3 style={{ margin: 0, fontSize: 16 }}>Remove Document?</h3>
+              <h3 style={{ margin: 0, color: 'var(--red, #dc3e43)' }}>
+                Remove Document
+              </h3>
               <button
                 type="button"
                 className="x"
-                onClick={() => setDeleteTarget(null)}
+                onClick={() => !deleting && setDeleteTarget(null)}
                 disabled={deleting}
               >
                 ✕
               </button>
             </div>
 
-            {deleteError && (
-              <div className="notice bad" style={{ marginBottom: 12 }}>
-                {deleteError}
+            <div style={{ padding: '16px 0 8px' }}>
+              <p style={{ fontSize: 13.5, color: 'var(--ink)', margin: '0 0 12px' }}>
+                Are you sure you want to remove <b>{deleteTarget.label}</b>?
+              </p>
+              <div
+                className="notice bad"
+                style={{
+                  fontSize: 12,
+                  marginBottom: 14,
+                  lineHeight: 1.5,
+                }}
+              >
+                This will delete the file from the system and clear any stored document number.
               </div>
-            )}
 
-            <p
-              style={{
-                fontSize: 13,
-                color: 'var(--ink2, #344054)',
-                margin: '14px 0 20px',
-                lineHeight: 1.5,
-              }}
-            >
-              Are you sure you want to remove <b>{deleteTarget.label}</b>? This will delete the uploaded file and clear stored information from this employee profile.
-            </p>
+              {deleteError && (
+                <div
+                  className="notice red"
+                  style={{
+                    fontSize: 12,
+                    marginBottom: 12,
+                  }}
+                >
+                  {deleteError}
+                </div>
+              )}
 
-            <div className="mfoot">
-              <button
-                className="btn ghost"
-                type="button"
-                onClick={() => setDeleteTarget(null)}
-                disabled={deleting}
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'flex-end',
+                  gap: 8,
+                  marginTop: 16,
+                }}
               >
-                Cancel
-              </button>
-              <button
-                className="btn danger"
-                type="button"
-                onClick={handleConfirmDelete}
-                disabled={deleting}
-              >
-                {deleting ? 'Removing…' : 'Yes, Remove Document'}
-              </button>
+                <button
+                  type="button"
+                  className="btn ghost sm"
+                  onClick={() => setDeleteTarget(null)}
+                  disabled={deleting}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="btn danger sm"
+                  onClick={handleConfirmDelete}
+                  disabled={deleting}
+                  style={{
+                    background: '#dc3e43',
+                    borderColor: '#dc3e43',
+                    color: '#fff',
+                  }}
+                >
+                  {deleting ? 'Removing…' : 'Yes, Remove Document'}
+                </button>
+              </div>
             </div>
           </div>
         </div>
