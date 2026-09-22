@@ -1,9 +1,11 @@
 import type {
+  CompensationView,
   DismissEmployeePayload,
   DocumentKey,
   ProfileDocument,
   ProfileView,
   ToggleSalaryPayload,
+  UpdateCompensationPayload,
   UploadDocumentPayload,
 } from './profile.types'
 import { fetchBlob, getAccessToken, request } from '../../shared/api/client'
@@ -114,5 +116,15 @@ export const profileApi = {
     request<unknown>(`/profile/${employeeId}`, {
       method: 'DELETE',
     }),
+
+  /** Admin: Set or revise employee compensation details. */
+  updateCompensation: (employeeId: number, payload: UpdateCompensationPayload) =>
+    request<{ success: boolean; data: CompensationView }>(
+      `/profile/${employeeId}/compensation`,
+      {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      },
+    ),
 }
 

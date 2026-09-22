@@ -215,7 +215,15 @@ export function MyPage() {
           </div>
         </div>
 
-        <CompensationCard canSee={view.canSeeCompensation} compensation={view.compensation} />
+        <CompensationCard
+          canSee={view.canSeeCompensation}
+          compensation={view.compensation}
+          employeeId={view.employeeId}
+          employeeName={view.fullName}
+          isAdmin={view.access === 'admin'}
+          isContractor={view.isContractor}
+          onRefresh={() => load(true)}
+        />
       </div>
 
       <div className="grid g23 mt">

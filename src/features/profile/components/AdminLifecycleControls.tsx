@@ -12,9 +12,9 @@ interface Props {
 const isEmployeeContractor = (emp: ProfileView): boolean =>
   Boolean(
     emp.isContractor ||
-      emp.employmentType?.toLowerCase().includes('contract') ||
-      emp.designation?.toLowerCase().includes('contract') ||
-      emp.department?.toLowerCase().includes('contract'),
+    emp.employmentType?.toLowerCase().includes('contract') ||
+    emp.designation?.toLowerCase().includes('contract') ||
+    emp.department?.toLowerCase().includes('contract'),
   )
 
 export function AdminLifecycleControls({ employee, onRefresh }: Props) {
@@ -424,7 +424,8 @@ export function AdminLifecycleControls({ employee, onRefresh }: Props) {
           {isLoginDisabled ? '🔓 Enable Login' : '🔒 Disable Login'}
         </button>
 
-        {/* Option 4: Delete Contractor / Delete Employee */}
+        {/* Option 4: Delete Contractor / Delete Employee (Temporarily hidden from UI) */}
+        {/*
         <button
           type="button"
           className="btn sm"
@@ -443,6 +444,7 @@ export function AdminLifecycleControls({ employee, onRefresh }: Props) {
         >
           🗑 {isContractor ? 'Delete Contractor' : 'Delete Employee'}
         </button>
+        */}
       </div>
 
       {/* Dismissal / Contract Summary Box if already exited */}
@@ -593,7 +595,7 @@ export function AdminLifecycleControls({ employee, onRefresh }: Props) {
                     style={{ width: 'auto' }}
                   />
                   <span>
-                    {isContractor ? 'Yes, serving notice / handover' : 'Yes, serving notice period'}
+                    {isContractor ? 'Yes' : 'Yes'}
                   </span>
                 </label>
                 <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13 }}>
@@ -605,7 +607,7 @@ export function AdminLifecycleControls({ employee, onRefresh }: Props) {
                     style={{ width: 'auto' }}
                   />
                   <span>
-                    {isContractor ? 'No (Immediate / contract ended)' : 'No (Immediate / waived)'}
+                    {isContractor ? 'No' : 'No'}
                   </span>
                 </label>
               </div>
@@ -642,7 +644,7 @@ export function AdminLifecycleControls({ employee, onRefresh }: Props) {
                     style={{ width: 'auto' }}
                   />
                   <span>
-                    {isContractor ? 'Yes, eligible for future contracts' : 'Yes, eligible for rehire'}
+                    {isContractor ? 'Yes' : 'Yes'}
                   </span>
                 </label>
                 <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13 }}>
@@ -653,7 +655,7 @@ export function AdminLifecycleControls({ employee, onRefresh }: Props) {
                     onChange={() => setIsRehireEligible(false)}
                     style={{ width: 'auto' }}
                   />
-                  <span>No, not eligible</span>
+                  <span>No</span>
                 </label>
               </div>
             </div>

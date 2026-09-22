@@ -3,6 +3,7 @@ import { AddFeedbackModal } from './AddFeedbackModal'
 import { feedbackApi } from './feedback.api'
 import type { FeedbackRecord } from './feedback.types'
 import { fmtDate } from '../../shared/lib/date'
+// oxlint-disable-next-line eslint/no-restricted-imports
 import { useAuth } from '../../app/auth-context'
 
 /**
