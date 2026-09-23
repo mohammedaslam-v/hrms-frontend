@@ -22,8 +22,8 @@ export function Rail({ badges = {}, onLocked }: RailProps) {
   const navigate = useNavigate()
   const location = useLocation()
 
-  // Track if we are currently looking at a team member's page or leave
-  const employeeMatch = location.pathname.match(/^\/(me|leave)\/(\d+)/)
+  // Track if we are currently looking at a team member's page, leave, or salary
+  const employeeMatch = location.pathname.match(/^\/(me|leave|pay)\/(\d+)/)
   const activeEmployeeId = employeeMatch ? employeeMatch[2] : null
 
   const renderItem = (item: NavItem) => {
@@ -64,14 +64,18 @@ export function Rail({ badges = {}, onLocked }: RailProps) {
         ? `/leave/${activeEmployeeId}`
         : activeEmployeeId && item.key === 'me'
           ? `/me/${activeEmployeeId}`
-          : item.path
+          : activeEmployeeId && item.key === 'mypay'
+            ? `/pay/${activeEmployeeId}`
+            : item.path
 
     const isCurrentActive =
       activeEmployeeId && item.key === 'myleave'
         ? location.pathname === `/leave/${activeEmployeeId}`
         : activeEmployeeId && item.key === 'me'
           ? location.pathname === `/me/${activeEmployeeId}`
-          : location.pathname === item.path
+          : activeEmployeeId && item.key === 'mypay'
+            ? location.pathname === `/pay/${activeEmployeeId}`
+            : location.pathname === item.path
 
     return (
       <NavLink
@@ -80,7 +84,8 @@ export function Rail({ badges = {}, onLocked }: RailProps) {
         className={`rail-btn${isCurrentActive ? ' active' : ''}`}
         style={{ '--c': item.color } as React.CSSProperties}
         title={
-          activeEmployeeId && (item.key === 'myleave' || item.key === 'me')
+          activeEmployeeId &&
+          (item.key === 'myleave' || item.key === 'me' || item.key === 'mypay')
             ? `${item.label} (team member)`
             : item.label
         }

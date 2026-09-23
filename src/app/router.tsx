@@ -10,6 +10,9 @@ import { MyLeavePage } from '../features/leave'
 import { MyPage } from '../features/profile'
 import { TeamDirectoryPage } from '../features/team'
 import { MyGoalsPage, TeamGoalsPage } from '../features/goals'
+import { MySalaryPage } from '../features/salary'
+import { MyTaxPage } from '../features/tax'
+import { AdminReimbursementsPage } from '../features/reimbursement/pages/AdminReimbursementsPage'
 
 /**
  * Which screen answers each rail entry.
@@ -22,10 +25,13 @@ import { MyGoalsPage, TeamGoalsPage } from '../features/goals'
 const PAGES: Record<string, ReactNode> = {
   myleave: <MyLeavePage />,
   mygoals: <MyGoalsPage />,
+  mypay: <MySalaryPage />,
+  mytax: <MyTaxPage />,
   leave: <LeaveApprovalsPage />,
   teamgoals: <TeamGoalsPage />,
   me: <MyPage />,
   team: <TeamDirectoryPage />,
+  reimbursements: <AdminReimbursementsPage />,
 }
 
 export function AppRouter() {
@@ -59,6 +65,8 @@ export function AppRouter() {
               API against the reporting tree, so there is no tier gate here. */}
           <Route path="/me/:id" element={<MyPage />} />
           <Route path="/leave/:id" element={<MyLeavePage />} />
+          <Route path="/pay/:id" element={<MySalaryPage />} />
+          <Route path="/tax/:id" element={<MyTaxPage />} />
 
           <Route path="*" element={<Navigate to={home} replace />} />
         </Route>

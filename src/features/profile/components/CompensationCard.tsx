@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import type { CompensationView } from '../profile.types'
 import { calculateSalaryBreakout, formatInr, formatNumberInr } from '../salary.utils'
 import { CompensationModal } from './CompensationModal'
@@ -31,6 +32,7 @@ export function CompensationCard({
   isContractor = false,
   onRefresh,
 }: CompensationCardProps) {
+  const navigate = useNavigate()
   const [showModal, setShowModal] = useState(false)
   const [viewMode, setViewMode] = useState<'breakout' | 'summary'>('breakout')
 
@@ -114,6 +116,18 @@ export function CompensationCard({
 
             <div className="hint mt8" style={{ fontSize: 11.5, color: '#64748b' }}>
               ℹ️ Contractor agreement — statutory EPF, HRA, and Gratuity contributions are not applicable.
+            </div>
+
+            <div style={{ marginTop: 14, paddingTop: 10, borderTop: '1px solid var(--line2)', display: 'flex', justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                className="btn sm outline"
+                onClick={() => navigate(`/pay/${employeeId}`)}
+                style={{ fontSize: 11.5, padding: '4px 10px', height: 'auto', display: 'inline-flex', alignItems: 'center', gap: 5 }}
+              >
+                <span>📄 View Retainer Statements</span>
+                <span style={{ fontSize: 13 }}>→</span>
+              </button>
             </div>
           </div>
         )}
@@ -413,6 +427,19 @@ export function CompensationCard({
           </div>
         </div>
       )}
+
+      {/* Quick Action: View Full Salary Slip & Payslips */}
+      <div style={{ marginTop: 14, paddingTop: 10, borderTop: '1px solid var(--line2)', display: 'flex', justifyContent: 'flex-end' }}>
+        <button
+          type="button"
+          className="btn sm outline"
+          onClick={() => navigate(`/pay/${employeeId}`)}
+          style={{ fontSize: 11.5, padding: '4px 10px', height: 'auto', display: 'inline-flex', alignItems: 'center', gap: 5 }}
+        >
+          <span>📄 View Salary Slip &amp; Payslips</span>
+          <span style={{ fontSize: 13 }}>→</span>
+        </button>
+      </div>
 
       {showModal && (
         <CompensationModal

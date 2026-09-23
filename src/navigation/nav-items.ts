@@ -42,8 +42,8 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       { key: 'myleave', path: '/leave', label: 'My leave', tier: 'all', color: '#0FA968', built: true, icon: icon.calendarTick },
       { key: 'mygoals', path: '/goals', label: 'My goals', tier: 'all', color: '#DD8B08', built: true, icon: icon.target },
-      { key: 'mypay', path: '/pay', label: 'My salary & payslips', tier: 'all', color: '#0C8CD4', icon: icon.wallet },
-      { key: 'mytax', path: '/tax', label: 'My tax & TDS', tier: 'all', color: '#DC3E43', icon: icon.percent },
+      { key: 'mypay', path: '/pay', label: 'My salary & payslips', tier: 'all', color: '#0C8CD4', built: true, icon: icon.wallet },
+      { key: 'mytax', path: '/tax', label: 'My tax & TDS', tier: 'all', color: '#DC3E43', built: true, icon: icon.percent },
       { key: 'me', path: '/me', label: 'My page', tier: 'all', color: '#EC4899', icon: icon.person },
     ],
   },
@@ -65,6 +65,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { key: 'dash', path: '/dashboard', label: 'Dashboard', tier: 'adm', color: '#2563EB', icon: icon.tiles },
       { key: 'add', path: '/employees/new', label: 'Add employee', tier: 'adm', color: '#0E9C93', icon: icon.personPlus },
       { key: 'payroll', path: '/payroll', label: 'Payroll register', tier: 'adm', color: '#0C8CD4', icon: icon.banknote },
+      { key: 'reimbursements', path: '/reimbursement-approvals', label: 'Reimbursement approvals', tier: 'adm', color: '#10B981', built: true, icon: icon.receipt },
       { key: 'alltax', path: '/tax-register', label: 'Company TDS register', tier: 'adm', color: '#DC3E43', icon: icon.receipt },
     ],
   },
