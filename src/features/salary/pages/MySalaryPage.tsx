@@ -10,6 +10,7 @@ import { LoanAdvanceCard } from '../components/LoanAdvanceCard'
 import { PayslipHistoryCard } from '../components/PayslipHistoryCard'
 import { SalarySlipCard } from '../components/SalarySlipCard'
 import { EmployeeReimbursementsTab } from '../../reimbursement/components/EmployeeReimbursementsTab'
+import { EmployeeLoanTab } from '../../loans'
 
 export function MySalaryPage() {
   const { id } = useParams<{ id?: string }>()
@@ -19,7 +20,7 @@ export function MySalaryPage() {
 
   const currentMonthKey = new Date().toISOString().slice(0, 7)
   const [selectedMonth, setSelectedMonth] = useState<string>(currentMonthKey)
-  const [activeTab, setActiveTab] = useState<'salary' | 'reimbursements'>('salary')
+  const [activeTab, setActiveTab] = useState<'salary' | 'reimbursements' | 'loans'>('salary')
   const [view, setView] = useState<MySalaryView | null>(null)
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
@@ -166,6 +167,15 @@ export function MySalaryPage() {
         >
           <span>🧾 Reimbursements & Claims</span>
         </button>
+
+        <button
+          type="button"
+          className={`btn ${activeTab === 'loans' ? 'primary' : 'ghost'}`}
+          onClick={() => setActiveTab('loans')}
+          style={{ height: 36, display: 'inline-flex', alignItems: 'center', gap: 6 }}
+        >
+          <span>💳 Loan & Advance</span>
+        </button>
       </div>
 
       {activeTab === 'salary' ? (
@@ -201,8 +211,13 @@ export function MySalaryPage() {
             </div>
           </div>
         </>
-      ) : (
+      ) : activeTab === 'reimbursements' ? (
         <EmployeeReimbursementsTab />
+      ) : (
+        <EmployeeLoanTab
+          employeeId={employeeId}
+          employeeName={slip?.employee?.name}
+        />
       )}
     </div>
   )
