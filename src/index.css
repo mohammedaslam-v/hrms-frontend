@@ -135,7 +135,8 @@ label {
   margin: 0 0 6px;
 }
 
-input {
+input,
+select {
   width: 100%;
   padding: 10px 12px;
   border: 1px solid var(--line);
@@ -146,7 +147,8 @@ input {
   outline: none;
 }
 
-input:focus {
+input:focus,
+select:focus {
   border-color: var(--blue);
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
 }
@@ -155,7 +157,8 @@ input::placeholder {
   color: #b3aa9c;
 }
 
-input:disabled {
+input:disabled,
+select:disabled {
   background: var(--panel);
   color: var(--muted2);
 }
@@ -164,6 +167,50 @@ input:disabled {
   font-size: 11.5px;
   color: var(--muted2);
   margin-top: 5px;
+}
+
+/* Daychips and Add Employee Form primitives */
+.daychips {
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.daychip {
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: #fff;
+  cursor: pointer;
+  font: 600 12.5px 'Inter', sans-serif;
+  color: var(--muted2);
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.daychip:hover {
+  border-color: var(--muted);
+}
+
+.daychip.on {
+  background: var(--blue);
+  border-color: var(--blue);
+  color: #fff;
+}
+
+.formhead {
+  font: 800 10.5px 'Plus Jakarta Sans', 'Inter', sans-serif;
+  color: var(--blue);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  margin: 4px 0 14px;
+  padding-bottom: 9px;
+  border-bottom: 1px solid var(--line);
+}
+
+.fgrid {
+  display: grid;
+  gap: 14px;
 }
 
 .eyebrow {
