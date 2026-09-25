@@ -7,6 +7,7 @@ import { CloseLoanModal } from '../components/CloseLoanModal'
 import { IssueLoanModal } from '../components/IssueLoanModal'
 import { LoanDetailsModal } from '../components/LoanDetailsModal'
 import { LoanSummaryCards } from '../components/LoanSummaryCards'
+import { payrollApi } from '../../payroll/api/payroll.api'
 import type {
   AdminLoanItem,
   AdminLoansView,
@@ -83,6 +84,25 @@ export function AdminLoansPage() {
     }
   }
 
+  const handleDisburseLoan = async (loan: AdminLoanItem) => {
+    try {
+      setSubmitting(true)
+      await payrollApi.pushLoanDisbursement(loan.id)
+      setToast({
+        text: `Loan disbursement pushed to Razorpay for ${loan.employeeName}.`,
+        tone: 'good',
+      })
+      await loadLoans()
+    } catch (err: unknown) {
+      setToast({
+        text: err instanceof Error ? err.message : 'Failed to disburse loan via Razorpay.',
+        tone: 'bad',
+      })
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
   return (
     <>
       <PageHero
@@ -145,6 +165,7 @@ export function AdminLoansPage() {
               loans={data.loans}
               onCloseLoan={(loan) => setClosingLoan(loan)}
               onSelectLoan={(loan) => setSelectedLoan(loan)}
+              onDisburseLoan={handleDisburseLoan}
             />
           )}
         </>

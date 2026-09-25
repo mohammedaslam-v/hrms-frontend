@@ -5,6 +5,7 @@ interface AdminLoansTableProps {
   loans: AdminLoanItem[]
   onCloseLoan: (loan: AdminLoanItem) => void
   onSelectLoan: (loan: AdminLoanItem) => void
+  onDisburseLoan?: (loan: AdminLoanItem) => void
 }
 
 function formatInr(n: number): string {
@@ -12,7 +13,7 @@ function formatInr(n: number): string {
   return '₹' + Math.round(n).toLocaleString('en-IN')
 }
 
-export function AdminLoansTable({ loans, onCloseLoan, onSelectLoan }: AdminLoansTableProps) {
+export function AdminLoansTable({ loans, onCloseLoan, onSelectLoan, onDisburseLoan }: AdminLoansTableProps) {
   const [search, setSearch] = useState('')
 
   const filteredLoans = loans.filter((loan) => {
@@ -193,6 +194,14 @@ export function AdminLoansTable({ loans, onCloseLoan, onSelectLoan }: AdminLoans
                         <span className="chip c-in" style={{ textTransform: 'capitalize' }}>
                           Active
                         </span>
+                      ) : loan.status === 'pending_disbursement' ? (
+                        <span className="chip" style={{ background: '#fef3c7', color: '#b45309', textTransform: 'capitalize' }}>
+                          Pending Disburse
+                        </span>
+                      ) : loan.status === 'disbursement_failed' ? (
+                        <span className="chip" style={{ background: '#fee2e2', color: '#b91c1c', textTransform: 'capitalize' }}>
+                          Disburse Failed
+                        </span>
                       ) : (
                         <span
                           className="chip"
@@ -205,6 +214,19 @@ export function AdminLoansTable({ loans, onCloseLoan, onSelectLoan }: AdminLoans
 
                     <td style={{ textAlign: 'right' }}>
                       <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, justifyContent: 'flex-end' }}>
+                        {(loan.status === 'pending_disbursement' || loan.status === 'disbursement_failed') && onDisburseLoan && (
+                          <button
+                            type="button"
+                            className="btn primary sm"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              onDisburseLoan(loan)
+                            }}
+                            style={{ fontSize: '11.5px', padding: '4px 8px', background: '#0284c7' }}
+                          >
+                            💳 Disburse
+                          </button>
+                        )}
                         <button
                           type="button"
                           className="btn ghost sm"
@@ -233,7 +255,7 @@ export function AdminLoansTable({ loans, onCloseLoan, onSelectLoan }: AdminLoans
                           <span style={{ fontSize: '11px', color: 'var(--muted)', fontStyle: 'italic' }}>
                             {loan.closedReason
                               ? loan.closedReason.slice(0, 15) + (loan.closedReason.length > 15 ? '…' : '')
-                              : 'Settled'}
+                              : loan.status === 'pending_disbursement' ? 'Unpaid' : 'Settled'}
                           </span>
                         )}
                       </div>
