@@ -15,6 +15,7 @@ import { MyTaxPage } from '../features/tax'
 import { AdminReimbursementsPage } from '../features/reimbursement/pages/AdminReimbursementsPage'
 import { AddEmployeePage } from '../features/employees'
 import { AdminLoansPage } from '../features/loans'
+import { PayrollRegisterPage } from '../features/payroll'
 
 /**
  * Which screen answers each rail entry.
@@ -33,6 +34,7 @@ const PAGES: Record<string, ReactNode> = {
   teamgoals: <TeamGoalsPage />,
   me: <MyPage />,
   team: <TeamDirectoryPage />,
+  payroll: <PayrollRegisterPage />,
   reimbursements: <AdminReimbursementsPage />,
   add: <AddEmployeePage />,
   loans: <AdminLoansPage />,

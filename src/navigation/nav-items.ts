@@ -64,7 +64,7 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       { key: 'dash', path: '/dashboard', label: 'Dashboard', tier: 'adm', color: '#2563EB', icon: icon.tiles },
       { key: 'add', path: '/employees/new', label: 'Add employee', tier: 'adm', color: '#0E9C93', built: true, icon: icon.personPlus },
-      { key: 'payroll', path: '/payroll', label: 'Payroll register', tier: 'adm', color: '#0C8CD4', icon: icon.banknote },
+      { key: 'payroll', path: '/payroll', label: 'Payroll register', tier: 'adm', color: '#0C8CD4', built: true, icon: icon.banknote },
       { key: 'reimbursements', path: '/reimbursement-approvals', label: 'Reimbursement & Loan', tier: 'adm', color: '#10B981', built: true, icon: icon.receipt },
       { key: 'alltax', path: '/tax-register', label: 'Company TDS register', tier: 'adm', color: '#DC3E43', icon: icon.receipt },
     ],
