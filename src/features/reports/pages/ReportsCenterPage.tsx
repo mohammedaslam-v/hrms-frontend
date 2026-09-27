@@ -1,94 +1,174 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { PageHero } from '../../../shared/ui/PageHero';
 import { reportsApi } from '../api/reports.api';
+import { employeesApi } from '../../employees/employees.api';
+import type { Employee } from '../../employees/employee.types';
 import type {
-  ReportCatalogItem,
   ReportFilterDto,
   ReportResult,
   ReportType,
+  ReportColumn,
 } from '../types/reports.types';
-import { ReportsSidebar } from '../components/ReportsSidebar';
-import { ReportFilterBar } from '../components/ReportFilterBar';
-import { ReportCompanyHeader } from '../components/ReportCompanyHeader';
-import { ReportDataTable } from '../components/ReportDataTable';
+import { formatInr } from '../../../shared/lib/format';
+
+const REPORT_NOTES: Partial<Record<ReportType, string>> = {
+  attendance: '',
+  attsummary: '',
+  late: 'A login more than 15 minutes after shift start is treated as late.',
+  nologin:
+    'Working days with no system activity at all — excludes approved leave, weekly offs and holidays.',
+  active: '',
+  salary: '',
+  pf: 'PF wages are capped at the statutory ceiling of ₹15,000 a month. EPS is capped at ₹1,250.',
+  provident_fund:
+    'PF wages are capped at the statutory ceiling of ₹15,000 a month. EPS is capped at ₹1,250.',
+  pt: 'Karnataka charges ₹200 a month once monthly gross reaches ₹25,000. Other states follow their own slabs.',
+  profession_tax:
+    'Karnataka charges ₹200 a month once monthly gross reaches ₹25,000. Other states follow their own slabs.',
+  tds: 'Annual figures under section 115BAC. The period filter does not change these.',
+  loan: 'Company loans and salary advances recovered through payroll.',
+  loan_details: 'Company loans tracking: opening balance, monthly EMI, closing balance, and tenure.',
+  net_pay:
+    'Bank payout file with zero-padding protection for account numbers, IFSC, and net salary.',
+  income_tax: 'Monthly TDS computation, taxable income, slab tax, and cess statement.',
+  leave:
+    '2 paid leaves are credited on the 1st of every month. Balance = opening + credited − taken.',
+  goals:
+    'Goals run over a quarter, a half year or the full financial year. The period filter does not change these.',
+  basic: '',
+  appraisals: 'Compensation revisions, increment amount, percentage hike, and revised annual CTC.',
+  all_employees: 'Directory list of all currently active company employees.',
+  recent_joinees: 'New workforce additions in the chosen timeframe.',
+  recent_resignees: 'Departures and exit clearances in the chosen timeframe.',
+};
 
 export const ReportsCenterPage: React.FC = () => {
-  const [catalog, setCatalog] = useState<ReportCatalogItem[]>([]);
-  const [selectedType, setSelectedType] = useState<ReportType>('income_tax');
-  const [loadingCatalog, setLoadingCatalog] = useState(true);
+  const [selectedType, setSelectedType] = useState<ReportType>('attendance');
+  const [period, setPeriod] = useState<'daily' | 'weekly' | 'monthly' | 'range' | 'fytd'>('monthly');
+
+  // Dates
+  const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
+  const currentMonthStr = useMemo(() => todayStr.slice(0, 7), [todayStr]);
+
+  const [day, setDay] = useState<string>(todayStr);
+  const [week, setWeek] = useState<string>(todayStr);
+  const [month, setMonth] = useState<string>(currentMonthStr);
+  const [fromDate, setFromDate] = useState<string>(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 30);
+    return d.toISOString().split('T')[0];
+  });
+  const [toDate, setToDate] = useState<string>(todayStr);
+
+  const [department, setDepartment] = useState<string>('');
+  const [employeeId, setEmployeeId] = useState<string>('');
+
+  const [employees, setEmployees] = useState<Employee[]>([]);
   const [loadingData, setLoadingData] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [reportResult, setReportResult] = useState<ReportResult | null>(null);
 
-  // Filter state
-  const [filter, setFilter] = useState<ReportFilterDto>({
-    type: 'income_tax',
-    month: '2026-08',
-    state: 'Karnataka',
-    department: 'ALL',
-  });
-
-  // Load catalog on mount
+  // Load employee list for dropdown
   useEffect(() => {
-    async function loadCatalog() {
+    async function loadEmployees() {
       try {
-        setLoadingCatalog(true);
-        const data = await reportsApi.getCatalog();
-        setCatalog(data);
-      } catch (err: any) {
-        setError(err.message || 'Failed to load reports catalog');
-      } finally {
-        setLoadingCatalog(false);
+        const emps = await employeesApi.list();
+        setEmployees(emps || []);
+      } catch (err) {
+        // Non-blocking fallback
       }
     }
-    loadCatalog();
+    loadEmployees();
   }, []);
 
-  // Current selected catalog item
-  const selectedCatalogItem = useMemo(() => {
-    return catalog.find((c) => c.type === selectedType);
-  }, [catalog, selectedType]);
-
-  // Load report data
-  const loadReport = useCallback(async (currentFilter: ReportFilterDto) => {
-    try {
-      setLoadingData(true);
-      setError(null);
-      const data = await reportsApi.getReportData(currentFilter);
-      setReportResult(data);
-    } catch (err: any) {
-      setError(err.message || 'Failed to load report data');
-      setReportResult(null);
-    } finally {
-      setLoadingData(false);
+  // Department options derived from employee list or standard list
+  const departments = useMemo(() => {
+    const set = new Set<string>();
+    employees.forEach((e) => {
+      if (e.department) set.add(e.department);
+    });
+    if (set.size === 0) {
+      return [
+        'Engineering',
+        'Curriculum',
+        'Operations',
+        'Marketing',
+        'Sales',
+        'Human Resources',
+        'Finance',
+      ];
     }
-  }, []);
+    return Array.from(set).sort();
+  }, [employees]);
 
-  // When type or filter parameters change, reload report
+  // Compute period label
+  const periodLabel = useMemo(() => {
+    if (period === 'daily') return day;
+    if (period === 'weekly') return `Week of ${week}`;
+    if (period === 'monthly') {
+      try {
+        const [y, m] = month.split('-');
+        const dateObj = new Date(parseInt(y, 10), parseInt(m, 10) - 1, 1);
+        return dateObj.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+      } catch {
+        return month;
+      }
+    }
+    if (period === 'range') return `${fromDate} — ${toDate}`;
+    return 'Financial year to date';
+  }, [period, day, week, month, fromDate, toDate]);
+
+  // Fetch report data
+  const loadReport = useCallback(
+    async (type: ReportType) => {
+      try {
+        setLoadingData(true);
+        setError(null);
+
+        const filter: ReportFilterDto = {
+          type,
+          period,
+          date: period === 'daily' ? day : undefined,
+          week: period === 'weekly' ? week : undefined,
+          month: period === 'monthly' ? month : undefined,
+          from: period === 'range' ? fromDate : undefined,
+          to: period === 'range' ? toDate : undefined,
+          department: department || undefined,
+          employeeId: employeeId || undefined,
+        };
+
+        const data = await reportsApi.getReportData(filter);
+        setReportResult(data);
+      } catch (err: any) {
+        setError(err.message || 'Failed to load report data');
+        setReportResult(null);
+      } finally {
+        setLoadingData(false);
+      }
+    },
+    [period, day, week, month, fromDate, toDate, department, employeeId]
+  );
+
   useEffect(() => {
-    loadReport({ ...filter, type: selectedType });
-  }, [selectedType, filter.month, filter.from, filter.to, filter.state, filter.department, loadReport]);
-
-  const handleSelectType = (type: ReportType) => {
-    setSelectedType(type);
-    setFilter((prev) => ({
-      ...prev,
-      type,
-    }));
-  };
-
-  const handleFilterChange = (newValues: Partial<ReportFilterDto>) => {
-    setFilter((prev) => ({
-      ...prev,
-      ...newValues,
-    }));
-  };
+    loadReport(selectedType);
+  }, [selectedType, period, day, week, month, fromDate, toDate, department, employeeId, loadReport]);
 
   const handleDownloadCsv = async () => {
     try {
       setExporting(true);
-      await reportsApi.downloadCsv({ ...filter, type: selectedType });
+      const filter: ReportFilterDto = {
+        type: selectedType,
+        period,
+        date: period === 'daily' ? day : undefined,
+        week: period === 'weekly' ? week : undefined,
+        month: period === 'monthly' ? month : undefined,
+        from: period === 'range' ? fromDate : undefined,
+        to: period === 'range' ? toDate : undefined,
+        department: department || undefined,
+        employeeId: employeeId || undefined,
+      };
+      await reportsApi.downloadCsv(filter);
     } catch (err: any) {
       alert(err.message || 'Failed to download report CSV');
     } finally {
@@ -100,26 +180,58 @@ export const ReportsCenterPage: React.FC = () => {
     window.print();
   };
 
-  // Derive department list from current rows if available
-  const departments = useMemo(() => {
-    return [
-      'Engineering',
-      'Curriculum',
-      'Operations',
-      'Marketing',
-      'Sales',
-      'Human Resources',
-      'Finance',
-    ];
-  }, []);
+  const reportTitle = reportResult?.meta?.reportTitle || 'Report';
+  const rows = reportResult?.rows || [];
+  const columns: ReportColumn[] = reportResult?.columns || [];
+  const totals = reportResult?.totals;
+  const reportNote = REPORT_NOTES[selectedType] || reportResult?.note || '';
+
+  const renderCell = (col: ReportColumn, val: any) => {
+    if (val === null || val === undefined || val === '') {
+      return <span style={{ color: 'var(--muted2, #9ca3af)' }}>—</span>;
+    }
+    if (col.isCurrency && typeof val === 'number') {
+      return formatInr(val);
+    }
+    if (col.isNumeric && typeof val === 'number') {
+      return val.toLocaleString('en-IN');
+    }
+    return String(val);
+  };
 
   return (
     <div>
+      <div className="crumb">Manager access / Reports centre</div>
+
       <PageHero
         navKey="reports"
-        title="Reports Centre"
-        eyebrow="Comprehensive statutory filings, corporate bank disbursement advice, workforce lifecycle tracking, and compensation appraisals"
-      />
+        title="Reports centre"
+        eyebrow="13 REPORTS · DAILY, WEEKLY, MONTHLY OR ANY DATE RANGE"
+      >
+        <button
+          className="btn primary"
+          type="button"
+          onClick={handleDownloadCsv}
+          disabled={exporting}
+        >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            style={{ marginRight: '6px' }}
+          >
+            <path d="M12 3v12" />
+            <path d="M7.5 10.5L12 15l4.5-4.5" />
+            <path d="M4 20h16" />
+          </svg>
+          {exporting ? 'Downloading...' : 'Download CSV'}
+        </button>
+      </PageHero>
 
       {error && (
         <div
@@ -138,7 +250,7 @@ export const ReportsCenterPage: React.FC = () => {
           <span>{error}</span>
           <button
             type="button"
-            onClick={() => loadReport({ ...filter, type: selectedType })}
+            onClick={() => loadReport(selectedType)}
             className="btn sm secondary"
             style={{ fontSize: '11px' }}
           >
@@ -147,72 +259,256 @@ export const ReportsCenterPage: React.FC = () => {
         </div>
       )}
 
-      {loadingCatalog ? (
-        <div style={{ padding: '60px', textAlign: 'center', color: 'var(--muted, #6b7280)' }}>
-          Loading reports catalog...
-        </div>
-      ) : (
-        <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start' }}>
-          {/* Left Sidebar: 9 Reports by category */}
-          <ReportsSidebar
-            catalog={catalog}
-            selectedType={selectedType}
-            onSelect={handleSelectType}
-          />
-
-          {/* Right Main Panel */}
-          <div style={{ flex: 1, minWidth: 0 }}>
-            {/* Filter Bar */}
-            <ReportFilterBar
-              selectedCatalogItem={selectedCatalogItem}
-              filter={filter}
-              onFilterChange={handleFilterChange}
-              onDownloadCsv={handleDownloadCsv}
-              onPrint={handlePrint}
-              exporting={exporting}
-              departments={departments}
-            />
-
-            {/* Report Content */}
-            {loadingData ? (
-              <div
-                style={{
-                  padding: '60px',
-                  background: '#ffffff',
-                  borderRadius: '10px',
-                  border: '1px solid var(--line2, #e5e7eb)',
-                  textAlign: 'center',
-                  color: 'var(--muted, #6b7280)',
-                }}
+      {/* Grid g32: Left card "Build a report" (1fr), Right card table (2fr) */}
+      <div className="grid g32">
+        {/* Left card */}
+        <div className="card">
+          <h3>Build a report</h3>
+          <div className="fgrid">
+            <div className="f">
+              <label>Report</label>
+              <select
+                id="rpType"
+                value={selectedType}
+                onChange={(e) => setSelectedType(e.target.value as ReportType)}
               >
-                <div style={{ fontSize: '20px', marginBottom: '8px' }}>⚡</div>
-                <div>Generating {selectedCatalogItem?.title || 'report'}...</div>
-              </div>
-            ) : reportResult ? (
-              <div>
-                {/* Standardized Letterhead Matching Screenshots */}
-                <ReportCompanyHeader meta={reportResult.meta} />
+                <optgroup label="Attendance">
+                  <option value="attendance">Attendance — day by day</option>
+                  <option value="attsummary">Attendance summary — on time, late, absent</option>
+                  <option value="late">Late logins</option>
+                  <option value="nologin">No login activity</option>
+                  <option value="active">Daily active hours</option>
+                </optgroup>
+                <optgroup label="Payroll">
+                  <option value="salary">Salary register</option>
+                  <option value="pf">Provident fund</option>
+                  <option value="pt">Professional tax</option>
+                  <option value="tds">TDS — new regime</option>
+                  <option value="loan">Loans and advances</option>
+                  <option value="net_pay">Net Pay (Bank Disbursement Advice)</option>
+                  <option value="income_tax">Income Tax Monthly Statement</option>
+                  <option value="loan_details">Loan Details Report</option>
+                </optgroup>
+                <optgroup label="People">
+                  <option value="leave">Leave</option>
+                  <option value="goals">Goals and progress</option>
+                  <option value="basic">Employee basic information</option>
+                  <option value="all_employees">All Active Employees</option>
+                  <option value="recent_joinees">Recent Joinees</option>
+                  <option value="recent_resignees">Recent Resignees</option>
+                  <option value="appraisals">Appraisal &amp; Increment Report</option>
+                </optgroup>
+              </select>
+            </div>
 
-                {/* Data Table */}
-                <ReportDataTable report={reportResult} />
-              </div>
-            ) : (
-              <div
-                style={{
-                  padding: '48px',
-                  background: '#ffffff',
-                  borderRadius: '10px',
-                  border: '1px solid var(--line2, #e5e7eb)',
-                  textAlign: 'center',
-                  color: 'var(--muted, #6b7280)',
-                }}
+            <div className="f">
+              <label>Period</label>
+              <select
+                id="rpPeriod"
+                value={period}
+                onChange={(e) =>
+                  setPeriod(e.target.value as 'daily' | 'weekly' | 'monthly' | 'range' | 'fytd')
+                }
               >
-                No data available for this report.
+                <option value="daily">A single day</option>
+                <option value="weekly">A week</option>
+                <option value="monthly">A month</option>
+                <option value="range">Custom date range</option>
+                <option value="fytd">Financial year to date</option>
+              </select>
+            </div>
+
+            {period === 'daily' && (
+              <div className="f" id="rpDayWrap">
+                <label>Date</label>
+                <input
+                  type="date"
+                  id="rpDay"
+                  value={day}
+                  onChange={(e) => setDay(e.target.value)}
+                />
               </div>
             )}
+
+            {period === 'weekly' && (
+              <div className="f" id="rpWeekWrap">
+                <label>Week starting</label>
+                <input
+                  type="date"
+                  id="rpWeek"
+                  value={week}
+                  onChange={(e) => setWeek(e.target.value)}
+                />
+                <div className="hint">Runs Monday to Sunday from the date you pick.</div>
+              </div>
+            )}
+
+            {period === 'monthly' && (
+              <div className="f" id="rpMonthWrap">
+                <label>Month</label>
+                <input
+                  type="month"
+                  id="rpMonth"
+                  value={month}
+                  onChange={(e) => setMonth(e.target.value)}
+                />
+              </div>
+            )}
+
+            {period === 'range' && (
+              <div className="grid g2" id="rpRangeWrap">
+                <div className="f">
+                  <label>From</label>
+                  <input
+                    type="date"
+                    id="rpFrom"
+                    value={fromDate}
+                    onChange={(e) => setFromDate(e.target.value)}
+                  />
+                </div>
+                <div className="f">
+                  <label>To</label>
+                  <input
+                    type="date"
+                    id="rpTo"
+                    value={toDate}
+                    onChange={(e) => setToDate(e.target.value)}
+                  />
+                </div>
+              </div>
+            )}
+
+            <div className="f">
+              <label>Department</label>
+              <select
+                id="rpDept"
+                value={department}
+                onChange={(e) => setDepartment(e.target.value)}
+              >
+                <option value="">All departments</option>
+                {departments.map((d) => (
+                  <option key={d} value={d}>
+                    {d}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="f">
+              <label>Employee</label>
+              <select
+                id="rpEmp"
+                value={employeeId}
+                onChange={(e) => setEmployeeId(e.target.value)}
+              >
+                <option value="">Everyone in scope</option>
+                {employees.map((emp) => (
+                  <option key={emp.id} value={emp.id}>
+                    {emp.employeeCode} · {emp.firstName} {emp.lastName}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: '9px', flexWrap: 'wrap', marginTop: '16px' }}>
+            <button
+              className="btn primary"
+              type="button"
+              onClick={handleDownloadCsv}
+              disabled={exporting}
+            >
+              {exporting ? 'Downloading...' : 'Download CSV'}
+            </button>
+            <button className="btn ghost" type="button" onClick={handlePrint}>
+              Print
+            </button>
+          </div>
+
+          {reportNote && (
+            <div className="hint" id="rpNote" style={{ marginTop: '14px', lineHeight: '1.4' }}>
+              {reportNote}
+            </div>
+          )}
+        </div>
+
+        {/* Right card: Report Table View */}
+        <div className="card">
+          <h3 id="rpTitle">{reportTitle}</h3>
+          <div className="hint" id="rpMeta" style={{ margin: '0 0 12px' }}>
+            {periodLabel} · {reportResult?.meta?.totalRecords ?? rows.length} employee
+            {(reportResult?.meta?.totalRecords ?? rows.length) === 1 ? '' : 's'} · {rows.length} row
+            {rows.length === 1 ? '' : 's'}
+          </div>
+
+          <div className="scroll" style={{ maxHeight: '640px' }}>
+            <table>
+              <thead id="rpHead">
+                <tr>
+                  {columns.map((col) => (
+                    <th key={col.key} className={col.isNumeric ? 'num-col' : ''}>
+                      {col.label}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody id="rpBody">
+                {loadingData ? (
+                  <tr>
+                    <td
+                      colSpan={columns.length || 1}
+                      style={{ textAlign: 'center', padding: '48px', color: 'var(--muted)' }}
+                    >
+                      Generating report...
+                    </td>
+                  </tr>
+                ) : rows.length === 0 ? (
+                  <tr>
+                    <td colSpan={columns.length || 1}>
+                      <div className="empty">
+                        <b>No rows for this selection</b>
+                        Try a wider period, or clear the department and employee filters.
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  rows.map((row, idx) => (
+                    <tr key={idx}>
+                      {columns.map((col) => (
+                        <td key={col.key} className={col.isNumeric ? 'num-col' : ''}>
+                          {renderCell(col, row[col.key])}
+                        </td>
+                      ))}
+                    </tr>
+                  ))
+                )}
+              </tbody>
+              {totals && Object.keys(totals).length > 0 && rows.length > 0 && (
+                <tfoot id="rpFoot">
+                  <tr>
+                    {columns.map((col, idx) => {
+                      const totalVal = totals[col.key];
+                      return (
+                        <td key={col.key} className={col.isNumeric ? 'num-col' : ''}>
+                          {totalVal != null
+                            ? col.isCurrency && typeof totalVal === 'number'
+                              ? formatInr(totalVal)
+                              : typeof totalVal === 'number'
+                              ? totalVal.toLocaleString('en-IN')
+                              : String(totalVal)
+                            : idx === 0
+                            ? `Total · ${rows.length} rows`
+                            : ''}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                </tfoot>
+              )}
+            </table>
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 };
