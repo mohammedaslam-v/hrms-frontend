@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
-import { Outlet, useNavigate } from 'react-router-dom'
+import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { Rail } from './Rail'
 import { useAuth } from '../app/auth-context'
-import { TIER_NAME, type NavItem } from '../navigation/nav-items'
+import { ALL_NAV_ITEMS, TIER_NAME, type NavItem } from '../navigation/nav-items'
 import { TIER_LABEL } from '../shared/types/session'
 import { Toast, type ToastMessage } from '../shared/ui/Toast'
 import { ChangePasswordForm } from '../features/auth'
@@ -23,6 +23,19 @@ export function AppShell() {
   const [toast, setToast] = useState<ToastMessage | null>(null)
   const menuRef = useRef<HTMLDivElement>(null)
   const navigate = useNavigate()
+  const location = useLocation()
+
+  const activeNav = ALL_NAV_ITEMS.find(
+    (item) => item.path === location.pathname || (item.path !== '/' && location.pathname.startsWith(item.path)),
+  )
+  const currentTitle = activeNav ? activeNav.label : 'bambinos. HRMS'
+
+  const todayStr = new Intl.DateTimeFormat('en-GB', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  }).format(new Date())
 
   // Click-away and Escape both close the profile menu.
   useEffect(() => {
@@ -55,9 +68,10 @@ export function AppShell() {
       <div className="shell">
         <header className="topbar">
           <span className="chev">›</span>
-          <h1 className="tb-title">bambinos. HRMS</h1>
+          <h1 className="tb-title">{currentTitle}</h1>
 
           <div className="tb-right">
+            <span className="tb-date">{todayStr}</span>
             <span className="chip c-all nodot">{TIER_LABEL[employee.defaultTier]}</span>
             <div className="tb-menu" ref={menuRef}>
               <button

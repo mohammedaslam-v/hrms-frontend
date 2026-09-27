@@ -119,6 +119,16 @@ export interface ToggleSalaryPayload {
   reason?: string
 }
 
+export interface UpdateCompensationPayload {
+  effectiveFrom?: string
+  ctc: number
+  variablePay?: number
+  bonus?: number
+  esopUnits?: number
+  esopVestedPct?: number
+  revisionNote?: string
+}
+
 export const WORK_MODE_CLASS: Record<WorkMode, string> = {
   WFH: 'c-wfh',
   WFO: 'c-wfo',

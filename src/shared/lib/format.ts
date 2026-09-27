@@ -20,3 +20,21 @@ export const initials = (name: string): string =>
     .join('')
     .slice(0, 2)
     .toUpperCase()
+
+/**
+ * Indian Rupee formatter — whole rupees with en-IN grouping (e.g. ₹6,00,000).
+ */
+export const formatInr = (amount: number): string =>
+  new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    maximumFractionDigits: 0,
+  }).format(Math.round(amount || 0))
+
+/**
+ * Pure number formatter with en-IN grouping without currency symbol (e.g. 6,00,000).
+ */
+export const formatNumberInr = (amount: number): string =>
+  new Intl.NumberFormat('en-IN', {
+    maximumFractionDigits: 0,
+  }).format(Math.round(amount || 0))
