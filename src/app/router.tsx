@@ -11,11 +11,13 @@ import { MyPage } from '../features/profile'
 import { TeamDirectoryPage } from '../features/team'
 import { MyGoalsPage, TeamGoalsPage } from '../features/goals'
 import { MySalaryPage } from '../features/salary'
-import { MyTaxPage } from '../features/tax'
+import { MyTaxPage, CompanyTaxRegisterPage } from '../features/tax'
 import { AdminReimbursementsPage } from '../features/reimbursement/pages/AdminReimbursementsPage'
 import { AddEmployeePage } from '../features/employees'
 import { AdminLoansPage } from '../features/loans'
+import { DashboardPage } from '../features/dashboard'
 import { PayrollRegisterPage } from '../features/payroll'
+import { ReportsCenterPage } from '../features/reports'
 
 /**
  * Which screen answers each rail entry.
@@ -26,14 +28,17 @@ import { PayrollRegisterPage } from '../features/payroll'
  * another rung on a ternary chain inside `App`.
  */
 const PAGES: Record<string, ReactNode> = {
+  dash: <DashboardPage />,
   myleave: <MyLeavePage />,
   mygoals: <MyGoalsPage />,
   mypay: <MySalaryPage />,
   mytax: <MyTaxPage />,
+  alltax: <CompanyTaxRegisterPage />,
   leave: <LeaveApprovalsPage />,
   teamgoals: <TeamGoalsPage />,
   me: <MyPage />,
   team: <TeamDirectoryPage />,
+  reports: <ReportsCenterPage />,
   payroll: <PayrollRegisterPage />,
   reimbursements: <AdminReimbursementsPage />,
   add: <AddEmployeePage />,

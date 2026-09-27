@@ -55,7 +55,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { key: 'att', path: '/attendance', label: 'Attendance & activity', tier: 'mgr', color: '#EA6A18', icon: icon.clock },
       { key: 'leave', path: '/approvals', label: 'Leave approvals', tier: 'mgr', color: '#6D53F0', built: true, icon: icon.calendar },
       { key: 'teamgoals', path: '/team-goals', label: 'Team goals', tier: 'mgr', color: '#DD8B08', built: true, icon: icon.crosshair },
-      { key: 'reports', path: '/reports', label: 'Reports centre', tier: 'mgr', color: '#4F46E5', icon: icon.barChart },
+      { key: 'reports', path: '/reports', label: 'Reports centre', tier: 'mgr', color: '#4F46E5', built: true, icon: icon.barChart },
     ],
   },
   {
@@ -66,7 +66,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { key: 'add', path: '/employees/new', label: 'Add employee', tier: 'adm', color: '#0E9C93', built: true, icon: icon.personPlus },
       { key: 'payroll', path: '/payroll', label: 'Payroll register', tier: 'adm', color: '#0C8CD4', built: true, icon: icon.banknote },
       { key: 'reimbursements', path: '/reimbursement-approvals', label: 'Reimbursement & Loan', tier: 'adm', color: '#10B981', built: true, icon: icon.receipt },
-      { key: 'alltax', path: '/tax-register', label: 'Company TDS register', tier: 'adm', color: '#DC3E43', icon: icon.receipt },
+      { key: 'alltax', path: '/tax-register', label: 'Company TDS register', tier: 'adm', color: '#DC3E43', built: true, icon: icon.ledger },
     ],
   },
 ]
