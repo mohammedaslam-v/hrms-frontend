@@ -2,11 +2,19 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://YOUR-GCP-BACKEND-HOST/api/:path*"
+      "destination": "https://hrms-api-1045498615373.asia-south1.run.app/api/:path*"
     },
     {
       "source": "/((?!api/).*)",
       "destination": "/index.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/api/:path*",
+      "headers": [
+        { "key": "x-vercel-enable-rewrite-caching", "value": "0" }
+      ]
     }
   ]
 }
