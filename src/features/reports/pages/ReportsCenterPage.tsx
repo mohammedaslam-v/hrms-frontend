@@ -82,10 +82,15 @@ export const ReportsCenterPage: React.FC = () => {
     loadEmployees();
   }, []);
 
-  // Department options derived from employee list or standard list
+  // Filter ONLY active employees for the selection dropdown
+  const activeEmployees = useMemo(() => {
+    return employees.filter((emp) => emp.status !== 'inactive');
+  }, [employees]);
+
+  // Department options derived from active employees list or standard list
   const departments = useMemo(() => {
     const set = new Set<string>();
-    employees.forEach((e) => {
+    activeEmployees.forEach((e) => {
       if (e.department) set.add(e.department);
     });
     if (set.size === 0) {
@@ -100,11 +105,18 @@ export const ReportsCenterPage: React.FC = () => {
       ];
     }
     return Array.from(set).sort();
-  }, [employees]);
+  }, [activeEmployees]);
 
   // Compute period label
   const periodLabel = useMemo(() => {
-    if (period === 'daily') return day;
+    if (day && (period === 'daily' || period === 'monthly')) {
+      try {
+        const dObj = new Date(day + 'T00:00:00');
+        return dObj.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+      } catch {
+        return day;
+      }
+    }
     if (period === 'weekly') return `Week of ${week}`;
     if (period === 'monthly') {
       try {
@@ -129,7 +141,7 @@ export const ReportsCenterPage: React.FC = () => {
         const filter: ReportFilterDto = {
           type,
           period,
-          date: period === 'daily' ? day : undefined,
+          date: day || undefined,
           week: period === 'weekly' ? week : undefined,
           month: period === 'monthly' ? month : undefined,
           from: period === 'range' ? fromDate : undefined,
@@ -160,7 +172,7 @@ export const ReportsCenterPage: React.FC = () => {
       const filter: ReportFilterDto = {
         type: selectedType,
         period,
-        date: period === 'daily' ? day : undefined,
+        date: day || undefined,
         week: period === 'weekly' ? week : undefined,
         month: period === 'monthly' ? month : undefined,
         from: period === 'range' ? fromDate : undefined,
@@ -318,14 +330,47 @@ export const ReportsCenterPage: React.FC = () => {
               </select>
             </div>
 
-            {period === 'daily' && (
+            {/* Date field - present whenever daily or monthly (matching prototype design) */}
+            {(period === 'daily' || period === 'monthly') && (
               <div className="f" id="rpDayWrap">
-                <label>Date</label>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: '6px',
+                  }}
+                >
+                  <label style={{ margin: 0 }}>Date</label>
+                  {day && period === 'monthly' && (
+                    <button
+                      type="button"
+                      onClick={() => setDay('')}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        padding: 0,
+                        color: 'var(--blue, #2563eb)',
+                        fontSize: '11px',
+                        cursor: 'pointer',
+                        textDecoration: 'underline',
+                      }}
+                    >
+                      Clear (all days)
+                    </button>
+                  )}
+                </div>
                 <input
                   type="date"
                   id="rpDay"
                   value={day}
-                  onChange={(e) => setDay(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setDay(val);
+                    if (val) {
+                      setMonth(val.slice(0, 7));
+                    }
+                  }}
                 />
               </div>
             )}
@@ -350,7 +395,13 @@ export const ReportsCenterPage: React.FC = () => {
                   type="month"
                   id="rpMonth"
                   value={month}
-                  onChange={(e) => setMonth(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setMonth(val);
+                    if (day && !day.startsWith(val)) {
+                      setDay(`${val}-01`);
+                    }
+                  }}
                 />
               </div>
             )}
@@ -402,7 +453,7 @@ export const ReportsCenterPage: React.FC = () => {
                 onChange={(e) => setEmployeeId(e.target.value)}
               >
                 <option value="">Everyone in scope</option>
-                {employees.map((emp) => (
+                {activeEmployees.map((emp) => (
                   <option key={emp.id} value={emp.id}>
                     {emp.employeeCode} · {emp.firstName} {emp.lastName}
                   </option>
@@ -436,9 +487,10 @@ export const ReportsCenterPage: React.FC = () => {
         <div className="card">
           <h3 id="rpTitle">{reportTitle}</h3>
           <div className="hint" id="rpMeta" style={{ margin: '0 0 12px' }}>
-            {periodLabel} · {reportResult?.meta?.totalRecords ?? rows.length} employee
-            {(reportResult?.meta?.totalRecords ?? rows.length) === 1 ? '' : 's'} · {rows.length} row
-            {rows.length === 1 ? '' : 's'}
+            {reportResult?.meta?.periodLabel || periodLabel} ·{' '}
+            {reportResult?.meta?.totalRecords ?? activeEmployees.length} employee
+            {(reportResult?.meta?.totalRecords ?? activeEmployees.length) === 1 ? '' : 's'} ·{' '}
+            {rows.length} row{rows.length === 1 ? '' : 's'}
           </div>
 
           <div className="scroll" style={{ maxHeight: '640px' }}>
