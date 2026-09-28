@@ -12,21 +12,13 @@ import { AdminLifecycleControls } from '../components/AdminLifecycleControls'
 import { WORK_MODE_CLASS, type ProfileView } from '../profile.types'
 import { fmtDate } from '../../../shared/lib/date'
 import { initials } from '../../../shared/lib/format'
+import { DEPT_COLOR } from '../../../shared/lib/departments'
 
 /**
  * Department colours from the design. A person with no department falls back to
  * a neutral rather than picking an arbitrary one — and today that is almost
  * everyone, since only one record has a department set.
  */
-const DEPT_COLOR: Record<string, string> = {
-  Leadership: '#6C5CE7',
-  Sales: '#3777FF',
-  Marketing: '#E8613A',
-  Curriculum: '#F4A93A',
-  Tech: '#8B2E2E',
-  Operations: '#159A9C',
-  People: '#34C77B',
-}
 
 /** One label/value row. A missing value says so rather than showing a blank. */
 function Row({ label, value }: { label: string; value: string | null }) {

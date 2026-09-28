@@ -133,3 +133,12 @@ export const receipt = svg(
     <path d="M9.5 8.5h5M9.5 12h5" />
   </>,
 )
+
+/** A ruled table — a header band over rows. Reads as a register of many people,
+    against `receipt`'s single torn slip. */
+export const ledger = svg(
+  <>
+    <rect x="3.5" y="3" width="17" height="18" rx="2.6" />
+    <path d="M3.5 8.5h17M7.5 13h9M7.5 17h6" />
+  </>,
+)

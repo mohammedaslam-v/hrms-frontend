@@ -63,3 +63,39 @@ export interface MyTaxResponse {
     ay: string
   }
 }
+
+/** One line of the Company TDS register — the basis of the quarterly Form 24Q. */
+export interface TaxRegisterRow {
+  employeeId: number
+  code: string
+  name: string
+  department: string
+  pan: string
+  grossSalary: number
+  stdDeduction: number
+  taxableIncome: number
+  slabTax: number
+  rebate87A: number
+  cessAmount: number
+  totalTax: number
+  monthlyTds: number
+  deductedTillDate: number
+}
+
+export interface TaxRegisterTotals {
+  people: number
+  grossSalary: number
+  taxableIncome: number
+  totalTax: number
+  monthlyTds: number
+  deductedTillDate: number
+}
+
+export interface TaxRegisterResponse {
+  rows: TaxRegisterRow[]
+  totals: TaxRegisterTotals
+  departments: string[]
+  company: { name: string; address: string; pan: string; tan: string; fy: string; ay: string }
+  /** No payslip has been frozen yet, so "Deducted YTD" is zero for everybody. */
+  noPayslipsYet: boolean
+}

@@ -7,17 +7,9 @@ import { teamApi } from './team.api'
 import type { DirectoryMember, DirectoryView } from './team.types'
 import { fmtDateShortYear } from '../../shared/lib/date'
 import { initials } from '../../shared/lib/format'
+import { DEPT_COLOR } from '../../shared/lib/departments'
 
 /** Department colours from the design. Unset falls back to neutral, not random. */
-const DEPT_COLOR: Record<string, string> = {
-  Leadership: '#6C5CE7',
-  Sales: '#3777FF',
-  Marketing: '#E8613A',
-  Curriculum: '#F4A93A',
-  Tech: '#8B2E2E',
-  Operations: '#159A9C',
-  People: '#34C77B',
-}
 
 /**
  * ₹11.0L, ₹1.25Cr — the way pay is spoken about here. A raw ₹1,100,000 is

@@ -25,8 +25,14 @@ export function AppShell() {
   const navigate = useNavigate()
   const location = useLocation()
 
+  // A nav item owns its own path and anything below it, but not a path that
+  // merely starts with the same letters: `/tax` must not claim `/tax-register`,
+  // nor `/team` claim `/team-goals`. The trailing slash is what draws that line,
+  // and it still lets `/tax/336` resolve to the tax item for the detail view.
   const activeNav = ALL_NAV_ITEMS.find(
-    (item) => item.path === location.pathname || (item.path !== '/' && location.pathname.startsWith(item.path)),
+    (item) =>
+      item.path === location.pathname ||
+      (item.path !== '/' && location.pathname.startsWith(`${item.path}/`)),
   )
   const currentTitle = activeNav ? activeNav.label : 'bambinos. HRMS'
 
