@@ -45,7 +45,7 @@ export function OtpFields({
   return (
     <>
       <div className="auth-field">
-        <label htmlFor="code">6-digit code</label>
+        <label htmlFor="code">Verification code</label>
         <input
           id="code"
           className="otp-input"

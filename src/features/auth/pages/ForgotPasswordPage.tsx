@@ -129,7 +129,7 @@ export function ForgotPasswordPage({
           resending={resending}
           disabled={busy}
         />
-        <button className="btn primary block" type="submit" disabled={busy || code.length !== 6}>
+        <button className="btn primary block" type="submit" disabled={busy || (code.length !== 5 && code.length !== 6)}>
           {busy ? 'Verifying…' : 'Verify code'}
         </button>
       </AuthCard>
