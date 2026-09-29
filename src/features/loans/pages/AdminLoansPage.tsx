@@ -53,13 +53,29 @@ export function AdminLoansPage() {
   const handleIssueLoan = async (payload: CreateLoanPayload) => {
     try {
       setSubmitting(true)
-      await loansApi.createLoan(payload)
+      const res = await loansApi.createLoan(payload)
+      let payoutPushed = false
+      if (res?.id) {
+        try {
+          await payrollApi.pushLoanDisbursement(res.id)
+          payoutPushed = true
+        } catch (pErr: unknown) {
+          console.warn('Auto disbursement push note:', pErr)
+        }
+      }
       setToast({
-        text: 'Loan successfully disbursed. Monthly salary deductions scheduled.',
+        text: payoutPushed
+          ? 'Loan issued & disbursement request sent to RazorpayX dashboard!'
+          : 'Loan issued as pending disbursement. You can click 💳 Disburse anytime.',
         tone: 'good',
       })
       setIsIssueModalOpen(false)
       loadLoans()
+    } catch (err: unknown) {
+      setToast({
+        text: err instanceof Error ? err.message : 'Failed to issue loan.',
+        tone: 'bad',
+      })
     } finally {
       setSubmitting(false)
     }

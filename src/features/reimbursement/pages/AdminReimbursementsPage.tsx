@@ -23,6 +23,7 @@ import {
   type CreateLoanPayload,
   type LoanMetaDto,
 } from '../../loans'
+import { payrollApi } from '../../payroll/api/payroll.api'
 
 export function AdminReimbursementsPage() {
   // Main Tab: Reimbursements vs Loans
@@ -97,12 +98,38 @@ export function AdminReimbursementsPage() {
   const handleIssueLoan = async (payload: CreateLoanPayload) => {
     try {
       setLoanSubmitting(true)
-      await loansApi.createLoan(payload)
-      setNotice('Loan successfully disbursed. Monthly salary deductions scheduled.')
+      const res = await loansApi.createLoan(payload)
+      let payoutPushed = false
+      if (res?.id) {
+        try {
+          await payrollApi.pushLoanDisbursement(res.id)
+          payoutPushed = true
+        } catch (pErr: unknown) {
+          console.warn('Auto disbursement push note:', pErr)
+        }
+      }
+      setNotice(
+        payoutPushed
+          ? 'Loan issued & disbursement request sent to RazorpayX dashboard!'
+          : 'Loan issued as pending disbursement. You can click 💳 Disburse anytime.',
+      )
       setIsIssueModalOpen(false)
       void loadLoans()
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to disburse loan.')
+      setError(err instanceof Error ? err.message : 'Failed to issue loan.')
+    } finally {
+      setLoanSubmitting(false)
+    }
+  }
+
+  const handleDisburseLoan = async (loan: AdminLoanItem) => {
+    try {
+      setLoanSubmitting(true)
+      await payrollApi.pushLoanDisbursement(loan.id)
+      setNotice(`Loan disbursement pushed to RazorpayX for ${loan.employeeName}.`)
+      void loadLoans()
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to disburse loan via Razorpay.')
     } finally {
       setLoanSubmitting(false)
     }
@@ -571,6 +598,7 @@ export function AdminReimbursementsPage() {
                     loans={loansData.loans}
                     onCloseLoan={(loan) => setClosingLoan(loan)}
                     onSelectLoan={(loan) => setSelectedLoan(loan)}
+                    onDisburseLoan={handleDisburseLoan}
                   />
                 )}
               </>

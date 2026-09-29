@@ -256,7 +256,7 @@ export function IssueLoanModal({ meta, submitting, onClose, onSubmit }: IssueLoa
               className="btn primary"
               disabled={submitting || !employeeId}
             >
-              {submitting ? 'Disbursing Loan…' : 'Disburse Loan'}
+              {submitting ? 'Disbursing to Razorpay…' : '💳 Issue & Disburse via Razorpay'}
             </button>
           </div>
         </form>
