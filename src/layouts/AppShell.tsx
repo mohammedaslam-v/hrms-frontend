@@ -1,12 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { Rail } from './Rail'
+import { MobileNavDrawer } from './MobileNavDrawer'
+import { MobileBottomNav } from './MobileBottomNav'
 import { useAuth } from '../app/auth-context'
 import { ALL_NAV_ITEMS, TIER_NAME, type NavItem } from '../navigation/nav-items'
 import { TIER_LABEL } from '../shared/types/session'
 import { Toast, type ToastMessage } from '../shared/ui/Toast'
 import { ChangePasswordForm } from '../features/auth'
 import { initials } from '../shared/lib/format'
+import * as icon from '../navigation/icons'
 
 /**
  * The frame every signed-in screen sits in: the rail down the left, the top bar,
@@ -19,6 +22,7 @@ import { initials } from '../shared/lib/format'
 export function AppShell() {
   const { employee, signOut } = useAuth()
   const [menuOpen, setMenuOpen] = useState(false)
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false)
   const [changingPassword, setChangingPassword] = useState(false)
   const [toast, setToast] = useState<ToastMessage | null>(null)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -71,8 +75,25 @@ export function AppShell() {
     <div className="app">
       <Rail onLocked={handleLocked} />
 
+      {/* Slide-out navigation drawer for mobile */}
+      <MobileNavDrawer
+        open={mobileDrawerOpen}
+        onClose={() => setMobileDrawerOpen(false)}
+        onLocked={handleLocked}
+      />
+
       <div className="shell">
         <header className="topbar">
+          <button
+            type="button"
+            className="mobile-menu-trigger"
+            onClick={() => setMobileDrawerOpen(true)}
+            aria-label="Open navigation menu"
+          >
+            {icon.menu}
+          </button>
+          <div className="mobile-logo-mark">b</div>
+
           <span className="chev">›</span>
           <h1 className="tb-title">{currentTitle}</h1>
 
@@ -145,6 +166,12 @@ export function AppShell() {
           )}
         </main>
       </div>
+
+      {/* Mobile fixed bottom navigation */}
+      <MobileBottomNav
+        onOpenMenu={() => setMobileDrawerOpen(true)}
+        isMenuOpen={mobileDrawerOpen}
+      />
 
       <Toast message={toast} onDismiss={() => setToast(null)} />
     </div>

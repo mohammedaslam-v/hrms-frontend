@@ -142,3 +142,16 @@ export const ledger = svg(
     <path d="M3.5 8.5h17M7.5 13h9M7.5 17h6" />
   </>,
 )
+
+export const menu = svg(
+  <>
+    <path d="M4 6h16M4 12h16M4 18h16" />
+  </>,
+)
+
+export const close = svg(
+  <>
+    <path d="M18 6L6 18M6 6l12 12" />
+  </>,
+)
+
