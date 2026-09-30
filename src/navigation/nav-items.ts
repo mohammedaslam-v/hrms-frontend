@@ -40,11 +40,11 @@ export const NAV_SECTIONS: NavSection[] = [
     heading: 'Individual',
     tier: 'all',
     items: [
+      { key: 'me', path: '/me', label: 'My page', tier: 'all', color: '#EC4899', built: true, icon: icon.person },
       { key: 'myleave', path: '/leave', label: 'My leave', tier: 'all', color: '#0FA968', built: true, icon: icon.calendarTick },
       { key: 'mygoals', path: '/goals', label: 'My goals', tier: 'all', color: '#DD8B08', built: true, icon: icon.target },
       { key: 'mypay', path: '/pay', label: 'My salary & payslips', tier: 'all', color: '#0C8CD4', built: true, icon: icon.wallet },
       { key: 'mytax', path: '/tax', label: 'My tax & TDS', tier: 'all', color: '#DC3E43', built: true, icon: icon.percent },
-      { key: 'me', path: '/me', label: 'My page', tier: 'all', color: '#EC4899', icon: icon.person },
     ],
   },
   {

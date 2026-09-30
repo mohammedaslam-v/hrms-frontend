@@ -16,9 +16,7 @@ export const canAccess = (tier: NavTier, held: AccessTier[]): boolean => {
   return held.includes('admin')
 }
 
-/** Nobody should land on a page their access level padlocks. */
-export const homePathFor = (defaultTier: AccessTier): string => {
-  if (defaultTier === 'admin') return '/dashboard'
-  if (defaultTier === 'manager') return '/team'
+/** When user logs into the HRMS portal, My page (/me) opens first. */
+export const homePathFor = (_defaultTier?: AccessTier): string => {
   return '/me'
 }
