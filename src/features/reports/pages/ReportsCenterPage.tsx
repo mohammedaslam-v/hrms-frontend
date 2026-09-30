@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { PageHero } from '../../../shared/ui/PageHero';
+import { useAuth } from '../../../app/auth-context';
 import { reportsApi } from '../api/reports.api';
 import { employeesApi } from '../../employees/employees.api';
 import type { Employee } from '../../employees/employee.types';
@@ -10,6 +11,20 @@ import type {
   ReportColumn,
 } from '../types/reports.types';
 import { formatInr } from '../../../shared/lib/format';
+
+export const PAYROLL_REPORT_TYPES: ReadonlySet<ReportType> = new Set([
+  'salary',
+  'pf',
+  'provident_fund',
+  'pt',
+  'profession_tax',
+  'tds',
+  'loan',
+  'loan_details',
+  'net_pay',
+  'income_tax',
+  'appraisals',
+]);
 
 const REPORT_NOTES: Partial<Record<ReportType, string>> = {
   attendance: '',
@@ -43,8 +58,18 @@ const REPORT_NOTES: Partial<Record<ReportType, string>> = {
 };
 
 export const ReportsCenterPage: React.FC = () => {
+  const { employee } = useAuth();
+  const isAdmin = employee.tiers.includes('admin');
+
   const [selectedType, setSelectedType] = useState<ReportType>('attendance');
   const [period, setPeriod] = useState<'daily' | 'weekly' | 'monthly' | 'range' | 'fytd'>('monthly');
+
+  // If a non-admin user ever has a payroll report selected, fallback to attendance
+  useEffect(() => {
+    if (!isAdmin && PAYROLL_REPORT_TYPES.has(selectedType)) {
+      setSelectedType('attendance');
+    }
+  }, [isAdmin, selectedType]);
 
   // Dates
   const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
@@ -218,7 +243,7 @@ export const ReportsCenterPage: React.FC = () => {
       <PageHero
         navKey="reports"
         title="Reports centre"
-        eyebrow="13 REPORTS · DAILY, WEEKLY, MONTHLY OR ANY DATE RANGE"
+        eyebrow={`${isAdmin ? 20 : 11} REPORTS · DAILY, WEEKLY, MONTHLY OR ANY DATE RANGE`}
       >
         <button
           className="btn primary"
@@ -291,16 +316,18 @@ export const ReportsCenterPage: React.FC = () => {
                   <option value="nologin">No login activity</option>
                   <option value="active">Daily active hours</option>
                 </optgroup>
-                <optgroup label="Payroll">
-                  <option value="salary">Salary register</option>
-                  <option value="pf">Provident fund</option>
-                  <option value="pt">Professional tax</option>
-                  <option value="tds">TDS — new regime</option>
-                  <option value="loan">Loans and advances</option>
-                  <option value="net_pay">Net Pay (Bank Disbursement Advice)</option>
-                  <option value="income_tax">Income Tax Monthly Statement</option>
-                  <option value="loan_details">Loan Details Report</option>
-                </optgroup>
+                {isAdmin && (
+                  <optgroup label="Payroll">
+                    <option value="salary">Salary register</option>
+                    <option value="pf">Provident fund</option>
+                    <option value="pt">Professional tax</option>
+                    <option value="tds">TDS — new regime</option>
+                    <option value="loan">Loans and advances</option>
+                    <option value="net_pay">Net Pay (Bank Disbursement Advice)</option>
+                    <option value="income_tax">Income Tax Monthly Statement</option>
+                    <option value="loan_details">Loan Details Report</option>
+                  </optgroup>
+                )}
                 <optgroup label="People">
                   <option value="leave">Leave</option>
                   <option value="goals">Goals and progress</option>
@@ -308,7 +335,7 @@ export const ReportsCenterPage: React.FC = () => {
                   <option value="all_employees">All Active Employees</option>
                   <option value="recent_joinees">Recent Joinees</option>
                   <option value="recent_resignees">Recent Resignees</option>
-                  <option value="appraisals">Appraisal &amp; Increment Report</option>
+                  {isAdmin && <option value="appraisals">Appraisal &amp; Increment Report</option>}
                 </optgroup>
               </select>
             </div>
