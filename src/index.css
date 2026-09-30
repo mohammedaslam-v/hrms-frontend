@@ -276,18 +276,14 @@ select:disabled {
   color: var(--blue);
 }
 
-/* The blue rounded logo tile from the prototype's rail */
+/* The blue rounded logo tile */
 .logo {
   width: 44px;
   height: 44px;
   border-radius: 13px;
-  background: var(--blue);
-  color: #fff;
   flex: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font: 800 21px 'Plus Jakarta Sans', sans-serif;
+  display: block;
+  object-fit: contain;
 }
 
 /* ================= LOGIN ================= */
@@ -531,8 +527,48 @@ select:disabled {
   box-shadow: 14px 0 40px rgba(28, 22, 14, 0.1);
 }
 
-.rail .logo {
+/* Sidebar brand logos: collapsed mark vs expanded full logo */
+.rail-brand {
+  height: 44px;
+  display: flex;
+  align-items: center;
   margin-bottom: 10px;
+  text-decoration: none;
+  overflow: hidden;
+  position: relative;
+  flex: none;
+  border-radius: 12px;
+}
+
+.rail-logo-mark {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  margin: 0 auto;
+  display: block;
+  flex: none;
+  transition: opacity 0.15s ease;
+}
+
+.rail-logo-full {
+  height: 32px;
+  width: auto;
+  max-width: 196px;
+  object-fit: contain;
+  display: none;
+  margin-left: 2px;
+  flex: none;
+  transition: opacity 0.15s ease;
+}
+
+.rail:hover .rail-logo-mark,
+.rail:focus-within .rail-logo-mark {
+  display: none;
+}
+
+.rail:hover .rail-logo-full,
+.rail:focus-within .rail-logo-full {
+  display: block;
 }
 
 .rail-sec {
@@ -2029,17 +2065,12 @@ tr.row:focus-visible { outline: 2px solid var(--blue); outline-offset: -2px; }
 
   /* Mobile Logo Mark beside Menu Button */
   .mobile-logo-mark {
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    display: block;
     width: 32px;
     height: 32px;
     border-radius: 9px;
-    background: var(--blue);
-    color: #fff;
-    font: 800 16px 'Outfit', sans-serif;
+    object-fit: contain;
     flex: none;
-    line-height: 1;
     user-select: none;
   }
 

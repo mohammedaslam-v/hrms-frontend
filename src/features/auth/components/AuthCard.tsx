@@ -24,7 +24,7 @@ export function AuthCard({
     <div className="auth">
       <form className="auth-card" onSubmit={onSubmit} noValidate>
         <div className="auth-brand">
-          <span className="logo">b</span>
+          <img src="/BambinosLogoOnly.png" alt="Bambinos" className="logo" />
           <div>
             <div className="wordmark">bambinos.</div>
             <div className="eyebrow">HRMS</div>

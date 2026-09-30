@@ -92,7 +92,7 @@ export function AppShell() {
           >
             {icon.menu}
           </button>
-          <div className="mobile-logo-mark">b</div>
+          <img src="/BambinosLogoOnly.png" alt="Bambinos" className="mobile-logo-mark" />
 
           <span className="chev">›</span>
           <h1 className="tb-title">{currentTitle}</h1>

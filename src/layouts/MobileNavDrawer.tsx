@@ -57,7 +57,7 @@ export function MobileNavDrawer({
         {/* Drawer Header */}
         <div className="mobile-drawer-header">
           <div className="mobile-drawer-brand">
-            <div className="mobile-logo-mark">b</div>
+            <img src="/BambinosLogoOnly.png" alt="Bambinos" className="mobile-logo-mark" />
             <div className="mobile-brand-text">
               <span className="mobile-brand-title">bambinos.</span>
               <span className="mobile-brand-subtitle">HRMS PORTAL</span>

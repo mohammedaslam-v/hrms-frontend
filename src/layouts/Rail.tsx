@@ -103,7 +103,18 @@ export function Rail({ badges = {}, onLocked }: RailProps) {
 
   return (
     <nav className="rail" aria-label="Main">
-      <div className="logo">b</div>
+      <NavLink to="/" className="rail-brand" aria-label="Bambinos HRMS">
+        <img
+          src="/BambinosLogoOnly.png"
+          alt="Bambinos"
+          className="rail-logo-mark"
+        />
+        <img
+          src="/BambinosLogo.png"
+          alt="bambinos.live"
+          className="rail-logo-full"
+        />
+      </NavLink>
 
       {NAV_SECTIONS.map((section) => {
         // The heading dims when the whole group is out of reach.
