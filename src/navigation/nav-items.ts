@@ -52,7 +52,7 @@ export const NAV_SECTIONS: NavSection[] = [
     tier: 'mgr',
     items: [
       { key: 'team', path: '/team', label: 'Team directory', tier: 'mgr', color: '#E8467C', icon: icon.people },
-      { key: 'att', path: '/attendance', label: 'Attendance & activity', tier: 'mgr', color: '#EA6A18', icon: icon.clock },
+      { key: 'att', path: '/attendance', label: 'Attendance & activity', tier: 'mgr', color: '#EA6A18', built: true, icon: icon.clock },
       { key: 'leave', path: '/approvals', label: 'Leave approvals', tier: 'mgr', color: '#6D53F0', built: true, icon: icon.calendar },
       { key: 'teamgoals', path: '/team-goals', label: 'Team goals', tier: 'mgr', color: '#DD8B08', built: true, icon: icon.crosshair },
       { key: 'reports', path: '/reports', label: 'Reports centre', tier: 'mgr', color: '#4F46E5', built: true, icon: icon.barChart },
