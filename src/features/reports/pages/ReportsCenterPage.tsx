@@ -9,6 +9,7 @@ import type {
   ReportResult,
   ReportType,
   ReportColumn,
+  ReportCatalogItem,
 } from '../types/reports.types';
 import { formatInr } from '../../../shared/lib/format';
 
@@ -59,17 +60,39 @@ const REPORT_NOTES: Partial<Record<ReportType, string>> = {
 
 export const ReportsCenterPage: React.FC = () => {
   const { employee } = useAuth();
-  const isAdmin = employee.tiers.includes('admin');
+
+  // User access is manager if defaultTier is 'manager' or if tiers does not include 'admin'
+  const isManager = employee?.defaultTier === 'manager' || !employee?.tiers?.includes('admin');
+  const isAdmin = !isManager && Boolean(employee?.tiers?.includes('admin'));
+
+  const [catalog, setCatalog] = useState<ReportCatalogItem[]>([]);
+
+  useEffect(() => {
+    reportsApi
+      .getCatalog()
+      .then((data) => setCatalog(data || []))
+      .catch(() => {});
+  }, []);
+
+  const canViewPayroll = useMemo(() => {
+    // If user access is manager, strictly hide payroll reports
+    if (isManager || !isAdmin) return false;
+    // If backend catalog is loaded, verify backend allows Payroll category
+    if (catalog.length > 0) {
+      return catalog.some((item) => item.category === 'Payroll');
+    }
+    return true;
+  }, [isManager, isAdmin, catalog]);
 
   const [selectedType, setSelectedType] = useState<ReportType>('attendance');
   const [period, setPeriod] = useState<'daily' | 'weekly' | 'monthly' | 'range' | 'fytd'>('monthly');
 
-  // If a non-admin user ever has a payroll report selected, fallback to attendance
+  // If a non-admin/manager user ever has a payroll report selected, fallback to attendance
   useEffect(() => {
-    if (!isAdmin && PAYROLL_REPORT_TYPES.has(selectedType)) {
+    if (!canViewPayroll && PAYROLL_REPORT_TYPES.has(selectedType)) {
       setSelectedType('attendance');
     }
-  }, [isAdmin, selectedType]);
+  }, [canViewPayroll, selectedType]);
 
   // Dates
   const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
@@ -243,7 +266,7 @@ export const ReportsCenterPage: React.FC = () => {
       <PageHero
         navKey="reports"
         title="Reports centre"
-        eyebrow={`${isAdmin ? 20 : 11} REPORTS · DAILY, WEEKLY, MONTHLY OR ANY DATE RANGE`}
+        eyebrow={`${canViewPayroll ? 20 : 11} REPORTS · DAILY, WEEKLY, MONTHLY OR ANY DATE RANGE`}
       >
         <button
           className="btn primary"
@@ -316,7 +339,7 @@ export const ReportsCenterPage: React.FC = () => {
                   <option value="nologin">No login activity</option>
                   <option value="active">Daily active hours</option>
                 </optgroup>
-                {isAdmin && (
+                {canViewPayroll && (
                   <optgroup label="Payroll">
                     <option value="salary">Salary register</option>
                     <option value="pf">Provident fund</option>
@@ -335,7 +358,7 @@ export const ReportsCenterPage: React.FC = () => {
                   <option value="all_employees">All Active Employees</option>
                   <option value="recent_joinees">Recent Joinees</option>
                   <option value="recent_resignees">Recent Resignees</option>
-                  {isAdmin && <option value="appraisals">Appraisal &amp; Increment Report</option>}
+                  {canViewPayroll && <option value="appraisals">Appraisal &amp; Increment Report</option>}
                 </optgroup>
               </select>
             </div>
