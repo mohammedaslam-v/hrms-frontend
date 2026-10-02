@@ -196,7 +196,7 @@ export function ForgotPasswordPage({
       }
     >
       <div className="auth-field">
-        <label htmlFor="resetEmail">Work email</label>
+        <label htmlFor="resetEmail">Email</label>
         <input
           id="resetEmail"
           type="email"

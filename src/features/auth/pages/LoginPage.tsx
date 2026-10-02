@@ -127,14 +127,14 @@ export function LoginPage({ onSignedIn }: LoginPageProps) {
   return (
     <AuthCard
       title="Sign in"
-      subtitle="Use your Bambinos work email and password."
+      subtitle="Use your email and password."
       error={error}
       notice={notice}
       onSubmit={submitCredentials}
-      footer="Trouble signing in? Contact HR — your HRMS password is the same one you use for the Bambinos admin portal."
+      footer="Trouble signing in? Contact HR"
     >
       <div className="auth-field">
-        <label htmlFor="workEmail">Work email</label>
+        <label htmlFor="workEmail">Email</label>
         <input
           id="workEmail"
           type="email"

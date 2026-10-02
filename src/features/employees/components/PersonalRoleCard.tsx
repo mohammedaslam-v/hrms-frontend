@@ -98,7 +98,7 @@ export function PersonalRoleCard({ form, meta, onChange }: PersonalRoleCardProps
         </div>
 
         <div className="f">
-          <label>Work Email *</label>
+          <label>Email *</label>
           <input
             id="nEmail"
             type="email"

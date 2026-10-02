@@ -130,7 +130,7 @@ export function AddEmployeePage() {
     }
 
     if (!trimmedEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
-      setToast({ text: 'Please provide a valid work email address.', tone: 'bad' })
+      setToast({ text: 'Please provide a valid email address.', tone: 'bad' })
       return
     }
 
