@@ -60,7 +60,10 @@ export interface ProfileView {
   weeklyOff: string[]
   dateOfJoining: string
   dateOfLeaving: string | null
+  managerId?: number | null
   managerName: string | null
+  role?: 'employee' | 'manager' | 'admin'
+  hrmsRole?: 'employee' | 'admin'
 
   mobile: string | null
   /** Null when a manager is viewing a report — withheld by the server, not hidden here. */
@@ -69,6 +72,8 @@ export interface ProfileView {
   emergencyMobile: string | null
   city: string | null
   linkedinProfile: string | null
+  panNumber?: string | null
+  aadharNumber?: string | null
 
   documents: ProfileDocument[]
   leaveBalance: number
@@ -127,6 +132,22 @@ export interface UpdateCompensationPayload {
   esopUnits?: number
   esopVestedPct?: number
   revisionNote?: string
+}
+
+export interface UpdatePersonalDetailsPayload {
+  email?: string | null
+  mobile?: string | null
+  dateOfBirth?: string | null
+  pan?: string | null
+  aadhar?: string | null
+  workLocation?: string | null
+  shiftStart?: string | null
+  shiftEnd?: string | null
+  weeklyOff?: string[] | string | null
+  dateOfJoining?: string | null
+  leaveBalance?: number | null
+  managerId?: number | null
+  role?: 'employee' | 'manager' | 'admin' | null
 }
 
 export const WORK_MODE_CLASS: Record<WorkMode, string> = {

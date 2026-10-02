@@ -6,6 +6,7 @@ import type {
   ProfileView,
   ToggleSalaryPayload,
   UpdateCompensationPayload,
+  UpdatePersonalDetailsPayload,
   UploadDocumentPayload,
   WorkMode,
 } from './profile.types'
@@ -137,5 +138,14 @@ export const profileApi = {
         body: JSON.stringify(payload),
       },
     ),
+
+  /** Update personal details (mobile, DOB, PAN, Aadhaar, work location) - self or admin */
+  updatePersonalDetails: (payload: UpdatePersonalDetailsPayload, employeeId?: number) => {
+    const path = employeeId ? `/profile/${employeeId}/personal-details` : '/profile/me/personal-details'
+    return request<{ success: boolean; data: ProfileView; message?: string }>(path, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+  },
 }
 

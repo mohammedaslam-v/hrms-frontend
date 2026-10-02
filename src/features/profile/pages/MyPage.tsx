@@ -9,6 +9,8 @@ import { CompensationCard } from '../components/CompensationCard'
 import { DocumentsCard } from '../components/DocumentsCard'
 import { TodayCard, WeekCard } from '../../attendance'
 import { AdminLifecycleControls } from '../components/AdminLifecycleControls'
+import { EditPersonalDetailsModal } from '../components/EditPersonalDetailsModal'
+import { Toast, type ToastMessage } from '../../../shared/ui/Toast'
 import { WORK_MODE_CLASS, type ProfileView, type WorkMode } from '../profile.types'
 import { fmtDate } from '../../../shared/lib/date'
 import { initials } from '../../../shared/lib/format'
@@ -30,6 +32,21 @@ function Row({ label, value }: { label: string; value: string | null }) {
   )
 }
 
+function fmtDob(dob?: string | null): string | null {
+  if (!dob) return null
+  if (/^\d{4}-\d{2}-\d{2}/.test(dob)) {
+    return fmtDate(dob.slice(0, 10))
+  }
+  const d = new Date(dob)
+  if (!isNaN(d.getTime())) {
+    const y = d.getFullYear()
+    const m = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    return fmtDate(`${y}-${m}-${day}`)
+  }
+  return dob
+}
+
 export function MyPage() {
   // The same screen serves your own profile and a team member's.
   const { id } = useParams<{ id: string }>()
@@ -37,6 +54,8 @@ export function MyPage() {
   const [view, setView] = useState<ProfileView | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [showEditDetails, setShowEditDetails] = useState(false)
+  const [toast, setToast] = useState<ToastMessage | null>(null)
 
   const load = useCallback(async (silent = false) => {
     if (!silent) setLoading(true)
@@ -212,20 +231,113 @@ export function MyPage() {
       <div className="grid g3">
         <TodayCard employeeId={view.employeeId} isSelf={view.isSelf} employeeName={view.fullName} />
 
-        <div className="card">
-          <h3>Personal details</h3>
-          <Row label="Employee code" value={view.employeeCode} />
-          <Row label="Email" value={view.workEmail} />
-          <Row label="Phone" value={view.mobile} />
-          <Row label="Shift" value={`${view.shiftStart}–${view.shiftEnd}`} />
-          <Row
-            label="Weekly off"
-            value={view.weeklyOff.length ? view.weeklyOff.join(' + ') : null}
-          />
-          <Row label="Date of joining" value={fmtDate(view.dateOfJoining)} />
-          <Row label="Work location" value={view.workState} />
-          <Row label="Leave balance" value={`${view.leaveBalance} days`} />
-          <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--line2)' }}>
+        <div
+          className="card"
+          style={{
+            height: 360,
+            display: 'flex',
+            flexDirection: 'column',
+            boxSizing: 'border-box',
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: 8,
+              flexShrink: 0,
+            }}
+          >
+            <h3 style={{ margin: 0 }}>Personal details</h3>
+            {(view.isSelf || view.access === 'admin') && (
+              <button
+                type="button"
+                className="btn ghost sm"
+                onClick={() => setShowEditDetails(true)}
+                style={{
+                  padding: '3px 10px',
+                  fontSize: 12,
+                  fontWeight: 500,
+                  color: 'var(--blue)',
+                  borderColor: 'var(--line2)',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  cursor: 'pointer',
+                }}
+                title={view.access === 'admin' ? 'Admin: Edit all personal and employment details' : 'Edit personal details'}
+              >
+                ✎ Edit
+              </button>
+            )}
+          </div>
+
+          <div
+            style={{
+              flex: 1,
+              overflowY: 'auto',
+              paddingRight: 6,
+              marginRight: -4,
+              scrollbarWidth: 'thin',
+            }}
+          >
+            <Row label="Employee code" value={view.employeeCode} />
+            <Row label="Email" value={view.workEmail} />
+            <Row label="Phone" value={view.mobile} />
+            <Row
+              label="Role"
+              value={
+                view.role
+                  ? view.role.charAt(0).toUpperCase() + view.role.slice(1)
+                  : view.isContractor
+                    ? 'Contractor'
+                    : 'Employee'
+              }
+            />
+            <Row label="Reporting manager" value={view.managerName} />
+            {(view.isSelf || view.access === 'admin') && (
+              <>
+                <Row
+                  label="Date of birth"
+                  value={fmtDob(view.dateOfBirth)}
+                />
+                <Row
+                  label="PAN"
+                  value={
+                    view.panNumber ||
+                    view.documents.find((d) => d.key === 'pan')?.docNumber ||
+                    null
+                  }
+                />
+                <Row
+                  label="Aadhaar"
+                  value={
+                    view.aadharNumber ||
+                    view.documents.find((d) => d.key === 'aadhaar')?.docNumber ||
+                    null
+                  }
+                />
+              </>
+            )}
+            <Row label="Shift" value={`${view.shiftStart}–${view.shiftEnd}`} />
+            <Row
+              label="Weekly off"
+              value={view.weeklyOff.length ? view.weeklyOff.join(' + ') : null}
+            />
+            <Row label="Date of joining" value={fmtDate(view.dateOfJoining)} />
+            <Row label="Work location" value={view.workState} />
+            <Row label="Leave balance" value={`${view.leaveBalance} days`} />
+          </div>
+
+          <div
+            style={{
+              marginTop: 'auto',
+              paddingTop: 8,
+              borderTop: '1px solid var(--line2)',
+              flexShrink: 0,
+            }}
+          >
             <button
               type="button"
               className="btn ghost sm"
@@ -278,6 +390,22 @@ export function MyPage() {
           onRefresh={load}
         />
       </div>
+
+      {showEditDetails && view && (
+        <EditPersonalDetailsModal
+          employee={view}
+          onClose={() => setShowEditDetails(false)}
+          onSuccess={() => {
+            void load(true)
+            setToast({
+              text: 'Personal details updated successfully.',
+              tone: 'good',
+            })
+          }}
+        />
+      )}
+
+      <Toast message={toast} onDismiss={() => setToast(null)} />
     </div>
   )
 }
