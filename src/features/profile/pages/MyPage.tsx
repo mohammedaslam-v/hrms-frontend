@@ -9,7 +9,7 @@ import { CompensationCard } from '../components/CompensationCard'
 import { DocumentsCard } from '../components/DocumentsCard'
 import { TodayCard, WeekCard } from '../../attendance'
 import { AdminLifecycleControls } from '../components/AdminLifecycleControls'
-import { WORK_MODE_CLASS, type ProfileView } from '../profile.types'
+import { WORK_MODE_CLASS, type ProfileView, type WorkMode } from '../profile.types'
 import { fmtDate } from '../../../shared/lib/date'
 import { initials } from '../../../shared/lib/format'
 import { DEPT_COLOR } from '../../../shared/lib/departments'
@@ -95,7 +95,37 @@ export function MyPage() {
           </div>
         </div>
         <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-          <span className={`chip ${WORK_MODE_CLASS[view.workMode]}`}>{view.workMode}</span>
+          {!view.isSelf && view.access === 'admin' ? (
+            <select
+              value={view.workMode}
+              onChange={async (e) => {
+                const nextMode = e.target.value as WorkMode
+                try {
+                  await profileApi.updateWorkMode(view.employeeId, nextMode)
+                  await load(true)
+                } catch (err) {
+                  console.error('Failed to update work mode', err)
+                }
+              }}
+              className={`chip ${WORK_MODE_CLASS[view.workMode]}`}
+              style={{
+                cursor: 'pointer',
+                border: '1px solid currentColor',
+                fontWeight: 600,
+                fontSize: '11px',
+                padding: '2px 8px',
+                borderRadius: '12px',
+                outline: 'none',
+              }}
+              title="Admin: Click to edit Mode of Work"
+            >
+              <option value="WFO">WFO</option>
+              <option value="WFH">WFH</option>
+              <option value="Hybrid">Hybrid</option>
+            </select>
+          ) : (
+            <span className={`chip ${WORK_MODE_CLASS[view.workMode]}`}>{view.workMode}</span>
+          )}
           {view.isContractor && (
             <span
               className="chip"

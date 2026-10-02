@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { profileApi } from '../profile.api'
-import type { ProfileView } from '../profile.types'
+import type { ProfileView, WorkMode } from '../profile.types'
 import { fmtDate } from '../../../shared/lib/date'
 
 interface Props {
@@ -36,12 +36,14 @@ export function AdminLifecycleControls({ employee, onRefresh }: Props) {
   const [isSalaryStopped, setIsSalaryStopped] = useState(Boolean(employee.isSalaryStopped))
   const [isExited, setIsExited] = useState(Boolean(employee.lastWorkingDay || employee.dateOfLeaving))
   const [isContractor, setIsContractor] = useState(isEmployeeContractor(employee))
+  const [workMode, setWorkMode] = useState<WorkMode>(employee.workMode || 'WFO')
 
   useEffect(() => {
     setIsLoginDisabled(Boolean(employee.isLoginDisabled))
     setIsSalaryStopped(Boolean(employee.isSalaryStopped))
     setIsExited(Boolean(employee.lastWorkingDay || employee.dateOfLeaving))
     setIsContractor(isEmployeeContractor(employee))
+    setWorkMode(employee.workMode || 'WFO')
   }, [
     employee.isLoginDisabled,
     employee.isSalaryStopped,
@@ -51,6 +53,7 @@ export function AdminLifecycleControls({ employee, onRefresh }: Props) {
     employee.employmentType,
     employee.designation,
     employee.department,
+    employee.workMode,
   ])
 
   // Dismiss form fields
@@ -253,6 +256,42 @@ export function AdminLifecycleControls({ employee, onRefresh }: Props) {
               >
                 <option value="Full-time">💼 Full-time</option>
                 <option value="Contract">📋 Contractor</option>
+              </select>
+            </div>
+
+            {/* Mode of Work Selector (WFO, WFH, Hybrid) */}
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginLeft: 6 }}>
+              <span style={{ fontSize: 11.5, color: 'var(--muted2)', fontWeight: 500 }}>Mode:</span>
+              <select
+                value={workMode}
+                onChange={async (e) => {
+                  const nextMode = e.target.value as WorkMode
+                  setWorkMode(nextMode)
+                  try {
+                    await profileApi.updateWorkMode(employee.employeeId, nextMode)
+                    setSuccessMsg(`Mode of work updated to ${nextMode}.`)
+                    await onRefresh()
+                    setTimeout(() => setSuccessMsg(null), 4000)
+                  } catch (err) {
+                    setError(err instanceof Error ? err.message : 'Could not update mode of work.')
+                  }
+                }}
+                disabled={submitting}
+                style={{
+                  padding: '2px 8px',
+                  borderRadius: 8,
+                  border: '1px solid var(--line)',
+                  fontSize: 11.5,
+                  fontWeight: 600,
+                  background: workMode === 'WFO' ? '#fef3c7' : workMode === 'WFH' ? '#e0f2fe' : '#f3e8ff',
+                  color: workMode === 'WFO' ? '#92400e' : workMode === 'WFH' ? '#0369a1' : '#6b21a8',
+                  cursor: 'pointer',
+                }}
+                title="Change Mode of Work (WFO, WFH, Hybrid)"
+              >
+                <option value="WFO">🏢 WFO</option>
+                <option value="WFH">🏠 WFH</option>
+                <option value="Hybrid">🔄 Hybrid</option>
               </select>
             </div>
           </div>

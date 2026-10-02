@@ -7,6 +7,7 @@ import type {
   ToggleSalaryPayload,
   UpdateCompensationPayload,
   UploadDocumentPayload,
+  WorkMode,
 } from './profile.types'
 import { fetchBlob, getAccessToken, request } from '../../shared/api/client'
 
@@ -108,6 +109,16 @@ export const profileApi = {
       {
         method: 'POST',
         body: JSON.stringify({ employmentType }),
+      },
+    ),
+
+  /** Admin: Update employee work mode (WFH, WFO, Hybrid). */
+  updateWorkMode: (employeeId: number, workMode: WorkMode) =>
+    request<{ workMode: WorkMode }>(
+      `/profile/${employeeId}/work-mode`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ workMode }),
       },
     ),
 
