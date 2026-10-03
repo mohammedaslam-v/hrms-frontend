@@ -182,7 +182,15 @@ export function TodayCard({ employeeId, isSelf, employeeName }: TodayCardProps) 
           </button>
         )}
         {view.canCheckOut && (
-          <button className="btn ghost" onClick={() => void act('out')} disabled={busy}>
+          <button
+            className="btn danger"
+            onClick={() => void act('out')}
+            disabled={busy}
+            style={{
+              boxShadow: '0 2px 8px rgba(220, 62, 67, 0.25)',
+              fontWeight: 600,
+            }}
+          >
             {busy ? 'Recording…' : 'Check out'}
           </button>
         )}
