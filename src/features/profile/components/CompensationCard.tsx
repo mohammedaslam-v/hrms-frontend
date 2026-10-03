@@ -203,7 +203,7 @@ export function CompensationCard({
   const breakout = calculateSalaryBreakout(c.ctc)
 
   return (
-    <div className="card" style={{ position: 'relative' }}>
+    <div className="card" style={{ position: 'relative', display: 'flex', flexDirection: 'column', height: '100%', boxSizing: 'border-box' }}>
       {/* Card Header */}
       <div
         style={{
@@ -429,7 +429,7 @@ export function CompensationCard({
       )}
 
       {/* Quick Action: View Full Salary Slip & Payslips */}
-      <div style={{ marginTop: 14, paddingTop: 10, borderTop: '1px solid var(--line2)', display: 'flex', justifyContent: 'flex-end' }}>
+      <div style={{ marginTop: 'auto', paddingTop: 10, borderTop: '1px solid var(--line2)', display: 'flex', justifyContent: 'flex-end' }}>
         <button
           type="button"
           className="btn sm outline"

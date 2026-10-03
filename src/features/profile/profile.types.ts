@@ -74,6 +74,12 @@ export interface ProfileView {
   linkedinProfile: string | null
   panNumber?: string | null
   aadharNumber?: string | null
+  confirmationDate?: string | null
+  uan?: string | null
+  pfNumber?: string | null
+  bankName?: string | null
+  ifscCode?: string | null
+  accountNo?: string | null
 
   documents: ProfileDocument[]
   leaveBalance: number
@@ -148,6 +154,13 @@ export interface UpdatePersonalDetailsPayload {
   leaveBalance?: number | null
   managerId?: number | null
   role?: 'employee' | 'manager' | 'admin' | null
+  confirmationDate?: string | null
+  dateOfLeaving?: string | null
+  uan?: string | null
+  pfNumber?: string | null
+  bankName?: string | null
+  ifscCode?: string | null
+  accountNo?: string | null
 }
 
 export const WORK_MODE_CLASS: Record<WorkMode, string> = {

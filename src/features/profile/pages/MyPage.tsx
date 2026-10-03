@@ -234,7 +234,7 @@ export function MyPage() {
         <div
           className="card"
           style={{
-            height: 360,
+            height: '100%',
             display: 'flex',
             flexDirection: 'column',
             boxSizing: 'border-box',
@@ -276,6 +276,7 @@ export function MyPage() {
           <div
             style={{
               flex: 1,
+              minHeight: 0,
               overflowY: 'auto',
               paddingRight: 6,
               marginRight: -4,
@@ -328,6 +329,21 @@ export function MyPage() {
             <Row label="Date of joining" value={fmtDate(view.dateOfJoining)} />
             <Row label="Work location" value={view.workState} />
             <Row label="Leave balance" value={`${view.leaveBalance} days`} />
+            {view.access === 'admin' && (
+              <>
+                {view.confirmationDate && (
+                  <Row label="Confirmation date" value={fmtDate(view.confirmationDate)} />
+                )}
+                {view.bankName && (
+                  <Row
+                    label="Bank details"
+                    value={`${view.bankName}${view.accountNo ? ` · A/C: ••••${view.accountNo.slice(-4)}` : ''}`}
+                  />
+                )}
+                {view.uan && <Row label="UAN" value={view.uan} />}
+                {view.pfNumber && <Row label="PF number" value={view.pfNumber} />}
+              </>
+            )}
           </div>
 
           <div

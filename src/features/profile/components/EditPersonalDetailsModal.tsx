@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import type { ProfileView } from '../profile.types'
 import { profileApi } from '../profile.api'
 import { employeeFormApi } from '../../employees/api/employee-form.api'
@@ -24,7 +24,6 @@ function SearchableManagerSelect({
   const containerRef = useRef<HTMLDivElement>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
 
-  // Find currently selected manager
   const selectedManager = managers.find((m) => String(m.id) === value)
   const displayLabel = selectedManager
     ? `${selectedManager.name} (${selectedManager.employeeCode})${
@@ -34,7 +33,6 @@ function SearchableManagerSelect({
       ? fallbackName || `Manager #${value}`
       : 'None / Self'
 
-  // Filter managers by search term (name, code, department)
   const q = searchTerm.toLowerCase().trim()
   const filteredManagers = managers.filter((m) => {
     if (!q) return true
@@ -44,7 +42,6 @@ function SearchableManagerSelect({
     return matchName || matchCode || matchDept
   })
 
-  // Close on outside click
   useEffect(() => {
     if (!isOpen) return
     const handleClickOutside = (e: MouseEvent) => {
@@ -56,7 +53,6 @@ function SearchableManagerSelect({
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [isOpen])
 
-  // Focus search input when opened
   useEffect(() => {
     if (isOpen) {
       setTimeout(() => searchInputRef.current?.focus(), 40)
@@ -67,18 +63,19 @@ function SearchableManagerSelect({
 
   return (
     <div ref={containerRef} style={{ position: 'relative', width: '100%' }}>
-      {/* Trigger Button */}
       <button
         type="button"
         id="empManager"
         onClick={() => setIsOpen((prev) => !prev)}
         style={{
           width: '100%',
-          padding: '8px 12px',
-          borderRadius: 6,
-          border: isOpen ? '1.5px solid #2563eb' : '1px solid #cbd5e1',
-          boxShadow: isOpen ? '0 0 0 3px rgba(37, 99, 235, 0.12)' : 'none',
-          fontSize: 14,
+          height: 34,
+          padding: '5px 10px',
+          borderRadius: 8,
+          border: isOpen ? '1px solid var(--blue)' : '1px solid var(--line)',
+          boxShadow: isOpen ? '0 0 0 2.5px rgba(37, 99, 235, 0.12)' : 'none',
+          fontSize: 12.5,
+          fontFamily: 'Inter, sans-serif',
           backgroundColor: '#ffffff',
           boxSizing: 'border-box',
           display: 'flex',
@@ -86,8 +83,8 @@ function SearchableManagerSelect({
           justifyContent: 'space-between',
           cursor: 'pointer',
           textAlign: 'left',
-          color: value ? '#1e293b' : '#64748b',
-          transition: 'all 0.15s ease',
+          color: value ? 'var(--ink)' : 'var(--muted2)',
+          transition: 'border-color 0.15s, box-shadow 0.15s',
         }}
       >
         <span
@@ -95,7 +92,7 @@ function SearchableManagerSelect({
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
-            marginRight: 8,
+            marginRight: 6,
             fontWeight: value ? 500 : 400,
           }}
         >
@@ -103,17 +100,17 @@ function SearchableManagerSelect({
         </span>
         <span
           style={{
-            fontSize: 11,
-            color: '#64748b',
+            fontSize: 10,
+            color: 'var(--muted2)',
             transform: isOpen ? 'rotate(180deg)' : 'none',
-            transition: 'transform 0.18s ease',
+            transition: 'transform 0.15s ease',
+            flexShrink: 0,
           }}
         >
           ▼
         </span>
       </button>
 
-      {/* Dropdown Popup Menu */}
       {isOpen && (
         <div
           style={{
@@ -122,30 +119,29 @@ function SearchableManagerSelect({
             left: 0,
             right: 0,
             backgroundColor: '#ffffff',
-            border: '1px solid #cbd5e1',
+            border: '1px solid var(--line)',
             borderRadius: 8,
-            boxShadow: '0 12px 24px -4px rgba(0, 0, 0, 0.15), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+            boxShadow: '0 10px 25px -4px rgba(24, 19, 13, 0.18)',
             zIndex: 10000,
             overflow: 'hidden',
             display: 'flex',
             flexDirection: 'column',
           }}
         >
-          {/* Search Field Header */}
           <div
             style={{
-              padding: '8px 10px',
-              borderBottom: '1px solid #e2e8f0',
-              backgroundColor: '#f8fafc',
+              padding: '6px 8px',
+              borderBottom: '1px solid var(--line2)',
+              backgroundColor: 'var(--panel)',
             }}
           >
             <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
               <span
                 style={{
                   position: 'absolute',
-                  left: 9,
-                  fontSize: 12,
-                  color: '#94a3b8',
+                  left: 8,
+                  fontSize: 11,
+                  color: 'var(--muted2)',
                   pointerEvents: 'none',
                 }}
               >
@@ -158,40 +154,38 @@ function SearchableManagerSelect({
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') e.preventDefault()
+                  if (e.key === 'Escape') {
+                    e.stopPropagation()
+                    setIsOpen(false)
+                  }
                 }}
-                onClick={(e) => e.stopPropagation()}
                 style={{
                   width: '100%',
-                  padding: '6px 28px 6px 28px',
-                  fontSize: 13,
+                  height: 28,
+                  padding: '4px 8px 4px 26px',
                   borderRadius: 6,
-                  border: '1px solid #cbd5e1',
-                  backgroundColor: '#ffffff',
+                  border: '1px solid var(--line)',
+                  fontSize: 11.5,
                   outline: 'none',
+                  backgroundColor: '#ffffff',
                   boxSizing: 'border-box',
                 }}
               />
               {searchTerm && (
                 <button
                   type="button"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    setSearchTerm('')
-                    searchInputRef.current?.focus()
-                  }}
+                  onClick={() => setSearchTerm('')}
                   style={{
                     position: 'absolute',
-                    right: 8,
+                    right: 6,
                     background: 'none',
                     border: 'none',
-                    color: '#94a3b8',
+                    fontSize: 12,
+                    color: 'var(--muted)',
                     cursor: 'pointer',
-                    fontSize: 13,
-                    padding: 2,
+                    padding: 0,
                     lineHeight: 1,
                   }}
-                  title="Clear search"
                 >
                   ✕
                 </button>
@@ -199,91 +193,91 @@ function SearchableManagerSelect({
             </div>
           </div>
 
-          {/* Scrollable Items List */}
           <div
             style={{
-              maxHeight: 220,
+              maxHeight: 180,
               overflowY: 'auto',
-              padding: '4px 0',
+              padding: '3px 0',
               scrollbarWidth: 'thin',
             }}
           >
-            {/* None / Self Option */}
-            {(!q || 'none'.includes(q) || 'self'.includes(q)) && (
-              <div
-                onClick={() => {
-                  onChange('')
-                  setIsOpen(false)
-                }}
-                style={{
-                  padding: '8px 12px',
-                  fontSize: 13,
-                  cursor: 'pointer',
-                  backgroundColor: !value ? '#eff6ff' : 'transparent',
-                  color: !value ? '#1d4ed8' : '#334155',
-                  fontWeight: !value ? 600 : 400,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  borderBottom: '1px solid #f1f5f9',
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = !value ? '#dbeafe' : '#f8fafc')}
-                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = !value ? '#eff6ff' : 'transparent')}
-              >
-                <span>None / Self</span>
-                {!value && <span style={{ color: '#2563eb', fontWeight: 600 }}>✓</span>}
-              </div>
-            )}
+            <div
+              onClick={() => {
+                onChange('')
+                setIsOpen(false)
+              }}
+              style={{
+                padding: '6px 10px',
+                fontSize: 12,
+                cursor: 'pointer',
+                backgroundColor: !value ? 'var(--blue-soft)' : 'transparent',
+                color: !value ? 'var(--blue)' : 'var(--ink2)',
+                fontWeight: !value ? 600 : 400,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+              onMouseEnter={(e) => {
+                if (value) e.currentTarget.style.backgroundColor = 'var(--panel)'
+              }}
+              onMouseLeave={(e) => {
+                if (value) e.currentTarget.style.backgroundColor = 'transparent'
+              }}
+            >
+              <span>None / Self (No manager)</span>
+              {!value && <span style={{ fontSize: 11 }}>✓</span>}
+            </div>
 
-            {filteredManagers.length > 0 ? (
-              filteredManagers.map((m) => {
-                const isSelected = String(m.id) === value
-                return (
-                  <div
-                    key={m.id}
-                    onClick={() => {
-                      onChange(String(m.id))
-                      setIsOpen(false)
-                    }}
-                    style={{
-                      padding: '8px 12px',
-                      fontSize: 13,
-                      cursor: 'pointer',
-                      backgroundColor: isSelected ? '#eff6ff' : 'transparent',
-                      color: isSelected ? '#1d4ed8' : '#334155',
-                      fontWeight: isSelected ? 600 : 400,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      borderBottom: '1px solid #f8fafc',
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = isSelected ? '#dbeafe' : '#f8fafc')}
-                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = isSelected ? '#eff6ff' : 'transparent')}
-                  >
-                    <div>
-                      <div>
-                        {m.name}{' '}
-                        <span style={{ color: '#64748b', fontSize: 12, fontWeight: 400 }}>
-                          ({m.employeeCode})
-                        </span>
-                      </div>
-                      {m.department && (
-                        <div style={{ fontSize: 11.5, color: '#94a3b8', marginTop: 1 }}>
-                          {m.department}
-                        </div>
-                      )}
-                    </div>
-                    {isSelected && <span style={{ color: '#2563eb', fontWeight: 600 }}>✓</span>}
+            {filteredManagers.map((m) => {
+              const isSelected = String(m.id) === value
+              return (
+                <div
+                  key={m.id}
+                  onClick={() => {
+                    onChange(String(m.id))
+                    setIsOpen(false)
+                  }}
+                  style={{
+                    padding: '6px 10px',
+                    fontSize: 12,
+                    cursor: 'pointer',
+                    backgroundColor: isSelected ? 'var(--blue-soft)' : 'transparent',
+                    color: isSelected ? 'var(--blue)' : 'var(--ink)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 6,
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isSelected) e.currentTarget.style.backgroundColor = 'var(--panel)'
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isSelected) e.currentTarget.style.backgroundColor = 'transparent'
+                  }}
+                >
+                  <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <span style={{ fontWeight: isSelected ? 600 : 500 }}>{m.name}</span>
+                    <span style={{ color: 'var(--muted2)', fontSize: 11, marginLeft: 5 }}>
+                      ({m.employeeCode})
+                    </span>
+                    {m.department && (
+                      <span style={{ color: 'var(--muted)', fontSize: 10.5, marginLeft: 4 }}>
+                        · {m.department}
+                      </span>
+                    )}
                   </div>
-                )
-              })
-            ) : (
+                  {isSelected && <span style={{ fontSize: 11, color: 'var(--blue)' }}>✓</span>}
+                </div>
+              )
+            })}
+
+            {filteredManagers.length === 0 && (
               <div
                 style={{
-                  padding: '16px 12px',
+                  padding: '12px 10px',
                   textAlign: 'center',
-                  fontSize: 12.5,
-                  color: '#94a3b8',
+                  fontSize: 11.5,
+                  color: 'var(--muted)',
                 }}
               >
                 No managers found matching "{searchTerm}"
@@ -296,21 +290,48 @@ function SearchableManagerSelect({
   )
 }
 
-const STANDARD_LOCATIONS = [
-  'Karnataka',
-  'Maharashtra',
-  'Telangana',
-  'Delhi',
-  'Tamil Nadu',
-  'Uttar Pradesh',
-  'Haryana',
-  'West Bengal',
+const INDIAN_STATES = [
+  'Andhra Pradesh',
+  'Arunachal Pradesh',
+  'Assam',
+  'Bihar',
+  'Chhattisgarh',
+  'Goa',
   'Gujarat',
+  'Haryana',
+  'Himachal Pradesh',
+  'Jharkhand',
+  'Karnataka',
   'Kerala',
-  'Remote',
+  'Madhya Pradesh',
+  'Maharashtra',
+  'Manipur',
+  'Meghalaya',
+  'Mizoram',
+  'Nagaland',
+  'Odisha',
+  'Punjab',
+  'Rajasthan',
+  'Sikkim',
+  'Tamil Nadu',
+  'Telangana',
+  'Tripura',
+  'Uttar Pradesh',
+  'Uttarakhand',
+  'West Bengal',
+  'Delhi',
+  'Remote / Other',
 ]
 
-const DAYS_OF_WEEK = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+const DAYS_OF_WEEK = [
+  { key: 'Mon', label: 'Mon' },
+  { key: 'Tue', label: 'Tue' },
+  { key: 'Wed', label: 'Wed' },
+  { key: 'Thu', label: 'Thu' },
+  { key: 'Fri', label: 'Fri' },
+  { key: 'Sat', label: 'Sat' },
+  { key: 'Sun', label: 'Sun' },
+]
 
 interface EditPersonalDetailsModalProps {
   employee: ProfileView
@@ -325,176 +346,159 @@ export function EditPersonalDetailsModal({
 }: EditPersonalDetailsModalProps) {
   const isAdmin = employee.access === 'admin'
 
-  const existingPan =
+  // Basic Personal & Contact Details
+  const [email, setEmail] = useState<string>(employee.workEmail || '')
+  const [mobile, setMobile] = useState<string>(employee.mobile || '')
+
+  const initialDob = employee.dateOfBirth
+    ? employee.dateOfBirth.length === 10
+      ? employee.dateOfBirth
+      : new Date(employee.dateOfBirth).toISOString().slice(0, 10)
+    : ''
+  const [dateOfBirth, setDateOfBirth] = useState<string>(initialDob)
+
+  const initialPan =
     employee.panNumber ||
     employee.documents.find((d) => d.key === 'pan')?.docNumber ||
     ''
+  const [pan, setPan] = useState<string>(initialPan)
 
-  const existingAadhar =
+  const initialAadhar =
     employee.aadharNumber ||
     employee.documents.find((d) => d.key === 'aadhaar')?.docNumber ||
     ''
+  const [aadhar, setAadhar] = useState<string>(initialAadhar)
 
-  // Basic Personal & Contact Fields (Both Employee and Admin)
-  const [email, setEmail] = useState<string>(employee.workEmail || '')
-  const [mobile, setMobile] = useState<string>(employee.mobile || '')
-  const [dateOfBirth, setDateOfBirth] = useState<string>(() => {
-    if (!employee.dateOfBirth) return ''
-    if (/^\d{4}-\d{2}-\d{2}/.test(employee.dateOfBirth)) {
-      return employee.dateOfBirth.slice(0, 10)
-    }
-    const d = new Date(employee.dateOfBirth)
-    if (!isNaN(d.getTime())) {
-      const y = d.getFullYear()
-      const m = String(d.getMonth() + 1).padStart(2, '0')
-      const day = String(d.getDate()).padStart(2, '0')
-      return `${y}-${m}-${day}`
-    }
-    return ''
+  const [selectedLocation, setSelectedLocation] = useState<string>(() => {
+    const loc = employee.workState || 'Karnataka'
+    return INDIAN_STATES.includes(loc) ? loc : 'Other'
   })
-  const [pan, setPan] = useState<string>(existingPan)
-  const [aadhar, setAadhar] = useState<string>(existingAadhar)
+  const [customLocation, setCustomLocation] = useState<string>(() => {
+    const loc = employee.workState || ''
+    return INDIAN_STATES.includes(loc) ? '' : loc
+  })
 
-  // Work location
-  const initialWorkLocation = employee.workState || 'Karnataka'
-  const isStandardLoc = STANDARD_LOCATIONS.includes(initialWorkLocation)
-  const [selectedLocation, setSelectedLocation] = useState<string>(
-    isStandardLoc ? initialWorkLocation : 'custom',
-  )
-  const [customLocation, setCustomLocation] = useState<string>(
-    isStandardLoc ? '' : initialWorkLocation,
-  )
-
-  // Admin-Only Fields
+  // Admin: Role, Shift & Organization
   const [role, setRole] = useState<'employee' | 'manager' | 'admin'>(() => {
-    if (employee.role) return employee.role
     if (employee.hrmsRole === 'admin') return 'admin'
+    if (employee.role === 'manager') return 'manager'
     return 'employee'
   })
-  const [managerId, setManagerId] = useState<string>(
-    employee.managerId ? String(employee.managerId) : '',
-  )
-  const [shiftStart, setShiftStart] = useState<string>(
-    employee.shiftStart ? employee.shiftStart.slice(0, 5) : '10:00',
-  )
-  const [shiftEnd, setShiftEnd] = useState<string>(
-    employee.shiftEnd ? employee.shiftEnd.slice(0, 5) : '19:00',
-  )
-  const [weeklyOff, setWeeklyOff] = useState<string[]>(
-    employee.weeklyOff && employee.weeklyOff.length ? employee.weeklyOff : ['Sun'],
-  )
-  const [dateOfJoining, setDateOfJoining] = useState<string>(() => {
-    if (!employee.dateOfJoining) return ''
-    return employee.dateOfJoining.slice(0, 10)
-  })
+  const [shiftStart, setShiftStart] = useState<string>(employee.shiftStart?.slice(0, 5) || '10:00')
+  const [shiftEnd, setShiftEnd] = useState<string>(employee.shiftEnd?.slice(0, 5) || '19:00')
+  const [weeklyOff, setWeeklyOff] = useState<string[]>(employee.weeklyOff || ['Sun'])
+
+  const initialDoj = employee.dateOfJoining
+    ? employee.dateOfJoining.length === 10
+      ? employee.dateOfJoining
+      : new Date(employee.dateOfJoining).toISOString().slice(0, 10)
+    : ''
+  const [dateOfJoining, setDateOfJoining] = useState<string>(initialDoj)
+
   const [leaveBalance, setLeaveBalance] = useState<string>(
     employee.leaveBalance !== undefined ? String(employee.leaveBalance) : '0',
   )
+  const [managerId, setManagerId] = useState<string>(
+    employee.managerId ? String(employee.managerId) : '',
+  )
 
-  // Managers list for dropdown
+  // Admin: Bank & Statutory Details
+  const initialConfDate = employee.confirmationDate
+    ? employee.confirmationDate.length === 10
+      ? employee.confirmationDate
+      : new Date(employee.confirmationDate).toISOString().slice(0, 10)
+    : ''
+  const [confirmationDate, setConfirmationDate] = useState<string>(initialConfDate)
+
+  const initialExitDate = employee.dateOfLeaving
+    ? employee.dateOfLeaving.length === 10
+      ? employee.dateOfLeaving
+      : new Date(employee.dateOfLeaving).toISOString().slice(0, 10)
+    : ''
+  const [dateOfLeaving, setDateOfLeaving] = useState<string>(initialExitDate)
+
+  const [bankName, setBankName] = useState<string>(employee.bankName || '')
+  const [accountNo, setAccountNo] = useState<string>(employee.accountNo || '')
+  const [ifscCode, setIfscCode] = useState<string>(employee.ifscCode || '')
+  const [uan, setUan] = useState<string>(employee.uan || '')
+  const [pfNumber, setPfNumber] = useState<string>(employee.pfNumber || '')
+
+  // Manager List for searchable dropdown
   const [managers, setManagers] = useState<ManagerOption[]>([])
-  const [loadingMeta, setLoadingMeta] = useState(false)
+  const [loadingManagers, setLoadingManagers] = useState<boolean>(false)
 
-  const [submitting, setSubmitting] = useState(false)
+  const [submitting, setSubmitting] = useState<boolean>(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Load managers when admin
   useEffect(() => {
     if (!isAdmin) return
     let active = true
-    setLoadingMeta(true)
+    setLoadingManagers(true)
     employeeFormApi
       .fetchMeta()
       .then((meta) => {
         if (active && meta?.managers) {
-          // Filter out the current employee from the manager list
-          setManagers(meta.managers.filter((m) => m.id !== employee.employeeId))
+          const filtered = meta.managers.filter((m) => m.id !== employee.employeeId)
+          setManagers(filtered)
         }
       })
-      .catch(() => {
-        // Non-blocking fallback
+      .catch((err: unknown) => {
+        console.warn('Could not load manager options for selector:', err)
       })
       .finally(() => {
-        if (active) setLoadingMeta(false)
+        if (active) setLoadingManagers(false)
       })
     return () => {
       active = false
     }
   }, [isAdmin, employee.employeeId])
 
-  // Close on Escape key
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !submitting) {
-        onClose()
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [submitting, onClose])
-
-  const maxDob = new Date().toISOString().slice(0, 10)
-
-  // Format Aadhaar with spaces (xxxx xxxx xxxx)
-  const handleAadharChange = (val: string) => {
-    const digitsOnly = val.replace(/\D/g, '').slice(0, 12)
-    const parts = digitsOnly.match(/[\s\S]{1,4}/g) || []
-    setAadhar(parts.join(' '))
+  const toggleDay = (day: string) => {
+    setWeeklyOff((prev) =>
+      prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day],
+    )
   }
 
-  const toggleWeeklyOffDay = (day: string) => {
-    if (weeklyOff.includes(day)) {
-      if (weeklyOff.length === 1) return // Keep at least one day
-      setWeeklyOff(weeklyOff.filter((d) => d !== day))
-    } else {
-      setWeeklyOff([...weeklyOff, day])
-    }
-  }
+  const todayStr = new Date().toISOString().slice(0, 10)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
 
     const cleanEmail = email.trim()
-    const cleanMobile = mobile.trim()
-    const cleanDob = dateOfBirth.trim()
-    const cleanPan = pan.trim().toUpperCase()
-    const cleanAadhar = aadhar.replace(/\s+/g, '').trim()
-    const finalLocation = (
-      selectedLocation === 'custom' ? customLocation : selectedLocation
-    ).trim()
-
-    // Email validation
-    if (!cleanEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+    if (!cleanEmail) {
+      setError('Work email is required.')
+      return
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
       setError('Please enter a valid work email address.')
       return
     }
 
-    // PAN validation
-    if (cleanPan && !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(cleanPan)) {
-      setError('PAN must be in valid 10-character alphanumeric format (e.g. ABCDE1234F).')
+    const cleanMobile = mobile.trim().replace(/\D/g, '')
+    if (mobile.trim() && cleanMobile.length < 10) {
+      setError('Please enter a valid 10-digit mobile number.')
       return
     }
 
-    // Aadhaar validation
+    const cleanPan = pan.trim().toUpperCase()
+    if (cleanPan && !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(cleanPan)) {
+      setError('PAN must be 10 characters in standard format (e.g. ABCDE1234F).')
+      return
+    }
+
+    const cleanAadhar = aadhar.trim().replace(/\s+/g, '')
     if (cleanAadhar && !/^\d{12}$/.test(cleanAadhar)) {
       setError('Aadhaar number must be exactly 12 numeric digits.')
       return
     }
 
-    // Mobile validation
-    if (cleanMobile && cleanMobile.replace(/\D/g, '').length < 10) {
-      setError('Mobile number must be at least 10 digits.')
+    const finalLocation = selectedLocation === 'Other' ? customLocation.trim() : selectedLocation
+    if (!finalLocation) {
+      setError('Work location is required.')
       return
     }
 
-    // DOB validation
-    if (cleanDob && cleanDob > maxDob) {
-      setError('Date of birth cannot be in the future.')
-      return
-    }
-
-    // Admin fields validation
     if (isAdmin) {
       if (!dateOfJoining) {
         setError('Date of joining is required.')
@@ -509,6 +513,10 @@ export function EditPersonalDetailsModal({
         setError('Leave balance must be a non-negative number.')
         return
       }
+      if (ifscCode.trim() && ifscCode.trim().length < 4) {
+        setError('Please enter a valid IFSC code.')
+        return
+      }
     }
 
     setSubmitting(true)
@@ -516,7 +524,7 @@ export function EditPersonalDetailsModal({
       const payload: Record<string, unknown> = {
         email: cleanEmail,
         mobile: cleanMobile || null,
-        dateOfBirth: cleanDob || null,
+        dateOfBirth: dateOfBirth || null,
         pan: cleanPan || null,
         aadhar: cleanAadhar || null,
         workLocation: finalLocation || null,
@@ -530,6 +538,13 @@ export function EditPersonalDetailsModal({
         payload.weeklyOff = weeklyOff
         payload.dateOfJoining = dateOfJoining
         payload.leaveBalance = Number(leaveBalance)
+        payload.confirmationDate = confirmationDate ? confirmationDate.slice(0, 10) : null
+        payload.dateOfLeaving = dateOfLeaving ? dateOfLeaving.slice(0, 10) : null
+        payload.bankName = bankName.trim() || null
+        payload.accountNo = accountNo.trim() || null
+        payload.ifscCode = ifscCode.trim() ? ifscCode.trim().toUpperCase() : null
+        payload.uan = uan.trim() || null
+        payload.pfNumber = pfNumber.trim() || null
       }
 
       await profileApi.updatePersonalDetails(
@@ -546,548 +561,588 @@ export function EditPersonalDetailsModal({
     }
   }
 
+  // Consistent input styling adhering strictly to the portal's design system
+  const inputStyle: CSSProperties = {
+    width: '100%',
+    height: 34,
+    padding: '5px 10px',
+    borderRadius: 8,
+    border: '1px solid var(--line)',
+    fontSize: 12.5,
+    fontFamily: 'Inter, sans-serif',
+    color: 'var(--ink)',
+    backgroundColor: '#ffffff',
+    outline: 'none',
+    boxSizing: 'border-box',
+    transition: 'border-color 0.15s, box-shadow 0.15s',
+  }
+
+  const labelStyle: CSSProperties = {
+    display: 'block',
+    fontSize: 11,
+    fontWeight: 600,
+    color: 'var(--ink2)',
+    marginBottom: 4,
+    letterSpacing: '0.01em',
+  }
+
+  const sectionHeaderStyle: CSSProperties = {
+    gridColumn: '1 / -1',
+    display: 'flex',
+    alignItems: 'center',
+    gap: 6,
+    fontSize: 10.5,
+    fontWeight: 700,
+    letterSpacing: '0.07em',
+    textTransform: 'uppercase',
+    color: 'var(--blue)',
+    borderBottom: '1px solid var(--line2)',
+    paddingBottom: 5,
+    marginTop: 6,
+  }
+
   return (
     <div
+      className="modal on"
       style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: 'rgba(15, 23, 42, 0.65)',
-        backdropFilter: 'blur(4px)',
-        zIndex: 9999,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 16,
+        zIndex: 90,
       }}
       onClick={(e) => {
         if (e.target === e.currentTarget && !submitting) onClose()
       }}
     >
       <div
+        className="box"
         style={{
-          backgroundColor: '#ffffff',
-          borderRadius: 14,
-          maxWidth: isAdmin ? 660 : 560,
-          width: '100%',
-          maxHeight: '92vh',
-          overflowY: 'auto',
-          boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
-          border: '1px solid #e2e8f0',
-          padding: '24px 28px',
+          maxWidth: isAdmin ? 600 : 520,
+          padding: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          maxHeight: '88vh',
+          borderRadius: 16,
+          boxShadow: '0 24px 60px rgba(24, 19, 13, 0.22)',
+          border: '1px solid var(--line)',
+          overflow: 'hidden',
         }}
       >
         {/* Header */}
         <div
           style={{
+            padding: '14px 18px',
+            borderBottom: '1px solid var(--line2)',
             display: 'flex',
-            justifyContent: 'space-between',
             alignItems: 'flex-start',
-            marginBottom: 18,
-            paddingBottom: 14,
-            borderBottom: '1px solid #edf2f7',
+            justifyContent: 'space-between',
+            gap: 12,
+            backgroundColor: '#ffffff',
+            flexShrink: 0,
           }}
         >
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: 20 }}>👤</span>
-              <h2 style={{ fontSize: 19, fontWeight: 600, color: '#1e293b', margin: 0 }}>
-                {isAdmin ? 'Edit Employee Details' : 'Edit Personal Details'}
-              </h2>
-            </div>
-            <p style={{ fontSize: 13, color: '#64748b', marginTop: 4, marginBottom: 0 }}>
+            <h3
+              style={{
+                margin: 0,
+                fontSize: 16,
+                fontWeight: 700,
+                color: 'var(--ink)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+              }}
+            >
+              <span>{isAdmin ? '👤 Edit Employee Details' : '👤 Edit Personal Details'}</span>
+            </h3>
+            <p
+              style={{
+                margin: '2px 0 0',
+                fontSize: 11.5,
+                color: 'var(--muted2)',
+              }}
+            >
               {isAdmin
-                ? `Full administrative edit for ${employee.fullName} (${employee.employeeCode})`
-                : 'Update your personal and statutory identification details'}
+                ? `Admin edit for ${employee.fullName} (${employee.employeeCode})`
+                : 'Update your contact and identification details'}
             </p>
           </div>
           <button
             type="button"
+            className="x"
             onClick={onClose}
             disabled={submitting}
+            aria-label="Close"
             style={{
-              background: 'none',
-              border: 'none',
-              fontSize: 22,
-              color: '#94a3b8',
+              width: 28,
+              height: 28,
+              borderRadius: 8,
+              border: '1px solid var(--line)',
+              background: '#fff',
               cursor: submitting ? 'not-allowed' : 'pointer',
-              lineHeight: 1,
-              padding: 4,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'var(--muted2)',
+              fontSize: 12,
+              flexShrink: 0,
             }}
-            title="Close"
           >
-            ×
+            ✕
           </button>
         </div>
 
-        {/* Error Alert */}
-        {error && (
+        {/* Scrollable Form Body */}
+        <form
+          onSubmit={handleSubmit}
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            flex: 1,
+            minHeight: 0,
+            overflow: 'hidden',
+          }}
+        >
           <div
             style={{
-              backgroundColor: '#fef2f2',
-              border: '1px solid #fecaca',
-              color: '#991b1b',
-              padding: '10px 14px',
-              borderRadius: 8,
-              fontSize: 13,
-              marginBottom: 18,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
+              flex: 1,
+              overflowY: 'auto',
+              padding: '14px 18px',
+              scrollbarWidth: 'thin',
             }}
           >
-            <span>⚠️</span>
-            <span>{error}</span>
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {/* SECTION 1: Personal & Contact */}
-          <div style={{ fontSize: 13, fontWeight: 600, color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-            Basic Details &amp; Contact
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-            {/* Work Email */}
-            <div className="f">
-              <label
-                htmlFor="empEmail"
-                style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#334155', marginBottom: 6 }}
-              >
-                Work email *
-              </label>
-              <input
-                id="empEmail"
-                type="email"
-                placeholder="name@company.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
+            {error && (
+              <div
+                className="notice bad"
                 style={{
-                  width: '100%',
+                  marginBottom: 12,
+                  fontSize: 12,
                   padding: '8px 12px',
-                  borderRadius: 6,
-                  border: '1px solid #cbd5e1',
-                  fontSize: 14,
-                  boxSizing: 'border-box',
+                  borderRadius: 8,
                 }}
-              />
-            </div>
-
-            {/* Phone / Mobile */}
-            <div className="f">
-              <label
-                htmlFor="empMobile"
-                style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#334155', marginBottom: 6 }}
+                role="alert"
               >
-                Phone / Mobile number
-              </label>
-              <input
-                id="empMobile"
-                type="tel"
-                placeholder="e.g. 9876543210"
-                value={mobile}
-                onChange={(e) => setMobile(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '8px 12px',
-                  borderRadius: 6,
-                  border: '1px solid #cbd5e1',
-                  fontSize: 14,
-                  boxSizing: 'border-box',
-                }}
-              />
-            </div>
-          </div>
+                ⚠️ {error}
+              </div>
+            )}
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-            {/* Date of Birth */}
-            <div className="f">
-              <label
-                htmlFor="empDob"
-                style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#334155', marginBottom: 6 }}
-              >
-                Date of birth
-              </label>
-              <input
-                id="empDob"
-                type="date"
-                max={maxDob}
-                value={dateOfBirth}
-                onChange={(e) => setDateOfBirth(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '8px 12px',
-                  borderRadius: 6,
-                  border: '1px solid #cbd5e1',
-                  fontSize: 14,
-                  boxSizing: 'border-box',
-                }}
-              />
-            </div>
-
-            {/* Work Location */}
-            <div className="f">
-              <label
-                htmlFor="empLocation"
-                style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#334155', marginBottom: 6 }}
-              >
-                Work location
-              </label>
-              <select
-                id="empLocation"
-                value={selectedLocation}
-                onChange={(e) => setSelectedLocation(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '8px 12px',
-                  borderRadius: 6,
-                  border: '1px solid #cbd5e1',
-                  fontSize: 14,
-                  boxSizing: 'border-box',
-                  backgroundColor: '#ffffff',
-                }}
-              >
-                {STANDARD_LOCATIONS.map((loc) => (
-                  <option key={loc} value={loc}>
-                    {loc}
-                  </option>
-                ))}
-                <option value="custom">Other / Custom location…</option>
-              </select>
-            </div>
-          </div>
-
-          {selectedLocation === 'custom' && (
-            <div className="f">
-              <input
-                type="text"
-                placeholder="Enter custom work location or state"
-                value={customLocation}
-                onChange={(e) => setCustomLocation(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '8px 12px',
-                  borderRadius: 6,
-                  border: '1px solid #cbd5e1',
-                  fontSize: 14,
-                  boxSizing: 'border-box',
-                }}
-                required
-              />
-            </div>
-          )}
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-            {/* PAN Card */}
-            <div className="f">
-              <label
-                htmlFor="empPan"
-                style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#334155', marginBottom: 6 }}
-              >
-                PAN number
-              </label>
-              <input
-                id="empPan"
-                type="text"
-                placeholder="ABCDE1234F"
-                maxLength={10}
-                value={pan}
-                onChange={(e) => setPan(e.target.value.toUpperCase())}
-                style={{
-                  width: '100%',
-                  padding: '8px 12px',
-                  borderRadius: 6,
-                  border: '1px solid #cbd5e1',
-                  fontSize: 14,
-                  textTransform: 'uppercase',
-                  boxSizing: 'border-box',
-                  fontFamily: 'monospace',
-                  letterSpacing: '0.05em',
-                }}
-              />
-            </div>
-
-            {/* Aadhaar Number */}
-            <div className="f">
-              <label
-                htmlFor="empAadhar"
-                style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#334155', marginBottom: 6 }}
-              >
-                Aadhaar number
-              </label>
-              <input
-                id="empAadhar"
-                type="text"
-                placeholder="1234 5678 9012"
-                maxLength={14}
-                value={aadhar}
-                onChange={(e) => handleAadharChange(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '8px 12px',
-                  borderRadius: 6,
-                  border: '1px solid #cbd5e1',
-                  fontSize: 14,
-                  boxSizing: 'border-box',
-                  fontFamily: 'monospace',
-                  letterSpacing: '0.05em',
-                }}
-              />
-            </div>
-          </div>
-
-          {/* SECTION 2: ADMIN ONLY (Role, Manager, Shift, Weekly Off, DOJ, Leave Balance) */}
-          {isAdmin && (
             <div
               style={{
-                marginTop: 10,
-                paddingTop: 16,
-                borderTop: '1.5px dashed #cbd5e1',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 16,
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: '10px 12px',
               }}
             >
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  fontSize: 13,
-                  fontWeight: 600,
-                  color: '#1d4ed8',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.04em',
-                }}
-              >
-                <span>⚙️ Role, Shift &amp; Organization</span>
+              {/* SECTION 1: Personal & Contact Details */}
+              <div style={sectionHeaderStyle}>
+                <span>Basic Details &amp; Contact</span>
               </div>
 
-              {/* Role & Manager */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-                {/* HRMS Role */}
-                <div className="f">
-                  <label
-                    htmlFor="empRole"
-                    style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#334155', marginBottom: 6 }}
-                  >
-                    HRMS Role *
-                  </label>
-                  <select
-                    id="empRole"
-                    value={role}
-                    onChange={(e) => setRole(e.target.value as 'employee' | 'manager' | 'admin')}
-                    style={{
-                      width: '100%',
-                      padding: '8px 12px',
-                      borderRadius: 6,
-                      border: '1px solid #cbd5e1',
-                      fontSize: 14,
-                      backgroundColor: '#ffffff',
-                      boxSizing: 'border-box',
-                    }}
-                  >
-                    <option value="employee">Employee</option>
-                    <option value="manager">Manager</option>
-                    <option value="admin">Admin</option>
-                  </select>
-                </div>
-
-                {/* Reporting Manager */}
-                <div className="f">
-                  <label
-                    htmlFor="empManager"
-                    style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#334155', marginBottom: 6 }}
-                  >
-                    Reporting manager {loadingMeta && '…'}
-                  </label>
-                  <SearchableManagerSelect
-                    value={managerId}
-                    onChange={setManagerId}
-                    managers={managers}
-                    fallbackName={employee.managerName}
-                    loading={loadingMeta}
-                  />
-                </div>
-              </div>
-
-              {/* Shift timings */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-                <div className="f">
-                  <label
-                    htmlFor="empShiftStart"
-                    style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#334155', marginBottom: 6 }}
-                  >
-                    Shift start time
-                  </label>
-                  <input
-                    id="empShiftStart"
-                    type="time"
-                    value={shiftStart}
-                    onChange={(e) => setShiftStart(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '8px 12px',
-                      borderRadius: 6,
-                      border: '1px solid #cbd5e1',
-                      fontSize: 14,
-                      boxSizing: 'border-box',
-                    }}
-                  />
-                </div>
-
-                <div className="f">
-                  <label
-                    htmlFor="empShiftEnd"
-                    style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#334155', marginBottom: 6 }}
-                  >
-                    Shift end time
-                  </label>
-                  <input
-                    id="empShiftEnd"
-                    type="time"
-                    value={shiftEnd}
-                    onChange={(e) => setShiftEnd(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '8px 12px',
-                      borderRadius: 6,
-                      border: '1px solid #cbd5e1',
-                      fontSize: 14,
-                      boxSizing: 'border-box',
-                    }}
-                  />
-                </div>
-              </div>
-
-              {/* Weekly Off Days */}
+              {/* Work Email */}
               <div className="f">
-                <label
-                  style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#334155', marginBottom: 6 }}
-                >
-                  Weekly off days
+                <label htmlFor="empEmail" style={labelStyle}>
+                  Work email *
                 </label>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                  {DAYS_OF_WEEK.map((day) => {
-                    const isSelected = weeklyOff.includes(day)
-                    return (
-                      <button
-                        key={day}
-                        type="button"
-                        onClick={() => toggleWeeklyOffDay(day)}
-                        style={{
-                          padding: '6px 14px',
-                          borderRadius: 20,
-                          fontSize: 12.5,
-                          fontWeight: 500,
-                          cursor: 'pointer',
-                          border: isSelected ? '1.5px solid #2563eb' : '1px solid #cbd5e1',
-                          backgroundColor: isSelected ? '#eff6ff' : '#f8fafc',
-                          color: isSelected ? '#1d4ed8' : '#64748b',
-                          transition: 'all 0.15s ease',
-                        }}
-                      >
-                        {day} {isSelected && '✓'}
-                      </button>
-                    )
-                  })}
-                </div>
+                <input
+                  id="empEmail"
+                  type="email"
+                  placeholder="name@company.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  style={inputStyle}
+                />
               </div>
 
-              {/* Date of Joining & Leave Balance */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-                <div className="f">
-                  <label
-                    htmlFor="empDoj"
-                    style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#334155', marginBottom: 6 }}
-                  >
-                    Date of joining *
+              {/* Phone / Mobile */}
+              <div className="f">
+                <label htmlFor="empMobile" style={labelStyle}>
+                  Mobile number
+                </label>
+                <input
+                  id="empMobile"
+                  type="tel"
+                  placeholder="e.g. 9876543210"
+                  value={mobile}
+                  onChange={(e) => setMobile(e.target.value)}
+                  style={inputStyle}
+                />
+              </div>
+
+              {/* Date of Birth */}
+              <div className="f">
+                <label htmlFor="empDob" style={labelStyle}>
+                  Date of birth
+                </label>
+                <input
+                  id="empDob"
+                  type="date"
+                  max={todayStr}
+                  value={dateOfBirth}
+                  onChange={(e) => setDateOfBirth(e.target.value)}
+                  style={inputStyle}
+                />
+              </div>
+
+              {/* Work Location */}
+              <div className="f">
+                <label htmlFor="empLocation" style={labelStyle}>
+                  Work location
+                </label>
+                <select
+                  id="empLocation"
+                  value={selectedLocation}
+                  onChange={(e) => setSelectedLocation(e.target.value)}
+                  style={inputStyle}
+                >
+                  {INDIAN_STATES.map((state) => (
+                    <option key={state} value={state}>
+                      {state}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {selectedLocation === 'Other' && (
+                <div className="f" style={{ gridColumn: '1 / -1' }}>
+                  <label htmlFor="customLocation" style={labelStyle}>
+                    Specify location *
                   </label>
                   <input
-                    id="empDoj"
-                    type="date"
-                    value={dateOfJoining}
-                    onChange={(e) => setDateOfJoining(e.target.value)}
+                    id="customLocation"
+                    type="text"
+                    placeholder="Enter state or city"
+                    value={customLocation}
+                    onChange={(e) => setCustomLocation(e.target.value)}
                     required
-                    style={{
-                      width: '100%',
-                      padding: '8px 12px',
-                      borderRadius: 6,
-                      border: '1px solid #cbd5e1',
-                      fontSize: 14,
-                      boxSizing: 'border-box',
-                    }}
+                    style={inputStyle}
                   />
                 </div>
+              )}
 
-                <div className="f">
-                  <label
-                    htmlFor="empLeaveBal"
-                    style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#334155', marginBottom: 6 }}
-                  >
-                    Leave balance (days)
-                  </label>
-                  <input
-                    id="empLeaveBal"
-                    type="number"
-                    step="0.5"
-                    min="0"
-                    placeholder="e.g. 19.5"
-                    value={leaveBalance}
-                    onChange={(e) => setLeaveBalance(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '8px 12px',
-                      borderRadius: 6,
-                      border: '1px solid #cbd5e1',
-                      fontSize: 14,
-                      boxSizing: 'border-box',
-                    }}
-                  />
-                </div>
+              {/* PAN Number */}
+              <div className="f">
+                <label htmlFor="empPan" style={labelStyle}>
+                  PAN number
+                </label>
+                <input
+                  id="empPan"
+                  type="text"
+                  placeholder="ABCDE1234F"
+                  maxLength={10}
+                  value={pan}
+                  onChange={(e) => setPan(e.target.value.toUpperCase())}
+                  style={{ ...inputStyle, textTransform: 'uppercase' }}
+                />
               </div>
-            </div>
-          )}
 
-          {/* Action buttons */}
+              {/* Aadhaar Number */}
+              <div className="f">
+                <label htmlFor="empAadhaar" style={labelStyle}>
+                  Aadhaar number
+                </label>
+                <input
+                  id="empAadhaar"
+                  type="text"
+                  placeholder="1234 5678 9012"
+                  maxLength={14}
+                  value={aadhar}
+                  onChange={(e) => setAadhar(e.target.value)}
+                  style={inputStyle}
+                />
+              </div>
+
+              {/* SECTION 2: Role, Shift & Organization (Admin only) */}
+              {isAdmin && (
+                <>
+                  <div style={sectionHeaderStyle}>
+                    <span>⚙️ Role, Shift &amp; Organization</span>
+                  </div>
+
+                  {/* HRMS Role */}
+                  <div className="f">
+                    <label htmlFor="empRole" style={labelStyle}>
+                      HRMS role *
+                    </label>
+                    <select
+                      id="empRole"
+                      value={role}
+                      onChange={(e) =>
+                        setRole(e.target.value as 'employee' | 'manager' | 'admin')
+                      }
+                      style={inputStyle}
+                    >
+                      <option value="employee">Employee</option>
+                      <option value="manager">Manager</option>
+                      <option value="admin">Admin</option>
+                    </select>
+                  </div>
+
+                  {/* Reporting Manager */}
+                  <div className="f">
+                    <label htmlFor="empManager" style={labelStyle}>
+                      Reporting manager
+                    </label>
+                    <SearchableManagerSelect
+                      value={managerId}
+                      onChange={setManagerId}
+                      managers={managers}
+                      fallbackName={employee.managerName}
+                      loading={loadingManagers}
+                    />
+                  </div>
+
+                  {/* Shift Start Time */}
+                  <div className="f">
+                    <label htmlFor="shiftStart" style={labelStyle}>
+                      Shift start
+                    </label>
+                    <input
+                      id="shiftStart"
+                      type="time"
+                      value={shiftStart}
+                      onChange={(e) => setShiftStart(e.target.value)}
+                      style={inputStyle}
+                    />
+                  </div>
+
+                  {/* Shift End Time */}
+                  <div className="f">
+                    <label htmlFor="shiftEnd" style={labelStyle}>
+                      Shift end
+                    </label>
+                    <input
+                      id="shiftEnd"
+                      type="time"
+                      value={shiftEnd}
+                      onChange={(e) => setShiftEnd(e.target.value)}
+                      style={inputStyle}
+                    />
+                  </div>
+
+                  {/* Weekly Off Days */}
+                  <div className="f" style={{ gridColumn: '1 / -1' }}>
+                    <label style={labelStyle}>Weekly off days *</label>
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                      {DAYS_OF_WEEK.map((day) => {
+                        const active = weeklyOff.includes(day.key)
+                        return (
+                          <button
+                            key={day.key}
+                            type="button"
+                            onClick={() => toggleDay(day.key)}
+                            style={{
+                              padding: '4px 9px',
+                              borderRadius: 6,
+                              fontSize: 11,
+                              fontWeight: active ? 600 : 500,
+                              cursor: 'pointer',
+                              border: active ? '1px solid var(--blue)' : '1px solid var(--line)',
+                              backgroundColor: active ? 'var(--blue)' : 'var(--panel)',
+                              color: active ? '#ffffff' : 'var(--ink2)',
+                              transition: 'all 0.12s ease',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 3,
+                            }}
+                          >
+                            <span>{day.label}</span>
+                            {active && <span style={{ fontSize: 10 }}>✓</span>}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Date of Joining */}
+                  <div className="f">
+                    <label htmlFor="empDoj" style={labelStyle}>
+                      Date of joining *
+                    </label>
+                    <input
+                      id="empDoj"
+                      type="date"
+                      value={dateOfJoining}
+                      onChange={(e) => setDateOfJoining(e.target.value)}
+                      required
+                      style={inputStyle}
+                    />
+                  </div>
+
+                  {/* Leave Balance */}
+                  <div className="f">
+                    <label htmlFor="leaveBalance" style={labelStyle}>
+                      Leave balance (days)
+                    </label>
+                    <input
+                      id="leaveBalance"
+                      type="number"
+                      step="0.5"
+                      min="0"
+                      value={leaveBalance}
+                      onChange={(e) => setLeaveBalance(e.target.value)}
+                      style={inputStyle}
+                    />
+                  </div>
+
+                  {/* SECTION 3: Bank & Statutory Details (Admin only) */}
+                  <div style={sectionHeaderStyle}>
+                    <span>🏦 Statutory &amp; Bank Details</span>
+                  </div>
+
+                  {/* Bank Name */}
+                  <div className="f">
+                    <label htmlFor="bankName" style={labelStyle}>
+                      Bank name
+                    </label>
+                    <input
+                      id="bankName"
+                      type="text"
+                      placeholder="e.g. HDFC Bank, ICICI Bank"
+                      value={bankName}
+                      onChange={(e) => setBankName(e.target.value)}
+                      maxLength={128}
+                      style={inputStyle}
+                    />
+                  </div>
+
+                  {/* Account Number */}
+                  <div className="f">
+                    <label htmlFor="accountNo" style={labelStyle}>
+                      Account number
+                    </label>
+                    <input
+                      id="accountNo"
+                      type="text"
+                      placeholder="e.g. 50100234567890"
+                      value={accountNo}
+                      onChange={(e) => setAccountNo(e.target.value)}
+                      maxLength={40}
+                      style={inputStyle}
+                    />
+                  </div>
+
+                  {/* IFSC Code */}
+                  <div className="f">
+                    <label htmlFor="ifscCode" style={labelStyle}>
+                      IFSC code
+                    </label>
+                    <input
+                      id="ifscCode"
+                      type="text"
+                      placeholder="e.g. HDFC0001234"
+                      value={ifscCode}
+                      onChange={(e) => setIfscCode(e.target.value.toUpperCase())}
+                      maxLength={20}
+                      style={{ ...inputStyle, textTransform: 'uppercase' }}
+                    />
+                  </div>
+
+                  {/* Confirmation Date */}
+                  <div className="f">
+                    <label htmlFor="confirmationDate" style={labelStyle}>
+                      Confirmation date
+                    </label>
+                    <input
+                      id="confirmationDate"
+                      type="date"
+                      value={confirmationDate}
+                      onChange={(e) => setConfirmationDate(e.target.value)}
+                      style={inputStyle}
+                    />
+                  </div>
+
+                  {/* Date of Leaving */}
+                  <div className="f">
+                    <label htmlFor="dateOfLeaving" style={labelStyle}>
+                      Date of leaving
+                    </label>
+                    <input
+                      id="dateOfLeaving"
+                      type="date"
+                      value={dateOfLeaving}
+                      onChange={(e) => setDateOfLeaving(e.target.value)}
+                      style={inputStyle}
+                    />
+                  </div>
+
+                  {/* UAN Number */}
+                  <div className="f">
+                    <label htmlFor="uan" style={labelStyle}>
+                      UAN number
+                    </label>
+                    <input
+                      id="uan"
+                      type="text"
+                      placeholder="e.g. 100987654321"
+                      value={uan}
+                      onChange={(e) => setUan(e.target.value)}
+                      maxLength={20}
+                      style={inputStyle}
+                    />
+                  </div>
+
+                  {/* PF Number */}
+                  <div className="f" style={{ gridColumn: '1 / -1' }}>
+                    <label htmlFor="pfNumber" style={labelStyle}>
+                      PF number
+                    </label>
+                    <input
+                      id="pfNumber"
+                      type="text"
+                      placeholder="e.g. MH/BAN/0012345/000/0001234"
+                      value={pfNumber}
+                      onChange={(e) => setPfNumber(e.target.value)}
+                      maxLength={50}
+                      style={inputStyle}
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Fixed Footer with Actions */}
           <div
+            className="mfoot"
             style={{
+              padding: '12px 18px',
+              borderTop: '1px solid var(--line2)',
+              marginTop: 0,
+              backgroundColor: '#ffffff',
               display: 'flex',
+              alignItems: 'center',
               justifyContent: 'flex-end',
-              gap: 10,
-              marginTop: 10,
-              paddingTop: 16,
-              borderTop: '1px solid #f1f5f9',
+              gap: 8,
+              flexShrink: 0,
             }}
           >
             <button
               type="button"
-              className="btn ghost"
+              className="btn ghost sm"
               onClick={onClose}
               disabled={submitting}
-              style={{ padding: '8px 16px' }}
+              style={{
+                height: 32,
+                padding: '0 14px',
+                fontSize: 12,
+                borderRadius: 8,
+              }}
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="btn"
+              className="btn primary sm"
               disabled={submitting}
               style={{
-                backgroundColor: '#2563eb',
+                height: 32,
+                padding: '0 16px',
+                fontSize: 12,
+                fontWeight: 600,
+                borderRadius: 8,
+                backgroundColor: 'var(--blue)',
                 color: '#ffffff',
-                border: 'none',
-                padding: '8px 20px',
-                fontWeight: 500,
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 6,
               }}
             >
-              {submitting ? 'Saving…' : 'Save Details'}
+              {submitting ? 'Saving changes…' : 'Save changes'}
             </button>
           </div>
         </form>

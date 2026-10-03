@@ -126,7 +126,7 @@ export function TodayCard({ employeeId, isSelf, employeeName }: TodayCardProps) 
   const displayHours = isRunning && elapsed !== null ? elapsed / 60 : view.activeHours
 
   return (
-    <div className="card">
+    <div className="card" style={{ display: 'flex', flexDirection: 'column', height: '100%', boxSizing: 'border-box' }}>
       <h3>Today</h3>
 
       <div className="clock">{asHours(displayHours)}</div>
@@ -171,11 +171,11 @@ export function TodayCard({ employeeId, isSelf, employeeName }: TodayCardProps) 
       {/* Only the person themselves can punch. A manager sees the record; they
           cannot check somebody in, and there is no endpoint that would let them. */}
       {!isSelf ? (
-        <div className="hint" style={{ marginTop: 14 }}>
+        <div className="hint" style={{ marginTop: 'auto', paddingTop: 14 }}>
           {employeeName.split(' ')[0]} records this on their own page.
         </div>
       ) : (
-      <div style={{ marginTop: 14 }}>
+      <div style={{ marginTop: 'auto', paddingTop: 14 }}>
         {view.canCheckIn && (
           <button className="btn success" onClick={() => void act('in')} disabled={busy}>
             {busy ? 'Recording…' : 'Check in'}
