@@ -126,36 +126,36 @@ export function TodayCard({ employeeId, isSelf, employeeName }: TodayCardProps) 
   const displayHours = isRunning && elapsed !== null ? elapsed / 60 : view.activeHours
 
   return (
-    <div className="card" style={{ display: 'flex', flexDirection: 'column', height: '100%', boxSizing: 'border-box' }}>
-      <h3>Today</h3>
+    <div className="card top-card">
+      <h3 style={{ margin: 0, marginBottom: 8 }}>Today</h3>
 
-      <div className="clock">{asHours(displayHours)}</div>
-      <div className="eyebrow" style={{ marginBottom: 14 }}>
+      <div className="clock" style={{ fontSize: 32, marginBottom: 2 }}>{asHours(displayHours)}</div>
+      <div className="eyebrow" style={{ marginBottom: 10 }}>
         {isRunning ? 'Active so far today' : 'Active on system'}
       </div>
 
-      <div className="kv">
+      <div className="kv" style={{ padding: '5.5px 0', fontSize: 12.5 }}>
         <b>Status</b>
         <span>
           <span className={`chip ${STATUS_CLASS[view.status]}`}>{view.status}</span>
         </span>
       </div>
-      <div className="kv">
+      <div className="kv" style={{ padding: '5.5px 0', fontSize: 12.5 }}>
         <b>Check-in</b>
         <span>
           {view.loginAt ?? '—'}
           {view.lateByMinutes > 0 && (
-            <span className="hint" style={{ color: 'var(--red)' }}>
+            <span className="hint" style={{ color: 'var(--red)', marginLeft: 6 }}>
               {view.lateByMinutes} min late
             </span>
           )}
         </span>
       </div>
-      <div className="kv">
+      <div className="kv" style={{ padding: '5.5px 0', fontSize: 12.5 }}>
         <b>Check-out</b>
         <span>{view.logoutAt ?? '—'}</span>
       </div>
-      <div className="kv">
+      <div className="kv" style={{ padding: '5.5px 0', fontSize: 12.5 }}>
         <b>Shift</b>
         <span>
           {view.shiftStart}–{view.shiftEnd}
@@ -171,11 +171,11 @@ export function TodayCard({ employeeId, isSelf, employeeName }: TodayCardProps) 
       {/* Only the person themselves can punch. A manager sees the record; they
           cannot check somebody in, and there is no endpoint that would let them. */}
       {!isSelf ? (
-        <div className="hint" style={{ marginTop: 'auto', paddingTop: 14 }}>
+        <div className="hint" style={{ marginTop: 'auto', paddingTop: 8 }}>
           {employeeName.split(' ')[0]} records this on their own page.
         </div>
       ) : (
-      <div style={{ marginTop: 'auto', paddingTop: 14 }}>
+      <div style={{ marginTop: 'auto', paddingTop: 8 }}>
         {view.canCheckIn && (
           <button className="btn success" onClick={() => void act('in')} disabled={busy}>
             {busy ? 'Recording…' : 'Check in'}

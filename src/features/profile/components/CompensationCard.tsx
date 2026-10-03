@@ -38,7 +38,7 @@ export function CompensationCard({
 
   if (!canSee) {
     return (
-      <div className="card">
+      <div className="card top-card">
         <h3>Compensation</h3>
         <div className="empty">
           <b>Not visible to you</b>
@@ -54,7 +54,7 @@ export function CompensationCard({
     const monthlyRetainer = Math.round(retainer / 12)
 
     return (
-      <div className="card">
+      <div className="card top-card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
           <h3 style={{ margin: 0 }}>Contractor Retainer</h3>
           {isAdmin && (
@@ -151,7 +151,7 @@ export function CompensationCard({
   // Full-time employee with No Compensation record
   if (!compensation) {
     return (
-      <div className="card">
+      <div className="card top-card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
           <h3 style={{ margin: 0 }}>Compensation</h3>
           {isAdmin && (
@@ -203,7 +203,7 @@ export function CompensationCard({
   const breakout = calculateSalaryBreakout(c.ctc)
 
   return (
-    <div className="card" style={{ position: 'relative', display: 'flex', flexDirection: 'column', height: '100%', boxSizing: 'border-box' }}>
+    <div className="card top-card" style={{ position: 'relative' }}>
       {/* Card Header */}
       <div
         style={{
@@ -274,19 +274,19 @@ export function CompensationCard({
       </div>
 
       {/* Primary KPI Pills */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 12 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
         <div
           style={{
             backgroundColor: '#f8fafc',
             border: '1px solid #e2e8f0',
             borderRadius: 8,
-            padding: '8px 10px',
+            padding: '6px 10px',
           }}
         >
-          <div style={{ fontSize: 10.5, color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>
+          <div style={{ fontSize: 10, color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>
             Annual CTC
           </div>
-          <div style={{ fontSize: 16, fontWeight: 700, color: '#0f172a', marginTop: 2 }}>
+          <div style={{ fontSize: 15, fontWeight: 700, color: '#0f172a', marginTop: 1 }}>
             {formatInr(c.ctc)}
           </div>
         </div>
@@ -295,13 +295,13 @@ export function CompensationCard({
             backgroundColor: '#f0fdf4',
             border: '1px solid #bbf7d0',
             borderRadius: 8,
-            padding: '8px 10px',
+            padding: '6px 10px',
           }}
         >
-          <div style={{ fontSize: 10.5, color: '#166534', fontWeight: 600, textTransform: 'uppercase' }}>
+          <div style={{ fontSize: 10, color: '#166534', fontWeight: 600, textTransform: 'uppercase' }}>
             Monthly Gross
           </div>
-          <div style={{ fontSize: 16, fontWeight: 700, color: '#15803d', marginTop: 2 }}>
+          <div style={{ fontSize: 15, fontWeight: 700, color: '#15803d', marginTop: 1 }}>
             {formatInr(breakout.monthlyGross)}
           </div>
         </div>
@@ -309,7 +309,7 @@ export function CompensationCard({
 
       {/* Breakout Table View (Matches User's Screenshot) */}
       {viewMode === 'breakout' ? (
-        <div style={{ marginBottom: 10 }}>
+        <div style={{ marginBottom: 6 }}>
           {/* Table Header Pill */}
           <div
             style={{
@@ -319,8 +319,8 @@ export function CompensationCard({
               borderBottom: 'none',
               borderTopLeftRadius: 6,
               borderTopRightRadius: 6,
-              padding: '5px 8px',
-              fontSize: 13,
+              padding: '3px 8px',
+              fontSize: 12,
               fontWeight: 700,
               color: '#0f172a',
             }}
@@ -340,17 +340,17 @@ export function CompensationCard({
               style={{
                 width: '100%',
                 borderCollapse: 'collapse',
-                fontSize: 11.5,
+                fontSize: 11,
                 textAlign: 'left',
               }}
             >
               <thead>
                 <tr style={{ backgroundColor: '#ffffff', borderBottom: '1px solid #cbd5e1' }}>
-                  <th style={{ padding: '6px 8px', fontWeight: 700, color: '#1e293b' }}>Component</th>
-                  <th style={{ padding: '6px 8px', fontWeight: 700, color: '#1e293b', textAlign: 'right' }}>
+                  <th style={{ padding: '4px 8px', fontWeight: 700, color: '#1e293b' }}>Component</th>
+                  <th style={{ padding: '4px 8px', fontWeight: 700, color: '#1e293b', textAlign: 'right' }}>
                     Annual Amount
                   </th>
-                  <th style={{ padding: '6px 8px', fontWeight: 700, color: '#1e293b', textAlign: 'right' }}>
+                  <th style={{ padding: '4px 8px', fontWeight: 700, color: '#1e293b', textAlign: 'right' }}>
                     Monthly Amount
                   </th>
                 </tr>
@@ -366,11 +366,11 @@ export function CompensationCard({
                       color: row.isTotal ? '#15803d' : '#1e293b',
                     }}
                   >
-                    <td style={{ padding: '5.5px 8px' }}>{row.component}</td>
-                    <td style={{ padding: '5.5px 8px', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+                    <td style={{ padding: '3.5px 8px' }}>{row.component}</td>
+                    <td style={{ padding: '3.5px 8px', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
                       {formatNumberInr(row.annualAmount)}
                     </td>
-                    <td style={{ padding: '5.5px 8px', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+                    <td style={{ padding: '3.5px 8px', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
                       {formatNumberInr(row.monthlyAmount)}
                     </td>
                   </tr>
@@ -429,15 +429,15 @@ export function CompensationCard({
       )}
 
       {/* Quick Action: View Full Salary Slip & Payslips */}
-      <div style={{ marginTop: 'auto', paddingTop: 10, borderTop: '1px solid var(--line2)', display: 'flex', justifyContent: 'flex-end' }}>
+      <div style={{ marginTop: 'auto', paddingTop: 8, borderTop: '1px solid var(--line2)', display: 'flex', justifyContent: 'flex-end' }}>
         <button
           type="button"
           className="btn sm outline"
           onClick={() => navigate(`/pay/${employeeId}`)}
-          style={{ fontSize: 11.5, padding: '4px 10px', height: 'auto', display: 'inline-flex', alignItems: 'center', gap: 5 }}
+          style={{ fontSize: 11, padding: '3px 8px', height: 'auto', display: 'inline-flex', alignItems: 'center', gap: 4 }}
         >
           <span>📄 View Salary Slip &amp; Payslips</span>
-          <span style={{ fontSize: 13 }}>→</span>
+          <span style={{ fontSize: 12 }}>→</span>
         </button>
       </div>
 

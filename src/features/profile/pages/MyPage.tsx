@@ -25,9 +25,25 @@ import { DEPT_COLOR } from '../../../shared/lib/departments'
 /** One label/value row. A missing value says so rather than showing a blank. */
 function Row({ label, value }: { label: string; value: string | null }) {
   return (
-    <div className="kv">
-      <b>{label}</b>
-      <span style={value ? undefined : { color: 'var(--muted2)' }}>{value ?? 'Not on file'}</span>
+    <div
+      className="kv"
+      style={{
+        padding: '5.5px 0',
+        fontSize: 12.5,
+        minHeight: 27,
+        alignItems: 'center',
+      }}
+    >
+      <b style={{ color: 'var(--muted2)', fontWeight: 500, fontSize: 12 }}>{label}</b>
+      <span
+        style={
+          value
+            ? { fontWeight: 500, color: 'var(--ink)', fontSize: 12.5 }
+            : { color: 'var(--muted)', fontSize: 12 }
+        }
+      >
+        {value ?? 'Not on file'}
+      </span>
     </div>
   )
 }
@@ -231,15 +247,7 @@ export function MyPage() {
       <div className="grid g3">
         <TodayCard employeeId={view.employeeId} isSelf={view.isSelf} employeeName={view.fullName} />
 
-        <div
-          className="card"
-          style={{
-            height: '100%',
-            display: 'flex',
-            flexDirection: 'column',
-            boxSizing: 'border-box',
-          }}
-        >
+        <div className="card top-card">
           <div
             style={{
               display: 'flex',
@@ -256,8 +264,8 @@ export function MyPage() {
                 className="btn ghost sm"
                 onClick={() => setShowEditDetails(true)}
                 style={{
-                  padding: '3px 10px',
-                  fontSize: 12,
+                  padding: '2px 8px',
+                  fontSize: 11.5,
                   fontWeight: 500,
                   color: 'var(--blue)',
                   borderColor: 'var(--line2)',
@@ -273,16 +281,7 @@ export function MyPage() {
             )}
           </div>
 
-          <div
-            style={{
-              flex: 1,
-              minHeight: 0,
-              overflowY: 'auto',
-              paddingRight: 6,
-              marginRight: -4,
-              scrollbarWidth: 'thin',
-            }}
-          >
+          <div className="card-scroll">
             <Row label="Employee code" value={view.employeeCode} />
             <Row label="Email" value={view.workEmail} />
             <Row label="Phone" value={view.mobile} />
