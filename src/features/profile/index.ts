@@ -1,5 +1,6 @@
 export { MyPage } from './pages/MyPage'
 export { DocumentsCard } from './components/DocumentsCard'
+export { DocumentGatePopup } from './components/DocumentGatePopup'
 export { UploadDocumentModal } from './components/UploadDocumentModal'
 export { DocumentViewerModal, type DocumentViewerTarget } from './components/DocumentViewerModal'
 export { AdminLifecycleControls } from './components/AdminLifecycleControls'

@@ -7,6 +7,8 @@ import { GoalsCard } from '../../goals'
 import { ProjectsCard } from '../../projects'
 import { CompensationCard } from '../components/CompensationCard'
 import { DocumentsCard } from '../components/DocumentsCard'
+import { DocumentGatePopup } from '../components/DocumentGatePopup'
+import { DOCUMENT_OPTIONS } from '../components/UploadDocumentModal'
 import { TodayCard, WeekCard } from '../../attendance'
 import { AdminLifecycleControls } from '../components/AdminLifecycleControls'
 import { EditPersonalDetailsModal } from '../components/EditPersonalDetailsModal'
@@ -72,6 +74,8 @@ export function MyPage() {
   const [error, setError] = useState<string | null>(null)
   const [showEditDetails, setShowEditDetails] = useState(false)
   const [toast, setToast] = useState<ToastMessage | null>(null)
+  const [adminBypassed, setAdminBypassed] = useState(false)
+  const [popupDismissed, setPopupDismissed] = useState(false)
 
   const load = useCallback(async (silent = false) => {
     if (!silent) setLoading(true)
@@ -91,6 +95,33 @@ export function MyPage() {
     // oxlint-disable-next-line react/set-state-in-effect
     void load()
   }, [load])
+
+  // Standard required documents (pan, aadhaar, resume, permanentAddress, temporaryAddress)
+  const missingRequiredDocs =
+    view && view.isSelf
+      ? DOCUMENT_OPTIONS.filter((opt) => {
+          const doc = view.documents.find((d) => d.key === opt.key)
+          return !doc?.path || doc.path.trim().length === 0
+        })
+      : []
+
+  const isGateActive = missingRequiredDocs.length > 0 && !adminBypassed
+
+  const scrollToDocs = useCallback(() => {
+    const el = document.getElementById('documents-information-section')
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+  }, [])
+
+  useEffect(() => {
+    if (isGateActive) {
+      const timer = setTimeout(() => {
+        scrollToDocs()
+      }, 500)
+      return () => clearTimeout(timer)
+    }
+  }, [isGateActive, scrollToDocs])
 
   if (loading) return <div className="boot">Loading profile…</div>
 
@@ -380,6 +411,29 @@ export function MyPage() {
         <GoalsCard goals={view.goals} isSelf={view.isSelf} />
       </div>
 
+      {isGateActive && (
+        <>
+          <div
+            className="doc-gate-overlay"
+            onClick={scrollToDocs}
+            title="Click to view Documents/Information section"
+          />
+          {!popupDismissed && (
+            <DocumentGatePopup
+              missingDocs={missingRequiredDocs}
+              totalDocs={DOCUMENT_OPTIONS.length}
+              onGoToSection={() => {
+                setPopupDismissed(true)
+                scrollToDocs()
+              }}
+              onClose={() => setPopupDismissed(true)}
+              isAdmin={view.access === 'admin'}
+              onAdminBypass={() => setAdminBypassed(true)}
+            />
+          )}
+        </>
+      )}
+
       <div className="grid g3 mt">
         <ProjectsCard
           projects={view.projects}
@@ -402,7 +456,11 @@ export function MyPage() {
           isSelf={view.isSelf}
           access={view.access}
           employeeId={view.employeeId}
-          onRefresh={load}
+          onRefresh={() => {
+            void load(true)
+          }}
+          isSpotlighted={isGateActive}
+          missingDocs={missingRequiredDocs}
         />
       </div>
 

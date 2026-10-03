@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { messageOf } from '../../../shared/api/errors'
 import { profileApi } from '../profile.api'
 import type { DocumentKey, ProfileAccess, ProfileDocument } from '../profile.types'
-import { DOCUMENT_OPTIONS, UploadDocumentModal } from './UploadDocumentModal'
+import { DOCUMENT_OPTIONS, UploadDocumentModal, type DocumentOption } from './UploadDocumentModal'
 import { DocumentViewerModal, type DocumentViewerTarget } from './DocumentViewerModal'
 
 interface DocumentsCardProps {
@@ -11,6 +11,8 @@ interface DocumentsCardProps {
   access: ProfileAccess
   employeeId: number
   onRefresh: () => void
+  isSpotlighted?: boolean
+  missingDocs?: DocumentOption[]
 }
 
 export function DocumentsCard({
@@ -19,6 +21,8 @@ export function DocumentsCard({
   access,
   employeeId,
   onRefresh,
+  isSpotlighted = false,
+  missingDocs = [],
 }: DocumentsCardProps) {
   const [modalState, setModalState] = useState<{
     open: boolean
@@ -84,7 +88,11 @@ export function DocumentsCard({
   const extraDocs = documents.filter((d) => !standardKeySet.has(d.key))
 
   return (
-    <div className="card" style={{ display: 'flex', flexDirection: 'column' }}>
+    <div
+      id="documents-information-section"
+      className={`card ${isSpotlighted ? 'doc-card-spotlight' : ''}`}
+      style={{ display: 'flex', flexDirection: 'column' }}
+    >
       <div
         style={{
           display: 'flex',
@@ -95,19 +103,34 @@ export function DocumentsCard({
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <h3 style={{ margin: 0 }}>Documents</h3>
-          {!isManagerViewingReport && onFileCount > 0 && (
+          <h3 style={{ margin: 0 }}>Documents/Information</h3>
+          {isSpotlighted && missingDocs.length > 0 ? (
             <span
               className="tag"
               style={{
-                background: '#ecfdf5',
-                color: '#059669',
-                borderColor: '#a7f3d0',
+                background: '#fff1f2',
+                color: '#e11d48',
+                borderColor: '#fecdd3',
                 fontSize: 11,
+                fontWeight: 600,
               }}
             >
-              {onFileCount} on file
+              ⚠️ {missingDocs.length} pending upload
             </span>
+          ) : (
+            !isManagerViewingReport && onFileCount > 0 && (
+              <span
+                className="tag"
+                style={{
+                  background: '#ecfdf5',
+                  color: '#059669',
+                  borderColor: '#a7f3d0',
+                  fontSize: 11,
+                }}
+              >
+                {onFileCount} on file
+              </span>
+            )
           )}
         </div>
 
@@ -123,9 +146,32 @@ export function DocumentsCard({
         )}
       </div>
 
+      {isSpotlighted && missingDocs.length > 0 && (
+        <div
+          style={{
+            background: '#fffbeb',
+            border: '1px solid #fde68a',
+            borderRadius: 10,
+            padding: '8px 12px',
+            marginBottom: 12,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            fontSize: 11.5,
+            color: '#92400e',
+            lineHeight: 1.4,
+          }}
+        >
+          <span style={{ fontSize: 16 }}>⚠️</span>
+          <div>
+            <b>Action required:</b> Please upload all {missingDocs.length} remaining document{missingDocs.length > 1 ? 's' : ''} to unlock full access to the HRMS portal.
+          </div>
+        </div>
+      )}
+
       {isManagerViewingReport ? (
         <div className="empty" style={{ padding: '24px 12px' }}>
-          <b>Documents restricted</b>
+          <b>Documents/Information restricted</b>
           Personal identity and onboarding documents are confidential and visible to the employee
           and HR only.
         </div>
@@ -134,7 +180,7 @@ export function DocumentsCard({
           <div className="docs-scroll">
             {DOCUMENT_OPTIONS.map((opt) => {
               const found = documents.find((d) => d.key === opt.key)
-              const hasFile = Boolean(found?.path)
+              const hasFile = Boolean(found?.path && found.path.trim().length > 0)
               const hasNumber = Boolean(found?.docNumber)
               const isOnFile = hasFile || hasNumber
 
@@ -180,7 +226,7 @@ export function DocumentsCard({
                         {opt.label}
                       </span>
 
-                      {isOnFile ? (
+                      {hasFile ? (
                         <span
                           className="tag"
                           style={{
@@ -189,9 +235,37 @@ export function DocumentsCard({
                             borderColor: '#a7f3d0',
                             fontSize: 10.5,
                             padding: '1px 6px',
+                            fontWeight: 500,
                           }}
                         >
                           ✓ On file
+                        </span>
+                      ) : isSpotlighted ? (
+                        <span
+                          className="tag"
+                          style={{
+                            background: '#fff1f2',
+                            color: '#e11d48',
+                            borderColor: '#fecdd3',
+                            fontSize: 10.5,
+                            padding: '1px 6px',
+                            fontWeight: 600,
+                          }}
+                        >
+                          ⚠️ Upload required
+                        </span>
+                      ) : isOnFile ? (
+                        <span
+                          className="tag"
+                          style={{
+                            background: '#eff6ff',
+                            color: '#2563eb',
+                            borderColor: '#bfdbfe',
+                            fontSize: 10.5,
+                            padding: '1px 6px',
+                          }}
+                        >
+                          Details on file (no file)
                         </span>
                       ) : (
                         <span
@@ -258,15 +332,19 @@ export function DocumentsCard({
                     {canUpload && (
                       <button
                         type="button"
-                        className="btn ghost sm"
-                        style={{ padding: '3px 8px', fontSize: 11 }}
+                        className={`btn ${isSpotlighted && !hasFile ? 'primary' : 'ghost'} sm`}
+                        style={{
+                          padding: '3px 9px',
+                          fontSize: 11,
+                          fontWeight: isSpotlighted && !hasFile ? 600 : undefined,
+                        }}
                         onClick={(e) => {
                           e.stopPropagation()
                           openUpload(opt.key, found?.docNumber || '')
                         }}
-                        title={isOnFile ? 'Replace file or change number' : 'Upload document'}
+                        title={hasFile ? 'Replace file or change number' : 'Upload document'}
                       >
-                        {isOnFile ? 'Update' : 'Upload'}
+                        {hasFile ? 'Update' : 'Upload'}
                       </button>
                     )}
 
