@@ -737,6 +737,12 @@ select:disabled {
   min-width: 0;
   display: flex;
   flex-direction: column;
+  transition: margin-left 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.rail:hover ~ .shell,
+.rail:focus-within ~ .shell {
+  margin-left: 232px;
 }
 
 .topbar {
@@ -2036,9 +2042,10 @@ tr.row:focus-visible { outline: 2px solid var(--blue); outline-offset: -2px; }
   }
 
   .shell {
-    margin-left: 0;
+    margin-left: 0 !important;
     margin-top: 0;
     padding-bottom: 74px; /* Space so fixed bottom navigation does not cover content */
+    transition: none;
   }
 
   /* Mobile Top Bar */
