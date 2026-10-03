@@ -290,6 +290,240 @@ function SearchableManagerSelect({
   )
 }
 
+interface SearchableStateSelectProps {
+  value: string
+  onChange: (val: string) => void
+  options: string[]
+}
+
+function SearchableStateSelect({
+  value,
+  onChange,
+  options,
+}: SearchableStateSelectProps) {
+  const [isOpen, setIsOpen] = useState(false)
+  const [searchTerm, setSearchTerm] = useState('')
+  const containerRef = useRef<HTMLDivElement>(null)
+  const searchInputRef = useRef<HTMLInputElement>(null)
+
+  const q = searchTerm.toLowerCase().trim()
+  const filteredOptions = options.filter((opt) => !q || opt.toLowerCase().includes(q))
+
+  useEffect(() => {
+    if (!isOpen) return
+    const handleClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [isOpen])
+
+  useEffect(() => {
+    if (isOpen) {
+      setTimeout(() => searchInputRef.current?.focus(), 40)
+    } else {
+      setSearchTerm('')
+    }
+  }, [isOpen])
+
+  return (
+    <div ref={containerRef} style={{ position: 'relative', width: '100%' }}>
+      <button
+        type="button"
+        id="empLocation"
+        onClick={() => setIsOpen((prev) => !prev)}
+        style={{
+          width: '100%',
+          height: 34,
+          padding: '5px 10px',
+          borderRadius: 8,
+          border: isOpen ? '1px solid var(--blue)' : '1px solid var(--line)',
+          boxShadow: isOpen ? '0 0 0 2.5px rgba(37, 99, 235, 0.12)' : 'none',
+          fontSize: 12.5,
+          fontFamily: 'Inter, sans-serif',
+          backgroundColor: '#ffffff',
+          boxSizing: 'border-box',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          cursor: 'pointer',
+          textAlign: 'left',
+          color: value ? 'var(--ink)' : 'var(--muted2)',
+          transition: 'border-color 0.15s, box-shadow 0.15s',
+        }}
+      >
+        <span
+          style={{
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            marginRight: 6,
+            fontWeight: value ? 500 : 400,
+          }}
+        >
+          {value || 'Select location'}
+        </span>
+        <span
+          style={{
+            fontSize: 10,
+            color: 'var(--muted2)',
+            transform: isOpen ? 'rotate(180deg)' : 'none',
+            transition: 'transform 0.15s ease',
+            flexShrink: 0,
+          }}
+        >
+          ▼
+        </span>
+      </button>
+
+      {isOpen && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 'calc(100% + 4px)',
+            left: 0,
+            right: 0,
+            backgroundColor: '#ffffff',
+            border: '1px solid var(--line)',
+            borderRadius: 8,
+            boxShadow: '0 10px 25px -4px rgba(24, 19, 13, 0.18)',
+            zIndex: 10000,
+            overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column',
+          }}
+        >
+          <div
+            style={{
+              padding: '6px 8px',
+              borderBottom: '1px solid var(--line2)',
+              backgroundColor: 'var(--panel)',
+            }}
+          >
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+              <span
+                style={{
+                  position: 'absolute',
+                  left: 8,
+                  fontSize: 11,
+                  color: 'var(--muted2)',
+                  pointerEvents: 'none',
+                }}
+              >
+                🔍
+              </span>
+              <input
+                ref={searchInputRef}
+                type="text"
+                placeholder="Search state or location..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') {
+                    e.stopPropagation()
+                    setIsOpen(false)
+                  }
+                }}
+                style={{
+                  width: '100%',
+                  height: 28,
+                  padding: '4px 8px 4px 26px',
+                  borderRadius: 6,
+                  border: '1px solid var(--line)',
+                  fontSize: 11.5,
+                  outline: 'none',
+                  backgroundColor: '#ffffff',
+                  boxSizing: 'border-box',
+                }}
+              />
+              {searchTerm && (
+                <button
+                  type="button"
+                  onClick={() => setSearchTerm('')}
+                  style={{
+                    position: 'absolute',
+                    right: 6,
+                    background: 'none',
+                    border: 'none',
+                    fontSize: 12,
+                    color: 'var(--muted)',
+                    cursor: 'pointer',
+                    padding: 0,
+                    lineHeight: 1,
+                  }}
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div
+            style={{
+              maxHeight: 180,
+              overflowY: 'auto',
+              padding: '3px 0',
+              scrollbarWidth: 'thin',
+            }}
+          >
+            {filteredOptions.map((opt) => {
+              const isSelected = opt === value
+              return (
+                <div
+                  key={opt}
+                  onClick={() => {
+                    onChange(opt)
+                    setIsOpen(false)
+                  }}
+                  style={{
+                    padding: '6px 10px',
+                    fontSize: 12,
+                    cursor: 'pointer',
+                    backgroundColor: isSelected ? 'var(--blue-soft)' : 'transparent',
+                    color: isSelected ? 'var(--blue)' : 'var(--ink2)',
+                    fontWeight: isSelected ? 600 : 400,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isSelected) {
+                      e.currentTarget.style.backgroundColor = 'var(--panel)'
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isSelected) {
+                      e.currentTarget.style.backgroundColor = 'transparent'
+                    }
+                  }}
+                >
+                  <span>{opt}</span>
+                  {isSelected && <span style={{ fontSize: 11, color: 'var(--blue)', fontWeight: 700 }}>✓</span>}
+                </div>
+              )
+            })}
+
+            {filteredOptions.length === 0 && (
+              <div
+                style={{
+                  padding: '12px 10px',
+                  fontSize: 11.5,
+                  textAlign: 'center',
+                  color: 'var(--muted)',
+                }}
+              >
+                No locations found matching "{searchTerm}"
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 const INDIAN_STATES = [
   'Andhra Pradesh',
   'Arunachal Pradesh',
@@ -371,10 +605,12 @@ export function EditPersonalDetailsModal({
 
   const [selectedLocation, setSelectedLocation] = useState<string>(() => {
     const loc = employee.workState || 'Karnataka'
-    return INDIAN_STATES.includes(loc) ? loc : 'Other'
+    if (loc === 'Other' || loc === 'Remote / Other') return 'Remote / Other'
+    return INDIAN_STATES.includes(loc) ? loc : 'Remote / Other'
   })
   const [customLocation, setCustomLocation] = useState<string>(() => {
     const loc = employee.workState || ''
+    if (loc === 'Other' || loc === 'Remote / Other') return ''
     return INDIAN_STATES.includes(loc) ? '' : loc
   })
 
@@ -493,7 +729,8 @@ export function EditPersonalDetailsModal({
       return
     }
 
-    const finalLocation = selectedLocation === 'Other' ? customLocation.trim() : selectedLocation
+    const isOtherLocation = selectedLocation === 'Other' || selectedLocation === 'Remote / Other'
+    const finalLocation = isOtherLocation ? customLocation.trim() : selectedLocation
     if (!finalLocation) {
       setError('Work location is required.')
       return
@@ -786,21 +1023,14 @@ export function EditPersonalDetailsModal({
                 <label htmlFor="empLocation" style={labelStyle}>
                   Work location
                 </label>
-                <select
-                  id="empLocation"
+                <SearchableStateSelect
                   value={selectedLocation}
-                  onChange={(e) => setSelectedLocation(e.target.value)}
-                  style={inputStyle}
-                >
-                  {INDIAN_STATES.map((state) => (
-                    <option key={state} value={state}>
-                      {state}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(val) => setSelectedLocation(val)}
+                  options={INDIAN_STATES}
+                />
               </div>
 
-              {selectedLocation === 'Other' && (
+              {(selectedLocation === 'Other' || selectedLocation === 'Remote / Other') && (
                 <div className="f" style={{ gridColumn: '1 / -1' }}>
                   <label htmlFor="customLocation" style={labelStyle}>
                     Specify location *
