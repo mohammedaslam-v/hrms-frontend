@@ -659,6 +659,15 @@ export function EditPersonalDetailsModal({
   const [uan, setUan] = useState<string>(employee.uan || '')
   const [pfNumber, setPfNumber] = useState<string>(employee.pfNumber || '')
 
+  // Emergency contact. Personal details, so editable by the employee themselves
+  // and not gated behind isAdmin like the employment fields below.
+  const [emergencyContactName, setEmergencyContactName] =
+    useState<string>(employee.emergencyContactName || '')
+  const [emergencyContactNumber, setEmergencyContactNumber] =
+    useState<string>(employee.emergencyMobile || '')
+  const [emergencyContactRelation, setEmergencyContactRelation] =
+    useState<string>(employee.emergencyContactRelation || '')
+
   // Manager List for searchable dropdown
   const [managers, setManagers] = useState<ManagerOption[]>([])
   const [loadingManagers, setLoadingManagers] = useState<boolean>(false)
@@ -765,6 +774,9 @@ export function EditPersonalDetailsModal({
         pan: cleanPan || null,
         aadhar: cleanAadhar || null,
         workLocation: finalLocation || null,
+        emergencyContactName: emergencyContactName.trim() || null,
+        emergencyContactNumber: emergencyContactNumber.trim() || null,
+        emergencyContactRelation: emergencyContactRelation.trim() || null,
       }
 
       if (isAdmin) {
@@ -1077,6 +1089,69 @@ export function EditPersonalDetailsModal({
                   onChange={(e) => setAadhar(e.target.value)}
                   style={inputStyle}
                 />
+              </div>
+
+              {/* Emergency contact. Not behind isAdmin — this is the employee's
+                  own information, like their mobile number above. */}
+              <div style={sectionHeaderStyle}>
+                <span>Emergency Contact</span>
+              </div>
+
+              <div className="f">
+                <label htmlFor="empEmgName" style={labelStyle}>
+                  Contact name
+                </label>
+                <input
+                  id="empEmgName"
+                  type="text"
+                  placeholder="e.g. Sunita Sharma"
+                  value={emergencyContactName}
+                  onChange={(e) => setEmergencyContactName(e.target.value)}
+                  style={inputStyle}
+                />
+              </div>
+
+              <div className="f">
+                <label htmlFor="empEmgNumber" style={labelStyle}>
+                  Contact number
+                </label>
+                <input
+                  id="empEmgNumber"
+                  type="tel"
+                  placeholder="e.g. 9876543210"
+                  value={emergencyContactNumber}
+                  onChange={(e) => setEmergencyContactNumber(e.target.value)}
+                  style={inputStyle}
+                />
+              </div>
+
+              <div className="f">
+                <label htmlFor="empEmgRelation" style={labelStyle}>
+                  Relationship
+                </label>
+                {/* Free text, with suggestions. A fixed list would be wrong for
+                    somebody whose emergency contact is a guardian or a friend. */}
+                <input
+                  id="empEmgRelation"
+                  type="text"
+                  list="emgRelationOptions"
+                  placeholder="e.g. Mother, Husband, Brother"
+                  value={emergencyContactRelation}
+                  onChange={(e) => setEmergencyContactRelation(e.target.value)}
+                  style={inputStyle}
+                />
+                <datalist id="emgRelationOptions">
+                  <option value="Mother" />
+                  <option value="Father" />
+                  <option value="Husband" />
+                  <option value="Wife" />
+                  <option value="Brother" />
+                  <option value="Sister" />
+                  <option value="Son" />
+                  <option value="Daughter" />
+                  <option value="Guardian" />
+                  <option value="Friend" />
+                </datalist>
               </div>
 
               {/* SECTION 2: Role, Shift & Organization (Admin only) */}

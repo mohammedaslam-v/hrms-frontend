@@ -1,182 +1,138 @@
 import type { DocumentOption } from './UploadDocumentModal'
+import type { RequiredPersonalField } from '../personal-details.required'
 
 interface DocumentGatePopupProps {
   missingDocs: DocumentOption[]
   totalDocs: number
+  /** Personal details still blank. Listed beside the documents, not separately:
+   *  two competing warnings about the same incomplete profile is one too many. */
+  missingPersonal?: RequiredPersonalField[]
+  totalPersonal?: number
   onGoToSection: () => void
   onClose?: () => void
   onAdminBypass?: () => void
   isAdmin?: boolean
 }
 
+/**
+ * The one thing standing between an employee and the portal, so it says what is
+ * missing and nothing else.
+ *
+ * Deliberately quiet: one amber mark, one line of red text per group, no chips,
+ * no progress bar, no emoji. An earlier version boxed every item in its own
+ * coloured pill, which turned four missing fields into a wall of red badges —
+ * loud enough that the actual words stopped registering.
+ */
 export function DocumentGatePopup({
   missingDocs,
   totalDocs,
+  missingPersonal = [],
+  totalPersonal = 0,
   onGoToSection,
   onClose,
   onAdminBypass,
   isAdmin,
 }: DocumentGatePopupProps) {
-  const uploadedCount = totalDocs - missingDocs.length
-  const pct = Math.round((uploadedCount / totalDocs) * 100)
+  const totalItems = totalDocs + totalPersonal
+  const doneCount = totalItems - (missingDocs.length + missingPersonal.length)
+
+  // Where the work is. Documents first when both are outstanding, since that
+  // section carries the upload button — and the label has to match, or it sends
+  // people to a section where the thing they need is not.
+  const docsFirst = missingDocs.length > 0
+  const destination = docsFirst ? 'Documents' : 'Personal details'
 
   return (
     <div className="doc-gate-popup" role="alertdialog" aria-labelledby="doc-gate-title">
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+        <span aria-hidden style={{ fontSize: 15, lineHeight: '20px', flexShrink: 0 }}>
+          ⚠️
+        </span>
+
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <h4
+            id="doc-gate-title"
+            style={{ margin: 0, fontSize: 14, fontWeight: 700, color: 'var(--ink)' }}
+          >
+            Complete your profile to continue
+          </h4>
+
+          <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {missingDocs.length > 0 && (
+              <div style={{ fontSize: 12.5, lineHeight: 1.5 }}>
+                <span style={{ color: 'var(--muted)' }}>Documents to upload — </span>
+                <span style={{ color: '#be123c', fontWeight: 600 }}>
+                  {missingDocs.map((d) => d.label).join(', ')}
+                </span>
+              </div>
+            )}
+
+            {missingPersonal.length > 0 && (
+              <div style={{ fontSize: 12.5, lineHeight: 1.5 }}>
+                <span style={{ color: 'var(--muted)' }}>Details to fill in — </span>
+                <span style={{ color: '#be123c', fontWeight: 600 }}>
+                  {missingPersonal.map((f) => f.label).join(', ')}
+                </span>
+              </div>
+            )}
+          </div>
+
           <div
             style={{
-              width: 38,
-              height: 38,
-              borderRadius: 10,
-              background: '#fef3c7',
-              border: '1px solid #fde68a',
+              marginTop: 10,
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: 20,
-              flexShrink: 0,
+              gap: 10,
+              flexWrap: 'wrap',
             }}
           >
-            ⚠️
-          </div>
-          <div>
-            <h4 id="doc-gate-title" style={{ margin: 0, fontSize: 14.5, fontWeight: 700, color: 'var(--ink)' }}>
-              Action Required: Upload Required Documents
-            </h4>
-            <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>
-              To access the HRMS portal, please upload all required documents.
-            </div>
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-          <span
-            className="tag"
-            style={{
-              background: missingDocs.length > 0 ? '#fff1f2' : '#ecfdf5',
-              color: missingDocs.length > 0 ? '#e11d48' : '#059669',
-              borderColor: missingDocs.length > 0 ? '#fecdd3' : '#a7f3d0',
-              fontWeight: 700,
-              fontSize: 11,
-              padding: '3px 8px',
-            }}
-          >
-            {uploadedCount} of {totalDocs} Completed
-          </span>
-
-          {onClose && (
             <button
               type="button"
-              onClick={onClose}
-              style={{
-                border: 'none',
-                background: 'transparent',
-                color: 'var(--muted2)',
-                fontSize: 18,
-                cursor: 'pointer',
-                padding: '0 4px',
-                lineHeight: 1,
-                borderRadius: 4,
-              }}
-              title="Close popup"
-              aria-label="Close alert"
+              className="btn primary sm"
+              onClick={onGoToSection}
+              style={{ fontSize: 11.5, padding: '4px 12px' }}
             >
-              ×
+              Go to {destination} ↓
             </button>
-          )}
-        </div>
-      </div>
 
-      {/* Progress Bar */}
-      <div>
-        <div
-          style={{
-            height: 6,
-            width: '100%',
-            background: '#e2e8f0',
-            borderRadius: 999,
-            overflow: 'hidden',
-          }}
-        >
-          <div
-            style={{
-              height: '100%',
-              width: `${pct}%`,
-              background: 'linear-gradient(90deg, var(--blue, #2563eb) 0%, #3b82f6 100%)',
-              transition: 'width 0.4s ease',
-              borderRadius: 999,
-            }}
-          />
-        </div>
-      </div>
+            <span style={{ fontSize: 11, color: 'var(--muted2)' }}>
+              {doneCount} of {totalItems} complete
+            </span>
 
-      {/* Missing items list (display only, no upload button) */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
-        <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600 }}>Missing:</span>
-        {missingDocs.map((doc) => (
-          <span
-            key={doc.key}
-            className="chip"
-            style={{
-              background: '#fff1f2',
-              border: '1px solid #fecdd3',
-              color: '#be123c',
-              fontSize: 11,
-              padding: '2px 8px',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 5,
-              fontWeight: 500,
-              borderRadius: 6,
-            }}
-          >
-            <span>{doc.icon}</span>
-            <span>{doc.label}</span>
-          </span>
-        ))}
-      </div>
-
-      {/* Bottom info & actions */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          paddingTop: 8,
-          borderTop: '1px solid var(--line, #f1f5f9)',
-          marginTop: 2,
-          flexWrap: 'wrap',
-          gap: 8,
-        }}
-      >
-        <div style={{ fontSize: 11, color: 'var(--muted2)' }}>
-          Only the <b>Documents/Information</b> section is interactive until completed.
+            {isAdmin && onAdminBypass && (
+              <button
+                type="button"
+                className="btn ghost sm"
+                onClick={onAdminBypass}
+                style={{ fontSize: 11, color: 'var(--muted2)', padding: '3px 8px' }}
+                title="Admin testing bypass"
+              >
+                Bypass
+              </button>
+            )}
+          </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto' }}>
-          {isAdmin && onAdminBypass && (
-            <button
-              type="button"
-              className="btn ghost sm"
-              onClick={onAdminBypass}
-              style={{ fontSize: 11, color: 'var(--muted)', padding: '3px 8px' }}
-              title="Admin Testing Bypass"
-            >
-              Admin Bypass
-            </button>
-          )}
-
+        {onClose && (
           <button
             type="button"
-            className="btn primary sm"
-            onClick={onGoToSection}
-            style={{ fontSize: 11.5, padding: '4px 12px', display: 'flex', alignItems: 'center', gap: 5 }}
+            onClick={onClose}
+            style={{
+              border: 'none',
+              background: 'transparent',
+              color: 'var(--muted2)',
+              fontSize: 17,
+              cursor: 'pointer',
+              padding: '0 2px',
+              lineHeight: 1,
+              flexShrink: 0,
+            }}
+            title="Close"
+            aria-label="Close alert"
           >
-            <span>Go to Documents/Information</span>
-            <span>↓</span>
+            ×
           </button>
-        </div>
+        )}
       </div>
     </div>
   )

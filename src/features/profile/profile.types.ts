@@ -10,6 +10,7 @@ export type ProfileAccess = 'self' | 'manager' | 'admin'
 export type DocumentKey =
   | 'pan'
   | 'aadhaar'
+  | 'photo'
   | 'resume'
   | 'permanentAddress'
   | 'temporaryAddress'
@@ -70,6 +71,8 @@ export interface ProfileView {
   personalEmail: string | null
   dateOfBirth: string | null
   emergencyMobile: string | null
+  emergencyContactName: string | null
+  emergencyContactRelation: string | null
   city: string | null
   linkedinProfile: string | null
   panNumber?: string | null

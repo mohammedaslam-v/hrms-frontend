@@ -11,6 +11,10 @@ export interface DocumentOption {
   hasNumber?: boolean
   numberLabel?: string
   numberPlaceholder?: string
+  /** Shown in the list and uploadable, but never gates the portal. */
+  optional?: boolean
+  /** Rendered under the label when the file has to meet a specification. */
+  hint?: string
 }
 
 export const DOCUMENT_OPTIONS: DocumentOption[] = [
@@ -31,9 +35,18 @@ export const DOCUMENT_OPTIONS: DocumentOption[] = [
     numberPlaceholder: 'e.g. 1234 5678 9012 (12 digits)',
   },
   {
+    key: 'photo',
+    label: 'Passport Size Photo',
+    icon: '🖼️',
+    hint: 'Professional headshot on a plain background, passport size.',
+  },
+  {
+    // Nice to have on file, but nobody should be locked out of the portal for
+    // not having a CV to hand — they already work here.
     key: 'resume',
     label: 'Resume / CV',
     icon: '📄',
+    optional: true,
   },
   {
     key: 'permanentAddress',
@@ -256,8 +269,8 @@ export function UploadDocumentModal({
     <Modal
       title={
         isCustomMode
-          ? `📄 ${isOnFile || isExistingCustom ? 'Update' : 'Add'} Custom Document`
-          : `${currentOption.icon} Upload / Update ${currentOption.label}`
+          ? `${isOnFile || isExistingCustom ? 'Update' : 'Add'} custom document`
+          : `${isOnFile ? 'Update' : 'Upload'} ${currentOption.label}`
       }
       onClose={onClose}
       onSubmit={submit}
@@ -338,10 +351,11 @@ export function UploadDocumentModal({
         >
           {DOCUMENT_OPTIONS.map((opt) => (
             <option key={opt.key} value={opt.key}>
-              {opt.icon} {opt.label}
+              {opt.label}
+              {opt.optional ? ' (optional)' : ''}
             </option>
           ))}
-          <option value="custom">➕ Other / Custom Document...</option>
+          <option value="custom">Other / custom document…</option>
         </select>
       </div>
 
@@ -389,6 +403,17 @@ export function UploadDocumentModal({
         </div>
       )}
 
+      {/* Any specification for this document, before a file is chosen rather
+          than after it has been uploaded. */}
+      {currentOption.hint && (
+        <div
+          className="hint mt"
+          style={{ fontSize: 11.5, color: 'var(--muted)', lineHeight: 1.5 }}
+        >
+          {currentOption.hint}
+        </div>
+      )}
+
       {/* File Upload Area */}
       <div className="f mt">
         <label>
@@ -427,7 +452,6 @@ export function UploadDocumentModal({
               transition: 'all 0.15s ease',
             }}
           >
-            <div style={{ fontSize: 26, marginBottom: 6 }}>📁</div>
             <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--ink)' }}>
               Click to select or drag &amp; drop document file
             </div>
@@ -447,7 +471,6 @@ export function UploadDocumentModal({
               background: 'var(--panel)',
             }}
           >
-            <span style={{ fontSize: 24 }}>📄</span>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div
                 style={{
@@ -470,7 +493,7 @@ export function UploadDocumentModal({
               style={{ flexShrink: 0, padding: '4px 8px', fontSize: 12 }}
               aria-label="Remove selected file"
             >
-              ✕ Remove
+              Remove
             </button>
           </div>
         )}
@@ -488,7 +511,7 @@ export function UploadDocumentModal({
           lineHeight: 1.45,
         }}
       >
-        🔒 <b>Privacy Notice:</b> Identity and onboarding paperwork is encrypted and strictly accessible only to you and authorized HR administrators.
+        <b>Privacy.</b> Identity and onboarding paperwork is accessible only to you and authorised HR administrators.
       </div>
     </Modal>
   )

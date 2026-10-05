@@ -14,6 +14,10 @@ import { AdminLifecycleControls } from '../components/AdminLifecycleControls'
 import { EditPersonalDetailsModal } from '../components/EditPersonalDetailsModal'
 import { Toast, type ToastMessage } from '../../../shared/ui/Toast'
 import { WORK_MODE_CLASS, type ProfileView, type WorkMode } from '../profile.types'
+import {
+  REQUIRED_PERSONAL_FIELDS,
+  missingPersonalFields,
+} from '../personal-details.required'
 import { fmtDate } from '../../../shared/lib/date'
 import { initials } from '../../../shared/lib/format'
 import { DEPT_COLOR } from '../../../shared/lib/departments'
@@ -100,19 +104,33 @@ export function MyPage() {
   const missingRequiredDocs =
     view && view.isSelf
       ? DOCUMENT_OPTIONS.filter((opt) => {
+          // An optional document is still listed and uploadable; it just never
+          // holds anyone out of the portal.
+          if (opt.optional) return false
           const doc = view.documents.find((d) => d.key === opt.key)
           return !doc?.path || doc.path.trim().length === 0
         })
       : []
 
-  const isGateActive = missingRequiredDocs.length > 0 && !adminBypassed
+  // The same gate, widened: an employee with every document uploaded but no
+  // emergency contact on file is as incomplete as one missing a PAN card.
+  const missingPersonal = view ? missingPersonalFields(view) : []
 
+  const isGateActive =
+    (missingRequiredDocs.length > 0 || missingPersonal.length > 0) && !adminBypassed
+
+  // Send people where the work is. Documents first when both are outstanding,
+  // since that section carries the upload button.
   const scrollToDocs = useCallback(() => {
-    const el = document.getElementById('documents-information-section')
+    const target =
+      missingRequiredDocs.length === 0 && missingPersonal.length > 0
+        ? 'personal-details-section'
+        : 'documents-information-section'
+    const el = document.getElementById(target)
     if (el) {
       el.scrollIntoView({ behavior: 'smooth', block: 'center' })
     }
-  }, [])
+  }, [missingRequiredDocs.length, missingPersonal.length])
 
   useEffect(() => {
     if (isGateActive) {
@@ -278,7 +296,14 @@ export function MyPage() {
       <div className="grid g3">
         <TodayCard employeeId={view.employeeId} isSelf={view.isSelf} employeeName={view.fullName} />
 
-        <div className="card top-card">
+        {/* The id is the scroll target when details are what is outstanding;
+            the spotlight class is the same one the documents card uses. */}
+        <div
+          id="personal-details-section"
+          className={`card top-card ${
+            isGateActive && missingPersonal.length > 0 ? 'doc-card-spotlight' : ''
+          }`}
+        >
           <div
             style={{
               display: 'flex',
@@ -288,7 +313,21 @@ export function MyPage() {
               flexShrink: 0,
             }}
           >
-            <h3 style={{ margin: 0 }}>Personal details</h3>
+            <h3 style={{ margin: 0 }}>
+              Personal details
+              {isGateActive && missingPersonal.length > 0 && (
+                <span
+                  style={{
+                    marginLeft: 8,
+                    color: '#be123c',
+                    fontSize: 11.5,
+                    fontWeight: 600,
+                  }}
+                >
+                  {missingPersonal.length} missing
+                </span>
+              )}
+            </h3>
             {(view.isSelf || view.access === 'admin') && (
               <button
                 type="button"
@@ -347,6 +386,25 @@ export function MyPage() {
                     view.aadharNumber ||
                     view.documents.find((d) => d.key === 'aadhaar')?.docNumber ||
                     null
+                  }
+                />
+                {/* One line rather than three: a name and number with no
+                    relationship reads oddly, and three empty rows is noise on a
+                    profile nobody has filled in yet. */}
+                <Row
+                  label="Emergency contact"
+                  value={
+                    view.emergencyMobile || view.emergencyContactName
+                      ? [
+                          view.emergencyContactName,
+                          view.emergencyContactRelation
+                            ? `(${view.emergencyContactRelation})`
+                            : null,
+                          view.emergencyMobile,
+                        ]
+                          .filter(Boolean)
+                          .join(' ')
+                      : null
                   }
                 />
               </>
@@ -421,7 +479,11 @@ export function MyPage() {
           {!popupDismissed && (
             <DocumentGatePopup
               missingDocs={missingRequiredDocs}
-              totalDocs={DOCUMENT_OPTIONS.length}
+              // Counts only what the gate actually requires, so "9 of 11
+              // complete" cannot sit next to an empty missing list.
+              totalDocs={DOCUMENT_OPTIONS.filter((o) => !o.optional).length}
+              missingPersonal={missingPersonal}
+              totalPersonal={REQUIRED_PERSONAL_FIELDS.length}
               onGoToSection={() => {
                 setPopupDismissed(true)
                 scrollToDocs()
@@ -459,7 +521,10 @@ export function MyPage() {
           onRefresh={() => {
             void load(true)
           }}
-          isSpotlighted={isGateActive}
+          // Only when documents are what is outstanding. The gate now also
+          // fires for missing personal details, and highlighting a complete
+          // documents card would send people to the wrong place.
+          isSpotlighted={isGateActive && missingRequiredDocs.length > 0}
           missingDocs={missingRequiredDocs}
         />
       </div>

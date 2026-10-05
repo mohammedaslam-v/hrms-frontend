@@ -226,6 +226,12 @@ export function DocumentsCard({
                         {opt.label}
                       </span>
 
+                      {/* Says so before anyone worries about the red mark the
+                          required rows carry while the gate is up. */}
+                      {opt.optional && !hasFile && (
+                        <span style={{ fontSize: 11, color: 'var(--muted2)' }}>Optional</span>
+                      )}
+
                       {hasFile ? (
                         <span
                           className="tag"
@@ -240,7 +246,7 @@ export function DocumentsCard({
                         >
                           ✓ On file
                         </span>
-                      ) : isSpotlighted ? (
+                      ) : isSpotlighted && !opt.optional ? (
                         <span
                           className="tag"
                           style={{
@@ -295,6 +301,11 @@ export function DocumentsCard({
                         <b style={{ color: 'var(--ink2)' }}>{found.docNumber}</b>
                       </div>
                     )}
+
+                    {/* `opt.hint` is deliberately not rendered here. The list is
+                        a scan of what is on file, and a sentence of spec under
+                        one row throws the whole column out. It belongs in the
+                        upload modal, where it is about to be acted on. */}
                   </div>
 
                   <div
