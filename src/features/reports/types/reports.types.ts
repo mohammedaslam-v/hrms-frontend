@@ -62,6 +62,8 @@ export interface ReportFilterDto {
   state?: string;
   department?: string;
   employeeId?: number | string;
+  /** The screen's search box, so a download matches the table on screen. */
+  search?: string;
 }
 
 export interface ReportCatalogItem {

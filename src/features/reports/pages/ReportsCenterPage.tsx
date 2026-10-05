@@ -27,6 +27,24 @@ export const PAYROLL_REPORT_TYPES: ReadonlySet<ReportType> = new Set([
   'appraisals',
 ]);
 
+/**
+ * The cells the search box looks in.
+ *
+ * The twenty reports call the name column four different things — `employee`,
+ * `empName`, `employeeName`, `name` — so searching a single key would quietly
+ * do nothing on most of them. `code` is here because people search by
+ * BAM-0837 as readily as by a name, and `manager` so a lead can pull their own
+ * team out of a company-wide report.
+ */
+const SEARCHABLE_KEYS = [
+  'employee',
+  'empName',
+  'employeeName',
+  'name',
+  'code',
+  'manager',
+] as const
+
 const REPORT_NOTES: Partial<Record<ReportType, string>> = {
   attendance: '',
   attsummary: '',
@@ -116,6 +134,7 @@ export const ReportsCenterPage: React.FC = () => {
   const [exporting, setExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [reportResult, setReportResult] = useState<ReportResult | null>(null);
+  const [rowSearch, setRowSearch] = useState('');
 
   // Load employee list for dropdown
   useEffect(() => {
@@ -227,6 +246,8 @@ export const ReportsCenterPage: React.FC = () => {
         to: period === 'range' ? toDate : undefined,
         department: department || undefined,
         employeeId: employeeId || undefined,
+        // Download what is on screen, not what was on screen before typing.
+        search: rowSearch.trim() || undefined,
       };
       await reportsApi.downloadCsv(filter);
     } catch (err: any) {
@@ -241,9 +262,28 @@ export const ReportsCenterPage: React.FC = () => {
   };
 
   const reportTitle = reportResult?.meta?.reportTitle || 'Report';
-  const rows = reportResult?.rows || [];
+  const allRows = reportResult?.rows || [];
   const columns: ReportColumn[] = reportResult?.columns || [];
   const totals = reportResult?.totals;
+
+  /**
+   * Filtering happens here rather than on the server: the rows are already
+   * loaded, and typing a character should narrow them immediately rather than
+   * wait for a round trip.
+   *
+   * Reports do not agree on what to call the name column — four different keys
+   * across the twenty — so match against all of them plus the code, instead of
+   * picking one and having search silently do nothing on half the reports.
+   */
+  const filteredRows = useMemo(() => {
+    const q = rowSearch.trim().toLowerCase();
+    if (!q) return allRows;
+    return allRows.filter((row) =>
+      SEARCHABLE_KEYS.some((key) => String(row[key] ?? '').toLowerCase().includes(q)),
+    );
+  }, [allRows, rowSearch]);
+
+  const rows = filteredRows;
   const reportNote = REPORT_NOTES[selectedType] || reportResult?.note || '';
 
   const renderCell = (col: ReportColumn, val: any) => {
@@ -535,12 +575,62 @@ export const ReportsCenterPage: React.FC = () => {
 
         {/* Right card: Report Table View */}
         <div className="card">
-          <h3 id="rpTitle">{reportTitle}</h3>
-          <div className="hint" id="rpMeta" style={{ margin: '0 0 12px' }}>
-            {reportResult?.meta?.periodLabel || periodLabel} ·{' '}
-            {reportResult?.meta?.totalRecords ?? activeEmployees.length} employee
-            {(reportResult?.meta?.totalRecords ?? activeEmployees.length) === 1 ? '' : 's'} ·{' '}
-            {rows.length} row{rows.length === 1 ? '' : 's'}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'flex-start',
+              justifyContent: 'space-between',
+              gap: 12,
+              flexWrap: 'wrap',
+            }}
+          >
+            <div style={{ minWidth: 0 }}>
+              <h3 id="rpTitle">{reportTitle}</h3>
+              <div className="hint" id="rpMeta" style={{ margin: '0 0 12px' }}>
+                {reportResult?.meta?.periodLabel || periodLabel} ·{' '}
+                {reportResult?.meta?.totalRecords ?? activeEmployees.length} employee
+                {(reportResult?.meta?.totalRecords ?? activeEmployees.length) === 1 ? '' : 's'} ·{' '}
+                {/* Says what is on screen AND what was filtered out, so a short
+                    table never looks like a report that returned little. */}
+                {rowSearch.trim()
+                  ? `${rows.length} of ${allRows.length} rows`
+                  : `${rows.length} row${rows.length === 1 ? '' : 's'}`}
+              </div>
+            </div>
+
+            <div style={{ position: 'relative', flexShrink: 0 }}>
+              <input
+                type="search"
+                value={rowSearch}
+                onChange={(e) => setRowSearch(e.target.value)}
+                placeholder="Search employee or code"
+                aria-label="Filter rows by employee name or code"
+                style={{ width: 230, paddingRight: rowSearch ? 26 : undefined }}
+              />
+              {rowSearch && (
+                <button
+                  type="button"
+                  onClick={() => setRowSearch('')}
+                  aria-label="Clear search"
+                  title="Clear"
+                  style={{
+                    position: 'absolute',
+                    right: 6,
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    border: 'none',
+                    background: 'transparent',
+                    color: 'var(--muted2)',
+                    fontSize: 15,
+                    lineHeight: 1,
+                    cursor: 'pointer',
+                    padding: 2,
+                  }}
+                >
+                  ×
+                </button>
+              )}
+            </div>
           </div>
 
           <div className="scroll" style={{ maxHeight: '640px' }}>

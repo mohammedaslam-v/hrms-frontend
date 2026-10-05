@@ -22,6 +22,8 @@ export const reportsApi = {
     if (filter.state) params.set('state', filter.state);
     if (filter.department && filter.department !== 'ALL') params.set('department', filter.department);
     if (filter.employeeId) params.set('employeeId', String(filter.employeeId));
+    // No `search` here on purpose: the table filters the rows it already has,
+    // so narrowing this request would empty the very list being searched.
 
     return request<ReportResult>(`/reports/data?${params.toString()}`);
   },
@@ -38,6 +40,9 @@ export const reportsApi = {
     if (filter.state) params.set('state', filter.state);
     if (filter.department && filter.department !== 'ALL') params.set('department', filter.department);
     if (filter.employeeId) params.set('employeeId', String(filter.employeeId));
+    // Narrow the file the same way the screen is narrowed, so a download after
+    // searching gives the rows on screen rather than the whole report.
+    if (filter.search?.trim()) params.set('search', filter.search.trim());
 
     const blob = await fetchBlob(`/reports/export?${params.toString()}`);
     const url = URL.createObjectURL(blob);
