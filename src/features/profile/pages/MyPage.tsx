@@ -116,8 +116,12 @@ export function MyPage() {
   // emergency contact on file is as incomplete as one missing a PAN card.
   const missingPersonal = view ? missingPersonalFields(view) : []
 
+  // An exempt employee is never locked out. The cards still list what is
+  // missing so they can upload what they do have; nothing blocks the portal.
   const isGateActive =
-    (missingRequiredDocs.length > 0 || missingPersonal.length > 0) && !adminBypassed
+    (missingRequiredDocs.length > 0 || missingPersonal.length > 0) &&
+    !adminBypassed &&
+    !view?.profileGateExempt
 
   // Send people where the work is. Documents first when both are outstanding,
   // since that section carries the upload button.

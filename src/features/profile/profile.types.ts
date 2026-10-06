@@ -73,6 +73,8 @@ export interface ProfileView {
   emergencyMobile: string | null
   emergencyContactName: string | null
   emergencyContactRelation: string | null
+  /** HR has exempted this person from the profile gate. */
+  profileGateExempt?: boolean
   city: string | null
   linkedinProfile: string | null
   panNumber?: string | null
