@@ -1,4 +1,5 @@
 import type { EmployeeFormState, EmployeeMetaDto } from '../types/employee-form.types'
+import { SearchableManagerSelect } from './SearchableManagerSelect'
 
 interface PersonalRoleCardProps {
   form: EmployeeFormState
@@ -75,18 +76,12 @@ export function PersonalRoleCard({ form, meta, onChange }: PersonalRoleCardProps
 
         <div className="f">
           <label>Reporting manager</label>
-          <select
+          <SearchableManagerSelect
             id="mgrSelect"
             value={form.managerId}
-            onChange={(e) => onChange('managerId', e.target.value)}
-          >
-            <option value="">None / Self</option>
-            {meta.managers.map((mgr) => (
-              <option key={mgr.id} value={mgr.id}>
-                {mgr.name} ({mgr.employeeCode}){mgr.department ? ` · ${mgr.department}` : ''}
-              </option>
-            ))}
-          </select>
+            onChange={(id) => onChange('managerId', id)}
+            managers={meta.managers}
+          />
         </div>
 
         <div className="f">
@@ -171,17 +166,13 @@ export function PersonalRoleCard({ form, meta, onChange }: PersonalRoleCardProps
 
         <div className="f">
           <label>Work location</label>
-          <select
+          <input
             id="nState"
+            type="text"
+            placeholder="e.g. Karnataka, Bangalore, Delhi"
             value={form.workState}
             onChange={(e) => onChange('workState', e.target.value)}
-          >
-            {meta.workStates.map((st) => (
-              <option key={st} value={st}>
-                {st}
-              </option>
-            ))}
-          </select>
+          />
         </div>
 
         <div className="f">

@@ -14,9 +14,10 @@ function formatInr(n: number): string {
 }
 
 export function IssueLoanModal({ meta, submitting, onClose, onSubmit }: IssueLoanModalProps) {
+  const maxTenure = meta.maxTenureMonths || 3
   const [employeeId, setEmployeeId] = useState<number | ''>('')
   const [principal, setPrincipal] = useState<number>(30000)
-  const [tenureMonths, setTenureMonths] = useState<number>(6)
+  const [tenureMonths, setTenureMonths] = useState<number>(Math.min(3, maxTenure))
   const [startMonth, setStartMonth] = useState<string>(
     meta.allowedStartMonths[0]?.monthKey || '',
   )
@@ -48,8 +49,8 @@ export function IssueLoanModal({ meta, submitting, onClose, onSubmit }: IssueLoa
       return
     }
 
-    if (tenureMonths < 1 || tenureMonths > 6) {
-      setError('Repayment tenure must be between 1 and 6 months.')
+    if (tenureMonths < 1 || tenureMonths > maxTenure) {
+      setError(`Repayment tenure must be between 1 and ${maxTenure} months.`)
       return
     }
 
@@ -176,13 +177,13 @@ export function IssueLoanModal({ meta, submitting, onClose, onSubmit }: IssueLoa
                 onChange={(e) => setTenureMonths(Number(e.target.value))}
                 required
               >
-                {[1, 2, 3, 4, 5, 6].map((m) => (
+                {Array.from({ length: maxTenure }, (_, i) => i + 1).map((m) => (
                   <option key={m} value={m}>
-                    {m} {m === 1 ? 'Month' : 'Months'} (Max 6)
+                    {m} {m === 1 ? 'Month' : 'Months'} (Max {maxTenure})
                   </option>
                 ))}
               </select>
-              <span className="hint">Max tenure allowed: 6 months</span>
+              <span className="hint">Max tenure allowed: {maxTenure} months</span>
             </div>
           </div>
 
