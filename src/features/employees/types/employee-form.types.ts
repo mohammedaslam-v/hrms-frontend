@@ -19,6 +19,7 @@ export interface EmployeeMetaDto {
 
 export interface CreateEmployeeRequestDto {
   fullName: string
+  employeeCode?: string
   title?: string
   department?: string
   managerId?: number | null
@@ -57,6 +58,7 @@ export interface CreateEmployeeResponseDto {
 
 export interface EmployeeFormState {
   fullName: string
+  employeeCode: string
   title: string
   employmentType: string
   department: string

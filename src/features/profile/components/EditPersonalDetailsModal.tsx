@@ -3,6 +3,7 @@ import type { ProfileView } from '../profile.types'
 import { profileApi } from '../profile.api'
 import { employeeFormApi } from '../../employees/api/employee-form.api'
 import type { ManagerOption } from '../../employees/types/employee-form.types'
+import { useAuth } from '../../../app/auth-context'
 
 interface SearchableManagerSelectProps {
   value: string
@@ -578,7 +579,14 @@ export function EditPersonalDetailsModal({
   onClose,
   onSuccess,
 }: EditPersonalDetailsModalProps) {
-  const isAdmin = employee.access === 'admin'
+  const { employee: currentUser } = useAuth()
+  const isAdmin = employee.access === 'admin' || Boolean(currentUser?.tiers?.includes('admin'))
+
+  // Admin: Identity & Organization
+  const [employeeCode, setEmployeeCode] = useState<string>(employee.employeeCode || '')
+  const [fullName, setFullName] = useState<string>(employee.fullName || '')
+  const [designation, setDesignation] = useState<string>(employee.designation || '')
+  const [department, setDepartment] = useState<string>(employee.department || '')
 
   // Basic Personal & Contact Details
   const [email, setEmail] = useState<string>(employee.workEmail || '')
@@ -746,6 +754,14 @@ export function EditPersonalDetailsModal({
     }
 
     if (isAdmin) {
+      if (!employeeCode.trim()) {
+        setError('Employee code is required.')
+        return
+      }
+      if (!fullName.trim()) {
+        setError('Full name is required.')
+        return
+      }
       if (!dateOfJoining) {
         setError('Date of joining is required.')
         return
@@ -780,6 +796,10 @@ export function EditPersonalDetailsModal({
       }
 
       if (isAdmin) {
+        payload.employeeCode = employeeCode.trim().toUpperCase()
+        payload.fullName = fullName.trim()
+        payload.designation = designation.trim() || null
+        payload.department = department.trim() || null
         payload.role = role
         payload.managerId = managerId ? Number(managerId) : null
         payload.shiftStart = shiftStart
@@ -909,7 +929,7 @@ export function EditPersonalDetailsModal({
               }}
             >
               {isAdmin
-                ? `Admin edit for ${employee.fullName} (${employee.employeeCode})`
+                ? `Admin edit for ${fullName || employee.fullName} (${employeeCode || employee.employeeCode})`
                 : 'Update your contact and identification details'}
             </p>
           </div>
@@ -1159,6 +1179,68 @@ export function EditPersonalDetailsModal({
                 <>
                   <div style={sectionHeaderStyle}>
                     <span>⚙️ Role, Shift &amp; Organization</span>
+                  </div>
+
+                  {/* Employee Code */}
+                  <div className="f">
+                    <label htmlFor="empCode" style={labelStyle}>
+                      Employee code *
+                    </label>
+                    <input
+                      id="empCode"
+                      type="text"
+                      placeholder="e.g. BAM-0123"
+                      value={employeeCode}
+                      onChange={(e) => setEmployeeCode(e.target.value.toUpperCase())}
+                      required
+                      style={inputStyle}
+                    />
+                  </div>
+
+                  {/* Full Name */}
+                  <div className="f">
+                    <label htmlFor="empFullName" style={labelStyle}>
+                      Full name *
+                    </label>
+                    <input
+                      id="empFullName"
+                      type="text"
+                      placeholder="e.g. Ananya Rao"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      required
+                      style={inputStyle}
+                    />
+                  </div>
+
+                  {/* Designation / Title */}
+                  <div className="f">
+                    <label htmlFor="empDesignation" style={labelStyle}>
+                      Designation / Title
+                    </label>
+                    <input
+                      id="empDesignation"
+                      type="text"
+                      placeholder="e.g. Growth Marketer"
+                      value={designation}
+                      onChange={(e) => setDesignation(e.target.value)}
+                      style={inputStyle}
+                    />
+                  </div>
+
+                  {/* Department */}
+                  <div className="f">
+                    <label htmlFor="empDept" style={labelStyle}>
+                      Department
+                    </label>
+                    <input
+                      id="empDept"
+                      type="text"
+                      placeholder="e.g. Tech, Sales, Operations"
+                      value={department}
+                      onChange={(e) => setDepartment(e.target.value)}
+                      style={inputStyle}
+                    />
                   </div>
 
                   {/* HRMS Role */}

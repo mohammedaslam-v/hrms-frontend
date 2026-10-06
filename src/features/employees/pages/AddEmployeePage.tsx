@@ -33,6 +33,7 @@ export function AddEmployeePage() {
 
   const [form, setForm] = useState<EmployeeFormState>({
     fullName: '',
+    employeeCode: '',
     title: '',
     employmentType: 'Employee',
     department: 'Tech',
@@ -127,6 +128,7 @@ export function AddEmployeePage() {
 
     const payload: CreateEmployeeRequestDto = {
       fullName: trimmedName,
+      employeeCode: form.employeeCode.trim() ? form.employeeCode.trim().toUpperCase() : undefined,
       title: form.title.trim() || 'Associate',
       department: form.department,
       managerId: form.managerId ? Number(form.managerId) : null,
