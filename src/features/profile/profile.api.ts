@@ -103,7 +103,7 @@ export const profileApi = {
       },
     ),
 
-  /** Admin: Update employee employment type (Full-time vs Contract). */
+  /** Admin: Update employee employment type (Probation, Contractor, or Employee). */
   updateEmploymentType: (employeeId: number, employmentType: string) =>
     request<{ employmentType: string; isContractor: boolean }>(
       `/profile/${employeeId}/employment-type`,

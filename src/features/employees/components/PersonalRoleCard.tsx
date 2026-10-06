@@ -35,6 +35,19 @@ export function PersonalRoleCard({ form, meta, onChange }: PersonalRoleCardProps
         </div>
 
         <div className="f">
+          <label>Type *</label>
+          <select
+            id="nType"
+            value={form.employmentType}
+            onChange={(e) => onChange('employmentType', e.target.value)}
+          >
+            <option value="Employee">Employee</option>
+            <option value="Probation">Probation</option>
+            <option value="Contractor">Contractor</option>
+          </select>
+        </div>
+
+        <div className="f">
           <label>Department</label>
           <select
             id="nDept"

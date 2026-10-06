@@ -30,11 +30,11 @@ export function AddEmployeePage() {
   const [loadingMeta, setLoadingMeta] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [toast, setToast] = useState<ToastMessage | null>(null)
-  const [emailAutoFilled, setEmailAutoFilled] = useState(true)
 
   const [form, setForm] = useState<EmployeeFormState>({
     fullName: '',
     title: '',
+    employmentType: 'Employee',
     department: 'Tech',
     managerId: '',
     dateOfJoining: todayIso,
@@ -90,29 +90,7 @@ export function AddEmployeePage() {
     field: K,
     value: EmployeeFormState[K],
   ) => {
-    setForm((prev) => {
-      const next = { ...prev, [field]: value }
-
-      // Auto-suggest email based on full name if user hasn't typed a custom email
-      if (field === 'fullName') {
-        const name = String(value).trim()
-        if (emailAutoFilled) {
-          const parts = name.split(/\s+/).filter(Boolean)
-          if (parts.length > 0) {
-            const handle = parts[0].toLowerCase()
-            next.workEmail = `${handle}@bambinos.live`
-          } else {
-            next.workEmail = ''
-          }
-        }
-      }
-
-      if (field === 'workEmail') {
-        setEmailAutoFilled(false)
-      }
-
-      return next
-    })
+    setForm((prev) => ({ ...prev, [field]: value }))
   }
 
   const handleSubmit = async () => {
@@ -161,7 +139,7 @@ export function AddEmployeePage() {
       uan: form.uan ? form.uan.trim() : null,
       workState: form.workState,
       openingLeave: form.openingLeave,
-      employmentType: 'Full-time',
+      employmentType: form.employmentType || 'Employee',
       hrmsRole: 'employee',
 
       ctc: form.ctc,

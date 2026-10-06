@@ -9,13 +9,24 @@ interface Props {
   onRefresh: () => Promise<void> | void
 }
 
-const isEmployeeContractor = (emp: ProfileView): boolean =>
-  Boolean(
+type EmploymentTypeOption = 'Probation' | 'Contractor' | 'Employee'
+
+const getEmployeeType = (emp: ProfileView): EmploymentTypeOption => {
+  const raw = (emp.employmentType || '').toLowerCase()
+  if (raw.includes('probation')) return 'Probation'
+  if (
+    raw.includes('contract') ||
     emp.isContractor ||
-    emp.employmentType?.toLowerCase().includes('contract') ||
     emp.designation?.toLowerCase().includes('contract') ||
-    emp.department?.toLowerCase().includes('contract'),
-  )
+    emp.department?.toLowerCase().includes('contract')
+  ) {
+    return 'Contractor'
+  }
+  return 'Employee'
+}
+
+const isEmployeeContractor = (emp: ProfileView): boolean =>
+  getEmployeeType(emp) === 'Contractor'
 
 export function AdminLifecycleControls({ employee, onRefresh }: Props) {
   const navigate = useNavigate()
@@ -32,6 +43,7 @@ export function AdminLifecycleControls({ employee, onRefresh }: Props) {
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
 
   // Local state for immediate reactive UI
+  const [employmentType, setEmploymentType] = useState<EmploymentTypeOption>(getEmployeeType(employee))
   const [isLoginDisabled, setIsLoginDisabled] = useState(Boolean(employee.isLoginDisabled))
   const [isSalaryStopped, setIsSalaryStopped] = useState(Boolean(employee.isSalaryStopped))
   const [isExited, setIsExited] = useState(Boolean(employee.lastWorkingDay || employee.dateOfLeaving))
@@ -39,10 +51,12 @@ export function AdminLifecycleControls({ employee, onRefresh }: Props) {
   const [workMode, setWorkMode] = useState<WorkMode>(employee.workMode || 'WFO')
 
   useEffect(() => {
+    const currentType = getEmployeeType(employee)
+    setEmploymentType(currentType)
+    setIsContractor(currentType === 'Contractor')
     setIsLoginDisabled(Boolean(employee.isLoginDisabled))
     setIsSalaryStopped(Boolean(employee.isSalaryStopped))
     setIsExited(Boolean(employee.lastWorkingDay || employee.dateOfLeaving))
-    setIsContractor(isEmployeeContractor(employee))
     setWorkMode(employee.workMode || 'WFO')
   }, [
     employee.isLoginDisabled,
@@ -223,14 +237,15 @@ export function AdminLifecycleControls({ employee, onRefresh }: Props) {
               Admin Only
             </span>
 
-            {/* Employment Type Selector (Full-time vs Contractor) */}
+            {/* Employment Type Selector (Probation, Contractor, Employee) */}
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginLeft: 4 }}>
               <span style={{ fontSize: 11.5, color: 'var(--muted2)', fontWeight: 500 }}>Type:</span>
               <select
-                value={isContractor ? 'Contract' : 'Full-time'}
+                value={employmentType}
                 onChange={async (e) => {
-                  const nextType = e.target.value
-                  const nextIsContractor = nextType === 'Contract'
+                  const nextType = e.target.value as EmploymentTypeOption
+                  setEmploymentType(nextType)
+                  const nextIsContractor = nextType === 'Contractor'
                   setIsContractor(nextIsContractor)
                   try {
                     await profileApi.updateEmploymentType(employee.employeeId, nextType)
@@ -248,14 +263,25 @@ export function AdminLifecycleControls({ employee, onRefresh }: Props) {
                   border: '1px solid var(--line)',
                   fontSize: 11.5,
                   fontWeight: 600,
-                  background: isContractor ? '#f3e8ff' : '#eff6ff',
-                  color: isContractor ? '#6b21a8' : '#1e40af',
+                  background:
+                    employmentType === 'Contractor'
+                      ? '#f3e8ff'
+                      : employmentType === 'Probation'
+                        ? '#fef3c7'
+                        : '#eff6ff',
+                  color:
+                    employmentType === 'Contractor'
+                      ? '#6b21a8'
+                      : employmentType === 'Probation'
+                        ? '#b45309'
+                        : '#1e40af',
                   cursor: 'pointer',
                 }}
-                title="Switch between Full-time employee and Contractor"
+                title="Select employment type (Probation, Contractor, Employee)"
               >
-                <option value="Full-time">💼 Full-time</option>
-                <option value="Contract">📋 Contractor</option>
+                <option value="Employee">💼 Employee</option>
+                <option value="Probation">🐣 Probation</option>
+                <option value="Contractor">📋 Contractor</option>
               </select>
             </div>
 

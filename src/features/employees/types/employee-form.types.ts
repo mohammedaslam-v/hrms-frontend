@@ -58,6 +58,7 @@ export interface CreateEmployeeResponseDto {
 export interface EmployeeFormState {
   fullName: string
   title: string
+  employmentType: string
   department: string
   managerId: string
   dateOfJoining: string

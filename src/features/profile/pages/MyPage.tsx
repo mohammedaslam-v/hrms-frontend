@@ -218,6 +218,14 @@ export function MyPage() {
               📋 Contractor
             </span>
           )}
+          {!view.isContractor && view.employmentType?.toLowerCase() === 'probation' && (
+            <span
+              className="chip"
+              style={{ background: '#fef3c7', color: '#b45309', borderColor: '#fde68a', fontWeight: 600 }}
+            >
+              🐣 Probation
+            </span>
+          )}
           {view.isLoginDisabled && (
             <span
               className="chip"
@@ -360,6 +368,16 @@ export function MyPage() {
               value={
                 view.role
                   ? view.role.charAt(0).toUpperCase() + view.role.slice(1)
+                  : view.isContractor
+                    ? 'Contractor'
+                    : 'Employee'
+              }
+            />
+            <Row
+              label="Type"
+              value={
+                view.employmentType?.toLowerCase() === 'probation'
+                  ? 'Probation'
                   : view.isContractor
                     ? 'Contractor'
                     : 'Employee'
