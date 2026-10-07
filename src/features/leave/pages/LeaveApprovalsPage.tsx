@@ -85,7 +85,11 @@ export function LeaveApprovalsPage() {
     <div className="page">
       <PageHero
         navKey="leave"
-        eyebrow={`${pending.length} awaiting your decision · ${teamSize} in your team`}
+        eyebrow={
+          view.isAdmin
+            ? `${pending.length} awaiting decision · Company-wide leave approvals`
+            : `${pending.length} awaiting your decision · ${teamSize} in your team`
+        }
       />
 
       {error && (
@@ -218,7 +222,8 @@ export function LeaveApprovalsPage() {
       {tab === 'balances' && (
         <div className="card">
           <h3>
-            Team balances <span className="sub">· {policy.leaveYear}</span>
+            {view.isAdmin && teamSize === 0 ? 'Applicant balances' : 'Team balances'}{' '}
+            <span className="sub">· {policy.leaveYear}</span>
           </h3>
           <div className="scroll">
             <table>
