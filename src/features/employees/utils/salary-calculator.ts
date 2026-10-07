@@ -30,7 +30,8 @@ export interface TaxComputationResult {
 }
 
 const CFG = {
-  pfCeiling: 15000,
+  // Company policy, mirroring COMPANY_CONFIG.pfCeiling in the backend.
+  pfCeiling: 25000,
   pfRate: 0.12,
   stdDeduction: 75000,
   rebateCap: 1200000,
@@ -67,7 +68,7 @@ export function formatInr(n: number): string {
  * rupee, which is why the logic is copied line for line, not approximated.
  *
  *   Basic 40% of Gross · HRA 50% of Basic · Special = balance
- *   PF 12% of Basic on a wage capped at ₹15,000/month (employer and employee)
+ *   PF 12% of Basic on a wage capped at ₹25,000/month (employer and employee)
  *   Gratuity 4.81% of Basic · CTC = Gross + Employer PF + Gratuity
  */
 const RULES = { basicPctOfGross: 0.4, hraPctOfBasic: 0.5, pfRate: 0.12, gratuityPctOfBasic: 0.0481 }

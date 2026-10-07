@@ -3,7 +3,7 @@ import { PageHero } from '../../shared/ui/PageHero'
 import { goalsApi } from './goals.api'
 import { GoalItem } from './GoalItem'
 import { SetGoalModal } from './SetGoalModal'
-import type { TeamGoalsFilter, TeamGoalsSummaryView } from './goals.types'
+import type { GoalView, TeamGoalsFilter, TeamGoalsSummaryView } from './goals.types'
 
 export function TeamGoalsPage() {
   const [summary, setSummary] = useState<TeamGoalsSummaryView | null>(null)
@@ -19,6 +19,7 @@ export function TeamGoalsPage() {
   // Modal state
   const [modalOpen, setModalOpen] = useState(false)
   const [selectedMemberId, setSelectedMemberId] = useState<number | undefined>(undefined)
+  const [editingGoal, setEditingGoal] = useState<GoalView | null>(null)
 
   const loadTeamGoals = useCallback(async () => {
     try {
@@ -78,8 +79,37 @@ export function TeamGoalsPage() {
     }
   }
 
+  const handleApproveGoal = async (goalId: number) => {
+    try {
+      await goalsApi.approve(goalId)
+      await loadTeamGoals()
+      setToast('Goal approved successfully!')
+      setTimeout(() => setToast(null), 3000)
+    } catch (err) {
+      throw err instanceof Error ? err : new Error('Could not approve goal.')
+    }
+  }
+
+  const handleRejectGoal = async (goalId: number, reason?: string) => {
+    try {
+      await goalsApi.reject(goalId, reason)
+      await loadTeamGoals()
+      setToast('Goal rejected.')
+      setTimeout(() => setToast(null), 3000)
+    } catch (err) {
+      throw err instanceof Error ? err : new Error('Could not reject goal.')
+    }
+  }
+
   const openSetGoal = (memberId?: number) => {
+    setEditingGoal(null)
     setSelectedMemberId(memberId)
+    setModalOpen(true)
+  }
+
+  const openEditGoal = (goal: GoalView) => {
+    setEditingGoal(goal)
+    setSelectedMemberId(goal.employeeId)
     setModalOpen(true)
   }
 
@@ -327,13 +357,13 @@ export function TeamGoalsPage() {
                   style={{ padding: '6px 10px', fontSize: 12.5, borderRadius: 8, border: '1px solid var(--line)' }}
                 >
                   <option value="all">All periods</option>
-                  <option value="Q1">Q1 (Apr–Jun)</option>
-                  <option value="Q2">Q2 (Jul–Sep)</option>
-                  <option value="Q3">Q3 (Oct–Dec)</option>
-                  <option value="Q4">Q4 (Jan–Mar)</option>
-                  <option value="H1">H1 (Apr–Sep)</option>
-                  <option value="H2">H2 (Oct–Mar)</option>
-                  <option value="FY">Full FY</option>
+                  <option value="Q1">Q1 (Jan–Mar)</option>
+                  <option value="Q2">Q2 (Apr–Jun)</option>
+                  <option value="Q3">Q3 (Jul–Sep)</option>
+                  <option value="Q4">Q4 (Oct–Dec)</option>
+                  <option value="H1">H1 (Jan–Jun)</option>
+                  <option value="H2">H2 (Jul–Dec)</option>
+                  <option value="FY">Full year</option>
                 </select>
               </div>
 
@@ -365,11 +395,13 @@ export function TeamGoalsPage() {
                   style={{ padding: '6px 10px', fontSize: 12.5, borderRadius: 8, border: '1px solid var(--line)' }}
                 >
                   <option value="all">All statuses</option>
+                  <option value="Pending Approval">Pending Approval</option>
                   <option value="On track">On track</option>
                   <option value="At risk">At risk</option>
                   <option value="Achieved">Achieved</option>
                   <option value="Missed">Missed</option>
                   <option value="Not started">Not started</option>
+                  <option value="Rejected">Rejected</option>
                 </select>
               </div>
             </div>
@@ -515,6 +547,9 @@ export function TeamGoalsPage() {
                           onUpdateMetric={handleUpdateMetric}
                           onToggleMilestone={handleToggleMilestone}
                           onDelete={handleDeleteGoal}
+                          onEdit={openEditGoal}
+                          onApprove={handleApproveGoal}
+                          onReject={handleRejectGoal}
                         />
                       ))
                     )}
@@ -530,12 +565,16 @@ export function TeamGoalsPage() {
         <SetGoalModal
           members={memberOptions}
           initialEmployeeId={selectedMemberId}
-          onCreated={() => {
-            setToast('Goal successfully created!')
+          editGoal={editingGoal}
+          onSaved={() => {
+            setToast(editingGoal ? 'Goal updated successfully!' : 'Goal successfully created!')
             setTimeout(() => setToast(null), 3000)
             void loadTeamGoals()
           }}
-          onClose={() => setModalOpen(false)}
+          onClose={() => {
+            setModalOpen(false)
+            setEditingGoal(null)
+          }}
         />
       )}
     </div>

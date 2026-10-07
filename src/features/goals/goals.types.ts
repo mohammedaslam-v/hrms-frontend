@@ -1,6 +1,7 @@
 export type GoalType = 'metric' | 'milestone'
 export type GoalPeriod = 'Q1' | 'Q2' | 'Q3' | 'Q4' | 'H1' | 'H2' | 'FY'
 export type GoalDirection = 'up' | 'down'
+export type GoalApprovalStatus = 'pending' | 'approved' | 'rejected'
 
 /** Derived on the server from progress against time elapsed. Never stored. */
 export type GoalStatus = 'Achieved' | 'Missed' | 'Not started' | 'At risk' | 'On track'
@@ -31,6 +32,11 @@ export interface GoalView {
   note: string | null
   setOn: string
   setterName: string | null
+  approvalStatus: GoalApprovalStatus
+  approvedBy?: number | null
+  approvedAt?: string | null
+  rejectionReason?: string | null
+  approverName?: string | null
   milestonesDone: number
   milestonesTotal: number
   milestones: Milestone[]
@@ -76,6 +82,18 @@ export interface CreateGoalDto {
   milestones?: string[]
 }
 
+export interface UpdateGoalDto {
+  title: string
+  goalType: GoalType
+  period: GoalPeriod
+  targetValue?: number | null
+  currentValue?: number | null
+  unit?: string | null
+  direction?: GoalDirection
+  note?: string | null
+  milestones?: string[]
+}
+
 export interface TeamGoalsFilter {
   period?: string
   status?: string
@@ -98,4 +116,10 @@ export const GOAL_CHIP: Record<GoalStatus, string> = {
   'At risk': 'c-wfo',
   Missed: 'c-abs',
   'Not started': 'c-out',
+}
+
+export const APPROVAL_CHIP: Record<GoalApprovalStatus, string> = {
+  approved: 'c-in',
+  pending: 'c-wfo',
+  rejected: 'c-abs',
 }

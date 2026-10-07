@@ -3,13 +3,16 @@ import { Link } from 'react-router-dom'
 import { PageHero } from '../../shared/ui/PageHero'
 import { goalsApi } from './goals.api'
 import { GoalItem } from './GoalItem'
-import type { MyGoalsSummaryView } from './goals.types'
+import { SetGoalModal } from './SetGoalModal'
+import type { GoalView, MyGoalsSummaryView } from './goals.types'
 
 export function MyGoalsPage() {
   const [summary, setSummary] = useState<MyGoalsSummaryView | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [toast, setToast] = useState<string | null>(null)
+  const [modalOpen, setModalOpen] = useState(false)
+  const [editingGoal, setEditingGoal] = useState<GoalView | null>(null)
 
   const loadGoals = useCallback(async () => {
     try {
@@ -55,12 +58,26 @@ export function MyGoalsPage() {
 
   if (loading) return <div className="boot">Loading your goals…</div>
 
+  const pendingCount = summary?.goals.filter((g) => g.approvalStatus === 'pending').length || 0
+
   return (
     <div className="page">
       <PageHero navKey="mygoals" eyebrow="Individual / My goals">
-        <Link to="/me" className="btn ghost sm">
-          View on my page
-        </Link>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          <button
+            type="button"
+            className="btn primary sm"
+            onClick={() => {
+              setEditingGoal(null)
+              setModalOpen(true)
+            }}
+          >
+            + Set a goal
+          </button>
+          <Link to="/me" className="btn ghost sm">
+            View on my page
+          </Link>
+        </div>
       </PageHero>
 
       {error && (
@@ -203,14 +220,41 @@ export function MyGoalsPage() {
             </div>
           </div>
 
+          {/* Pending approval notification banner */}
+          {pendingCount > 0 && (
+            <div
+              className="notice blue"
+              style={{
+                marginBottom: 16,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <span>
+                ⏳ You have <b>{pendingCount}</b> goal{pendingCount === 1 ? '' : 's'} waiting for manager approval.
+              </span>
+            </div>
+          )}
+
           {/* Goals List */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             {summary.goals.length === 0 ? (
               <div className="card empty" style={{ textAlign: 'center', padding: '40px 20px' }}>
                 <b style={{ fontSize: 16 }}>No goals set for this year</b>
-                <p style={{ color: 'var(--muted)', marginTop: 6, fontSize: 13 }}>
-                  Your manager sets these, and progress appears here as it is updated.
+                <p style={{ color: 'var(--muted)', marginTop: 6, fontSize: 13, marginBottom: 14 }}>
+                  Set your own goals to track your impact, or your manager can assign them.
                 </p>
+                <button
+                  type="button"
+                  className="btn primary sm"
+                  onClick={() => {
+                    setEditingGoal(null)
+                    setModalOpen(true)
+                  }}
+                >
+                  + Set a goal
+                </button>
               </div>
             ) : (
               summary.goals.map((goal) => (
@@ -219,12 +263,37 @@ export function MyGoalsPage() {
                   goal={goal}
                   onUpdateMetric={handleUpdateMetric}
                   onToggleMilestone={handleToggleMilestone}
+                  onEdit={(g) => {
+                    setEditingGoal(g)
+                    setModalOpen(true)
+                  }}
                 />
               ))
             )}
           </div>
         </>
       )}
+
+      {modalOpen && (
+        <SetGoalModal
+          isSelf={true}
+          editGoal={editingGoal}
+          onSaved={() => {
+            setToast(
+              editingGoal
+                ? 'Goal updated successfully!'
+                : 'Goal submitted for manager approval!',
+            )
+            setTimeout(() => setToast(null), 3000)
+            void loadGoals()
+          }}
+          onClose={() => {
+            setModalOpen(false)
+            setEditingGoal(null)
+          }}
+        />
+      )}
     </div>
   )
 }
+

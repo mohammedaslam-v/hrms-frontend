@@ -101,14 +101,14 @@ export function SalaryStructureCard({ form, onChange }: SalaryStructureCardProps
             <Money label="Gross" hint="Basic + HRA + Special" value={grossM} onChange={(v) => edit('grossM', v)} strong />
             <Money
               label="Employer PF"
-              hint="12% of Basic, PF wage capped at ₹15,000"
+              hint="12% of Basic, PF wage capped at ₹25,000"
               value={c.employerPfM}
               onChange={(v) => edit('employerPfM', v)}
             />
             <Money label="Gratuity" hint="4.81% of Basic" value={c.gratuityM} onChange={(v) => edit('gratuityM', v)} />
             <Money
               label="Employee PF"
-              hint="12% of Basic, PF wage capped at ₹15,000"
+              hint="12% of Basic, PF wage capped at ₹25,000"
               value={c.employeePfM}
               onChange={(v) => edit('employeePfM', v)}
             />

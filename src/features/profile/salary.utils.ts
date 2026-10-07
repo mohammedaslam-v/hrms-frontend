@@ -55,10 +55,10 @@ export function calculateSalaryBreakout(ctc: number, workState = ''): SalaryBrea
     { component: 'HRA (50% of Basic)', annualAmount: s.hraA, monthlyAmount: s.hraM },
     { component: 'Special allowance (balance)', annualAmount: s.specialA, monthlyAmount: s.specialM },
     { component: 'Gross', annualAmount: s.grossA, monthlyAmount: s.grossM, isSubtotal: true },
-    { component: 'Employer PF (12% of Basic, max ₹1,800/mo)', annualAmount: s.erPfA, monthlyAmount: s.erPfM },
+    { component: 'Employer PF (12% of Basic, max ₹3,000/mo)', annualAmount: s.erPfA, monthlyAmount: s.erPfM },
     { component: 'Gratuity (4.81% of Basic)', annualAmount: s.gratA, monthlyAmount: s.gratM },
     { component: 'CTC', annualAmount: s.ctc, monthlyAmount: s.grossM + s.erPfM + s.gratM, isTotal: true },
-    { component: 'Less: Employee PF (12% of Basic, max ₹1,800/mo)', annualAmount: s.eePfM * 12, monthlyAmount: s.eePfM },
+    { component: 'Less: Employee PF (12% of Basic, max ₹3,000/mo)', annualAmount: s.eePfM * 12, monthlyAmount: s.eePfM },
     { component: 'Less: Professional tax', annualAmount: ptM * 12, monthlyAmount: ptM },
     { component: 'Net salary', annualAmount: netM * 12, monthlyAmount: netM, isSubtotal: true },
   ]

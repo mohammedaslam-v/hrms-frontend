@@ -5,6 +5,7 @@ import type {
   MyGoalsSummaryView,
   TeamGoalsFilter,
   TeamGoalsSummaryView,
+  UpdateGoalDto,
 } from './goals.types'
 
 export const goalsApi = {
@@ -29,6 +30,23 @@ export const goalsApi = {
     request<GoalView>('/goals', {
       method: 'POST',
       body: JSON.stringify(dto),
+    }),
+
+  update: (id: number, dto: UpdateGoalDto) =>
+    request<GoalView>(`/goals/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(dto),
+    }),
+
+  approve: (id: number) =>
+    request<{ success: boolean; data: GoalView; message: string }>(`/goals/${id}/approve`, {
+      method: 'POST',
+    }),
+
+  reject: (id: number, reason?: string) =>
+    request<{ success: boolean; data: GoalView; message: string }>(`/goals/${id}/reject`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
     }),
 
   updateMetric: (id: number, currentValue: number) =>
