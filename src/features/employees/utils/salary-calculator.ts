@@ -218,3 +218,135 @@ export function calculateIncomeTax(
     monthly,
   }
 }
+
+/**
+ * Monthly components when HR overrides the formula on the Add Employee form.
+ * Mirrors SalaryComponents in the backend's salary.domain.ts.
+ */
+export interface SalaryOverride {
+  basicM: number
+  hraM: number
+  specialM: number
+  employerPfM: number
+  gratuityM: number
+  employeePfM: number
+  /** Null = "as applicable": follow the work state's slab. */
+  professionalTaxM: number | null
+}
+
+export type SalaryField = keyof SalaryOverride | 'grossM' | 'netM'
+
+/** The formula's monthly split, as an editable starting point. */
+export function formulaComponents(ctc: number): SalaryOverride {
+  const s = calculateStructure(ctc)
+  return {
+    basicM: s.basicM,
+    hraM: s.hraM,
+    specialM: s.specialM,
+    employerPfM: s.erPfM,
+    gratuityM: s.gratM,
+    employeePfM: s.eePfM,
+    professionalTaxM: null,
+  }
+}
+
+/**
+ * One field edited, the rest following the agreed rules:
+ *   Basic        → HRA, both PFs and Gratuity re-derive; Special balances
+ *   HRA/ErPF/Gr. → Special balances
+ *   Special      → it is the balancing field, so the CTC moves instead
+ *   EePF / PT    → change Net only
+ * CTC stays as entered in every case but the Special edit.
+ */
+export function applySalaryEdit(
+  current: SalaryOverride,
+  field: SalaryField,
+  value: number,
+  annualCtc: number,
+  workState = '',
+): { components: SalaryOverride; ctc: number } {
+  const v = Math.max(0, Math.round(value || 0))
+  const monthlyCtc = Math.round(annualCtc / 12)
+  const next: SalaryOverride = { ...current }
+  const rebalance = () => {
+    next.specialM = monthlyCtc - next.basicM - next.hraM - next.employerPfM - next.gratuityM
+  }
+
+  switch (field) {
+    case 'basicM': {
+      const pf = Math.round(Math.min(v, CFG.pfCeiling) * RULES.pfRate)
+      next.basicM = v
+      next.hraM = Math.round(v * RULES.hraPctOfBasic)
+      next.employerPfM = pf
+      next.employeePfM = pf
+      next.gratuityM = Math.round(v * RULES.gratuityPctOfBasic)
+      rebalance()
+      return { components: next, ctc: annualCtc }
+    }
+    case 'hraM':
+    case 'employerPfM':
+    case 'gratuityM':
+      next[field] = v
+      rebalance()
+      return { components: next, ctc: annualCtc }
+    case 'specialM':
+      next.specialM = v
+      return {
+        components: next,
+        ctc: (next.basicM + next.hraM + next.specialM + next.employerPfM + next.gratuityM) * 12,
+      }
+    case 'employeePfM':
+      next.employeePfM = v
+      return { components: next, ctc: annualCtc }
+    case 'professionalTaxM':
+      next.professionalTaxM = v
+      return { components: next, ctc: annualCtc }
+    case 'grossM':
+      return fromGross(v, current.professionalTaxM)
+    case 'netM':
+      return fromGross(grossForNet(v, current.professionalTaxM, workState), current.professionalTaxM)
+  }
+}
+
+/**
+ * Gross typed directly: the same percentages applied from the other end, so
+ * CTC becomes Gross + Employer PF + Gratuity. A PT figure HR already set is
+ * kept; anything else is re-derived.
+ */
+function fromGross(grossM: number, professionalTaxM: number | null): { components: SalaryOverride; ctc: number } {
+  const g = Math.max(0, Math.round(grossM))
+  const basicM = Math.round(g * RULES.basicPctOfGross)
+  const hraM = Math.round(basicM * RULES.hraPctOfBasic)
+  const pf = Math.round(Math.min(basicM, CFG.pfCeiling) * RULES.pfRate)
+  const gratuityM = Math.round(basicM * RULES.gratuityPctOfBasic)
+  const components: SalaryOverride = {
+    basicM,
+    hraM,
+    specialM: g - basicM - hraM,
+    employerPfM: pf,
+    gratuityM,
+    employeePfM: pf,
+    professionalTaxM,
+  }
+  return { components, ctc: (g + pf + gratuityM) * 12 }
+}
+
+/**
+ * The Gross whose take-home is `netM`. Employee PF and professional tax both
+ * depend on Gross — PF through Basic and its cap, PT through the state's
+ * slabs — so this steps towards it rather than solving in one line. A few
+ * rounds settle; a PT slab boundary can leave Net a rupee or two off.
+ */
+function grossForNet(netM: number, professionalTaxM: number | null, workState: string): number {
+  const target = Math.max(0, Math.round(netM))
+  let g = target
+  for (let i = 0; i < 8; i++) {
+    const basic = Math.round(g * RULES.basicPctOfGross)
+    const eePf = Math.round(Math.min(basic, CFG.pfCeiling) * RULES.pfRate)
+    const pt = professionalTaxM ?? calculatePt(workState, g)
+    const next = target + eePf + pt
+    if (next === g) break
+    g = next
+  }
+  return g
+}

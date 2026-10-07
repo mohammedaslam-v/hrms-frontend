@@ -1,3 +1,4 @@
+import type { SalaryOverride } from '../utils/salary-calculator'
 export type WorkMode = 'WFH' | 'WFO' | 'Hybrid'
 export type HrmsRole = 'employee' | 'admin'
 
@@ -40,6 +41,8 @@ export interface CreateEmployeeRequestDto {
   bonus?: number
   esopUnits?: number
   esopVesting?: string
+  /** Monthly components, sent only when HR overrode the formula. */
+  components?: SalaryOverride
 
   workMode?: WorkMode
   shiftStart?: string
@@ -78,6 +81,8 @@ export interface EmployeeFormState {
 
   ctc: number
   payCycle: string
+  /** Set once HR edits a component; null means the formula applies. */
+  salaryOverride: SalaryOverride | null
 
   workMode: WorkMode
   shiftStart: string

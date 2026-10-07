@@ -204,7 +204,6 @@ export function CompensationCard({
   }
 
   const c = compensation
-  const vested = Math.min(100, Math.max(0, c.esopVestedPct))
   const breakout = calculateSalaryBreakout(c.ctc, workState ?? '')
 
   return (
@@ -314,7 +313,17 @@ export function CompensationCard({
 
       {/* Breakout Table View (Matches User's Screenshot) */}
       {viewMode === 'breakout' ? (
-        <div style={{ marginBottom: 6 }}>
+        // Takes only the height the fixed-size card has left, so the table
+        // scrolls inside it instead of spilling over the card below.
+        <div
+          style={{
+            marginBottom: 6,
+            flex: 1,
+            minHeight: 0,
+            display: 'flex',
+            flexDirection: 'column',
+          }}
+        >
           {/* Table Header Pill */}
           <div
             style={{
@@ -336,6 +345,9 @@ export function CompensationCard({
           <div
             style={{
               overflowX: 'auto',
+              overflowY: 'auto',
+              flex: 1,
+              minHeight: 0,
               border: '1px solid #cbd5e1',
               borderBottomLeftRadius: 6,
               borderBottomRightRadius: 6,
@@ -350,12 +362,14 @@ export function CompensationCard({
               }}
             >
               <thead>
+                {/* Header cells are sticky individually: sticky on a <tr> is not
+                    honoured by every browser, on a <th> it is. */}
                 <tr style={{ backgroundColor: '#ffffff', borderBottom: '1px solid #cbd5e1' }}>
-                  <th style={{ padding: '4px 8px', fontWeight: 700, color: '#1e293b' }}>Component</th>
-                  <th style={{ padding: '4px 8px', fontWeight: 700, color: '#1e293b', textAlign: 'right' }}>
+                  <th style={{ position: 'sticky', top: 0, zIndex: 1, background: '#ffffff', boxShadow: '0 1px 0 #cbd5e1', padding: '4px 8px', fontWeight: 700, color: '#1e293b' }}>Component</th>
+                  <th style={{ position: 'sticky', top: 0, zIndex: 1, background: '#ffffff', boxShadow: '0 1px 0 #cbd5e1', padding: '4px 8px', fontWeight: 700, color: '#1e293b', textAlign: 'right' }}>
                     Annual Amount
                   </th>
-                  <th style={{ padding: '4px 8px', fontWeight: 700, color: '#1e293b', textAlign: 'right' }}>
+                  <th style={{ position: 'sticky', top: 0, zIndex: 1, background: '#ffffff', boxShadow: '0 1px 0 #cbd5e1', padding: '4px 8px', fontWeight: 700, color: '#1e293b', textAlign: 'right' }}>
                     Monthly Amount
                   </th>
                 </tr>
@@ -395,43 +409,9 @@ export function CompensationCard({
             muted={!c.variablePay}
           />
           <Row label="Bonus" value={c.bonus ? formatInr(c.bonus) : '—'} muted={!c.bonus} />
-          <Row
-            label="ESOPs"
-            value={c.esopUnits ? `${c.esopUnits.toLocaleString('en-IN')} units` : '—'}
-            muted={!c.esopUnits}
-          />
         </div>
       )}
 
-      {/* ESOPs Vesting Bar */}
-      {c.esopUnits > 0 && (
-        <div style={{ marginTop: 10, paddingTop: 8, borderTop: '1px solid var(--line2)' }}>
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              fontSize: 11.5,
-              marginBottom: 4,
-            }}
-          >
-            <b style={{ fontWeight: 500, color: 'var(--muted2)' }}>ESOP vested</b>
-            <span>
-              {vested}% · {c.esopVestedUnits.toLocaleString('en-IN')} / {c.esopUnits.toLocaleString('en-IN')} units
-            </span>
-          </div>
-          <div className="bar" style={{ height: 6, backgroundColor: '#f1f5f9', borderRadius: 999 }}>
-            <i
-              style={{
-                width: `${vested}%`,
-                background: 'var(--violet, #7c3aed)',
-                display: 'block',
-                height: '100%',
-                borderRadius: 999,
-              }}
-            />
-          </div>
-        </div>
-      )}
 
       {/* Quick Action: View Full Salary Slip & Payslips */}
       <div style={{ marginTop: 'auto', paddingTop: 8, borderTop: '1px solid var(--line2)', display: 'flex', justifyContent: 'flex-end' }}>

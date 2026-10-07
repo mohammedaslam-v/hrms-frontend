@@ -1,6 +1,11 @@
-import { useMemo } from 'react'
 import type { EmployeeFormState, EmployeeMetaDto } from '../types/employee-form.types'
-import { calculatePt, calculateStructure, formatInr } from '../utils/salary-calculator'
+import {
+  applySalaryEdit,
+  calculatePt,
+  formatInr,
+  formulaComponents,
+  type SalaryField,
+} from '../utils/salary-calculator'
 
 interface SalaryStructureCardProps {
   form: EmployeeFormState
@@ -9,41 +14,37 @@ interface SalaryStructureCardProps {
 }
 
 /**
- * Only CTC is typed; every component below is derived from it with the same
- * rules the payslip uses (see calculateStructure), so what HR sees here is what
- * the employee will see on their first slip.
+ * Annual CTC fills every component from the formula; each component can then
+ * be overwritten. Edits are saved with the employee and used on payslips —
+ * until one is made, nothing is stored and payroll keeps using the formula.
  */
 export function SalaryStructureCard({ form, onChange }: SalaryStructureCardProps) {
-  const rows = useMemo(() => {
-    if (!form.ctc || form.ctc <= 0) return null
-    const s = calculateStructure(form.ctc)
-    const ptM = calculatePt(form.workState, s.grossM)
-    const netM = s.grossM - s.eePfM - ptM
-    return {
-      earnings: [
-        { label: 'Basic', rule: '40% of Gross', m: s.basicM, a: s.basicA },
-        { label: 'HRA', rule: '50% of Basic', m: s.hraM, a: s.hraA },
-        { label: 'Special allowance', rule: 'Balance', m: s.specialM, a: s.specialA },
-      ],
-      gross: { m: s.grossM, a: s.grossA },
-      employer: [
-        { label: 'Employer PF', rule: '12% of Basic, PF wage capped at ₹15,000', m: s.erPfM, a: s.erPfA },
-        { label: 'Gratuity', rule: '4.81% of Basic', m: s.gratM, a: s.gratA },
-      ],
-      ctc: { m: s.grossM + s.erPfM + s.gratM, a: s.ctc },
-      deductions: [
-        { label: 'Employee PF', rule: '12% of Basic, PF wage capped at ₹15,000', m: s.eePfM, a: s.eePfM * 12 },
-        { label: 'Professional tax', rule: `As applicable (${form.workState || 'state not set'})`, m: ptM, a: ptM * 12 },
-      ],
-      net: { m: netM, a: netM * 12 },
-    }
-  }, [form.ctc, form.workState])
+  const ctc = form.ctc || 0
+  const c = form.salaryOverride ?? formulaComponents(ctc)
+  const grossM = c.basicM + c.hraM + c.specialM
+  const ptM = c.professionalTaxM ?? calculatePt(form.workState, grossM)
+  const netM = grossM - c.employeePfM - ptM
+  const overBudget = c.specialM < 0
+
+  // A new CTC starts again from the formula: edits made against the old figure
+  // would no longer mean anything.
+  const setCtc = (value: number) => {
+    onChange('ctc', Math.max(0, Math.round(value || 0)))
+    onChange('salaryOverride', null)
+  }
+
+  const edit = (field: SalaryField, value: number) => {
+    const next = applySalaryEdit(c, field, value, ctc, form.workState)
+    onChange('salaryOverride', next.components)
+    if (next.ctc !== ctc) onChange('ctc', next.ctc)
+  }
 
   return (
     <>
       <div className="formhead" style={{ marginTop: '22px' }}>
         Salary structure
       </div>
+
       <div className="grid g2">
         <div className="f">
           <label>Annual CTC (₹) *</label>
@@ -54,7 +55,7 @@ export function SalaryStructureCard({ form, onChange }: SalaryStructureCardProps
             step={10000}
             placeholder="900000"
             value={form.ctc || ''}
-            onChange={(e) => onChange('ctc', Math.max(0, Number(e.target.value) || 0))}
+            onChange={(e) => setCtc(Number(e.target.value))}
             required
           />
         </div>
@@ -68,63 +69,97 @@ export function SalaryStructureCard({ form, onChange }: SalaryStructureCardProps
         </div>
       </div>
 
-      <div id="structPreview" style={{ marginTop: '14px' }}>
-        {rows ? (
-          <table>
-            <thead>
-              <tr>
-                <th>Component</th>
-                <th>Formula</th>
-                <th style={{ textAlign: 'right' }}>Monthly</th>
-                <th style={{ textAlign: 'right' }}>Annual</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.earnings.map((r) => (
-                <Line key={r.label} {...r} />
-              ))}
-              <Line label="Gross" rule="Basic + HRA + Special" m={rows.gross.m} a={rows.gross.a} strong />
-              {rows.employer.map((r) => (
-                <Line key={r.label} {...r} />
-              ))}
-              <Line label="CTC" rule="Gross + Employer PF + Gratuity" m={rows.ctc.m} a={rows.ctc.a} strong />
-              {rows.deductions.map((r) => (
-                <Line key={r.label} {...r} deduction />
-              ))}
-              <Line label="Net salary" rule="Gross − Employee PF − PT" m={rows.net.m} a={rows.net.a} strong />
-            </tbody>
-          </table>
-        ) : (
-          <div className="hint">Enter an annual CTC to see the full salary breakdown.</div>
-        )}
-      </div>
+      {ctc > 0 && (
+        <>
+          <div className="hint" style={{ margin: '14px 0 6px' }}>
+            Monthly amounts, filled from the CTC. Change any of them — the rest adjust; editing Special, Gross or Net moves the CTC.
+            {form.salaryOverride && (
+              <>
+                {' '}
+                <button
+                  type="button"
+                  className="btn ghost sm"
+                  style={{ marginLeft: 6, padding: '1px 8px', fontSize: 11 }}
+                  onClick={() => onChange('salaryOverride', null)}
+                >
+                  Reset to formula
+                </button>
+              </>
+            )}
+          </div>
+
+          <div className="grid g2">
+            <Money label="Basic" hint="40% of Gross" value={c.basicM} onChange={(v) => edit('basicM', v)} />
+            <Money label="HRA" hint="50% of Basic" value={c.hraM} onChange={(v) => edit('hraM', v)} />
+            <Money
+              label="Special allowance"
+              hint="Balance"
+              value={c.specialM}
+              onChange={(v) => edit('specialM', v)}
+              error={overBudget ? 'Components exceed the CTC' : undefined}
+            />
+            <Money label="Gross" hint="Basic + HRA + Special" value={grossM} onChange={(v) => edit('grossM', v)} strong />
+            <Money
+              label="Employer PF"
+              hint="12% of Basic, PF wage capped at ₹15,000"
+              value={c.employerPfM}
+              onChange={(v) => edit('employerPfM', v)}
+            />
+            <Money label="Gratuity" hint="4.81% of Basic" value={c.gratuityM} onChange={(v) => edit('gratuityM', v)} />
+            <Money
+              label="Employee PF"
+              hint="12% of Basic, PF wage capped at ₹15,000"
+              value={c.employeePfM}
+              onChange={(v) => edit('employeePfM', v)}
+            />
+            <Money
+              label="Professional tax"
+              hint={`As applicable${form.workState ? ` (${form.workState})` : ''}`}
+              value={ptM}
+              onChange={(v) => edit('professionalTaxM', v)}
+            />
+            <Money label="Net salary" hint="Gross − Employee PF − PT" value={netM} onChange={(v) => edit('netM', v)} strong />
+          </div>
+        </>
+      )}
     </>
   )
 }
 
-function Line({
+function Money({
   label,
-  rule,
-  m,
-  a,
+  hint,
+  value,
+  onChange,
   strong,
-  deduction,
+  error,
 }: {
   label: string
-  rule: string
-  m: number
-  a: number
+  hint: string
+  value: number
+  onChange?: (v: number) => void
+  /** Totals: shown bold, still editable. */
   strong?: boolean
-  deduction?: boolean
+  error?: string
 }) {
-  const fmt = (n: number) => (deduction && n > 0 ? `− ${formatInr(n)}` : formatInr(n))
-  const weight = strong ? 700 : 400
   return (
-    <tr>
-      <td style={{ fontWeight: weight }}>{label}</td>
-      <td style={{ color: 'var(--muted)', fontSize: 12 }}>{rule}</td>
-      <td style={{ textAlign: 'right', fontWeight: weight }}>{fmt(m)}</td>
-      <td style={{ textAlign: 'right', fontWeight: weight }}>{fmt(a)}</td>
-    </tr>
+    <div className="f">
+      <label>
+        {label} <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>· {hint}</span>
+      </label>
+      <input
+        type="number"
+        min={0}
+        value={Number.isFinite(value) ? value : ''}
+        onChange={(e) => onChange?.(Number(e.target.value))}
+        style={{
+          ...(strong ? { fontWeight: 700 } : {}),
+          ...(error ? { borderColor: '#e11d48' } : {}),
+        }}
+      />
+      <div className="hint" style={{ color: error ? '#be123c' : undefined }}>
+        {error ?? `${formatInr(value * 12)} a year`}
+      </div>
+    </div>
   )
 }

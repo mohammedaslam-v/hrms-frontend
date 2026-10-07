@@ -50,6 +50,7 @@ export function AddEmployeePage() {
 
     ctc: 900000,
     payCycle: 'Monthly',
+    salaryOverride: null,
 
     workMode: 'WFO',
     shiftStart: '10:00',
@@ -104,6 +105,14 @@ export function AddEmployeePage() {
       return
     }
 
+    if (form.salaryOverride && form.salaryOverride.specialM < 0) {
+      setToast({
+        text: 'The salary components add up to more than the CTC — Special allowance would be negative.',
+        tone: 'bad',
+      })
+      return
+    }
+
     if (!trimmedEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
       setToast({ text: 'Please provide a valid email address.', tone: 'bad' })
       return
@@ -141,6 +150,8 @@ export function AddEmployeePage() {
       hrmsRole: 'employee',
 
       ctc: form.ctc,
+      // Only when HR changed something; otherwise payroll keeps the formula.
+      components: form.salaryOverride ?? undefined,
 
       workMode: form.workMode,
       shiftStart: form.shiftStart ? `${form.shiftStart}:00` : '10:00:00',
