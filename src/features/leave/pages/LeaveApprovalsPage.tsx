@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { PageHero } from '../../../shared/ui/PageHero'
 import { Pagination, usePage } from '../../../shared/ui/Pagination'
 import { approvalsApi } from '../leave.api'
@@ -64,10 +64,46 @@ export function LeaveApprovalsPage() {
     }
   }
 
+  const [search, setSearch] = useState('')
+  const q = search.trim().toLowerCase()
+
+  const filteredPending = useMemo(() => {
+    const list = view?.pending ?? []
+    if (!q) return list
+    return list.filter(
+      (p) =>
+        p.employeeName.toLowerCase().includes(q) ||
+        p.employeeCode.toLowerCase().includes(q) ||
+        (p.designation && p.designation.toLowerCase().includes(q)),
+    )
+  }, [view?.pending, q])
+
+  const filteredBalances = useMemo(() => {
+    const list = view?.balances ?? []
+    if (!q) return list
+    return list.filter(
+      (b) =>
+        b.employeeName.toLowerCase().includes(q) ||
+        b.employeeCode.toLowerCase().includes(q) ||
+        (b.designation && b.designation.toLowerCase().includes(q)),
+    )
+  }, [view?.balances, q])
+
+  const filteredLog = useMemo(() => {
+    const list = view?.log ?? []
+    if (!q) return list
+    return list.filter(
+      (r) =>
+        r.employeeName.toLowerCase().includes(q) ||
+        r.ref.toLowerCase().includes(q) ||
+        (r.reason && r.reason.toLowerCase().includes(q)),
+    )
+  }, [view?.log, q])
+
   // Called before the early returns below — hooks cannot sit behind a branch.
-  const pendingPage = usePage(view?.pending ?? [])
-  const balancesPage = usePage(view?.balances ?? [])
-  const logPage = usePage(view?.log ?? [])
+  const pendingPage = usePage(filteredPending)
+  const balancesPage = usePage(filteredBalances)
+  const logPage = usePage(filteredLog)
 
   if (loading) return <div className="boot">Loading approvals…</div>
 
@@ -79,7 +115,7 @@ export function LeaveApprovalsPage() {
     )
   }
 
-  const { pending, balances, log, policy, teamSize } = view
+  const { pending, policy, teamSize } = view
 
   return (
     <div className="page">
@@ -103,16 +139,93 @@ export function LeaveApprovalsPage() {
         </div>
       )}
 
-      <div className="tabs">
-        <button className={`tab${tab === 'pending' ? ' on' : ''}`} onClick={() => setTab('pending')}>
-          Approvals <span className="n">{pending.length}</span>
-        </button>
-        <button className={`tab${tab === 'balances' ? ' on' : ''}`} onClick={() => setTab('balances')}>
-          Balances
-        </button>
-        <button className={`tab${tab === 'log' ? ' on' : ''}`} onClick={() => setTab('log')}>
-          All requests
-        </button>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          gap: 12,
+          marginBottom: 18,
+          flexWrap: 'wrap',
+        }}
+      >
+        <div className="tabs" style={{ marginBottom: 0 }}>
+          <button className={`tab${tab === 'pending' ? ' on' : ''}`} onClick={() => setTab('pending')}>
+            Approvals <span className="n">{q ? filteredPending.length : pending.length}</span>
+          </button>
+          <button className={`tab${tab === 'balances' ? ' on' : ''}`} onClick={() => setTab('balances')}>
+            Balances
+          </button>
+          <button className={`tab${tab === 'log' ? ' on' : ''}`} onClick={() => setTab('log')}>
+            All requests
+          </button>
+        </div>
+
+        {/* Search Field on extreme right */}
+        <div style={{ position: 'relative', width: 260, maxWidth: '100%', flexShrink: 0 }}>
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="var(--muted2, #64748b)"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            style={{
+              position: 'absolute',
+              left: 11,
+              top: '50%',
+              transform: 'translateY(-50%)',
+              pointerEvents: 'none',
+            }}
+          >
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search by name..."
+            aria-label="Search by name"
+            style={{
+              width: '100%',
+              padding: '7px 28px 7px 32px',
+              borderRadius: 99,
+              border: '1px solid var(--line, #e2e8f0)',
+              backgroundColor: '#fff',
+              fontSize: 13,
+              fontFamily: "'Inter', sans-serif",
+              outline: 'none',
+              boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+              color: 'var(--ink, #0f172a)',
+            }}
+          />
+          {search && (
+            <button
+              type="button"
+              onClick={() => setSearch('')}
+              aria-label="Clear search"
+              title="Clear search"
+              style={{
+                position: 'absolute',
+                right: 8,
+                top: '50%',
+                transform: 'translateY(-50%)',
+                border: 'none',
+                background: 'transparent',
+                color: 'var(--muted, #94a3b8)',
+                cursor: 'pointer',
+                fontSize: 16,
+                lineHeight: 1,
+                padding: '2px 4px',
+              }}
+            >
+              ✕
+            </button>
+          )}
+        </div>
       </div>
 
       {tab === 'pending' && (
@@ -136,12 +249,14 @@ export function LeaveApprovalsPage() {
                 </tr>
               </thead>
               <tbody>
-                {pending.length === 0 ? (
+                {filteredPending.length === 0 ? (
                   <tr>
                     <td colSpan={9}>
                       <div className="empty">
-                        <b>Nothing waiting on you</b>
-                        Decided requests move to the All requests tab.
+                        <b>{q ? 'No matching leave requests' : 'Nothing waiting on you'}</b>
+                        {q
+                          ? `No pending requests match "${search}". Try clearing the search.`
+                          : 'Decided requests move to the All requests tab.'}
                       </div>
                     </td>
                   </tr>
@@ -241,7 +356,17 @@ export function LeaveApprovalsPage() {
                 </tr>
               </thead>
               <tbody>
-                {balancesPage.items.map((b) => (
+                {filteredBalances.length === 0 ? (
+                  <tr>
+                    <td colSpan={9}>
+                      <div className="empty">
+                        <b>{q ? 'No matching members' : 'No balance records'}</b>
+                        {q ? `No team members match "${search}".` : ''}
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  balancesPage.items.map((b) => (
                   <tr key={b.employeeId}>
                     <td>
                       <span className="tag">{b.employeeCode}</span>
@@ -263,17 +388,18 @@ export function LeaveApprovalsPage() {
                     </td>
                     <td>{b.lastLeaveOn ? fmtShort(b.lastLeaveOn) : '—'}</td>
                   </tr>
-                ))}
+                ))
+              )}
               </tbody>
               <tfoot>
                 <tr>
-                  <td colSpan={2}>Total · {balances.length} people</td>
-                  <td className="num-col">{sum(balances.map((b) => b.opening))}</td>
-                  <td className="num-col">{sum(balances.map((b) => b.credited))}</td>
-                  <td className="num-col">{sum(balances.map((b) => b.taken))}</td>
-                  <td className="num-col">{sum(balances.map((b) => b.pending))}</td>
-                  <td className="num-col">{sum(balances.map((b) => b.lop))}</td>
-                  <td className="num-col">{sum(balances.map((b) => b.balance))}</td>
+                  <td colSpan={2}>Total · {filteredBalances.length} people</td>
+                  <td className="num-col">{sum(filteredBalances.map((b) => b.opening))}</td>
+                  <td className="num-col">{sum(filteredBalances.map((b) => b.credited))}</td>
+                  <td className="num-col">{sum(filteredBalances.map((b) => b.taken))}</td>
+                  <td className="num-col">{sum(filteredBalances.map((b) => b.pending))}</td>
+                  <td className="num-col">{sum(filteredBalances.map((b) => b.lop))}</td>
+                  <td className="num-col">{sum(filteredBalances.map((b) => b.balance))}</td>
                   <td />
                 </tr>
               </tfoot>
@@ -426,10 +552,10 @@ export function LeaveApprovalsPage() {
                 </tr>
               </thead>
               <tbody>
-                {log.length === 0 ? (
+                {filteredLog.length === 0 ? (
                   <tr>
                     <td colSpan={9}>
-                      <div className="empty">No requests this year.</div>
+                      <div className="empty">{q ? `No requests match "${search}".` : 'No requests this year.'}</div>
                     </td>
                   </tr>
                 ) : (
