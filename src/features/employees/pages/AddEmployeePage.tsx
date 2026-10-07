@@ -18,6 +18,7 @@ const DEFAULT_META: EmployeeMetaDto = {
   workStates: ['Karnataka', 'Maharashtra', 'Telangana', 'Delhi', 'Tamil Nadu'],
   workModes: ['WFH', 'WFO', 'Hybrid'],
   esopVestingOptions: ['4 yr · 1 yr cliff', '3 yr · no cliff', 'Custom'],
+  nextEmployeeCode: '762',
 }
 
 const ALL_DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
@@ -33,7 +34,7 @@ export function AddEmployeePage() {
 
   const [form, setForm] = useState<EmployeeFormState>({
     fullName: '',
-    employeeCode: '',
+    employeeCode: '762',
     title: '',
     employmentType: 'Employee',
     department: 'Tech',
@@ -65,12 +66,25 @@ export function AddEmployeePage() {
       .then((data) => {
         if (!active) return
         setMeta(data)
-        if (data.departments.length > 0) {
-          setForm((prev) => ({
+        setForm((prev) => {
+          const nextDept =
+            data.departments.length > 0
+              ? data.departments.includes(prev.department)
+                ? prev.department
+                : data.departments[0]
+              : prev.department
+
+          const nextCode =
+            data.nextEmployeeCode && (prev.employeeCode === '' || prev.employeeCode === '762')
+              ? data.nextEmployeeCode
+              : prev.employeeCode
+
+          return {
             ...prev,
-            department: data.departments.includes(prev.department) ? prev.department : data.departments[0],
-          }))
-        }
+            department: nextDept,
+            employeeCode: nextCode,
+          }
+        })
       })
       .catch((err) => {
         console.error('Failed to load employee meta:', err)

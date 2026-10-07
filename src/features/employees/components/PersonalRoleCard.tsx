@@ -29,7 +29,7 @@ export function PersonalRoleCard({ form, meta, onChange }: PersonalRoleCardProps
           <input
             id="nEmpCode"
             type="text"
-            placeholder="e.g. BAM-0543 (leave blank to auto-generate)"
+            placeholder="e.g. 762"
             value={form.employeeCode || ''}
             onChange={(e) => onChange('employeeCode', e.target.value.toUpperCase())}
           />
