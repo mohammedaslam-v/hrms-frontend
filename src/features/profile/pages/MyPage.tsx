@@ -482,6 +482,7 @@ export function MyPage() {
           employeeName={view.fullName}
           isAdmin={view.access === 'admin'}
           isContractor={view.isContractor}
+          workState={view.workState}
           onRefresh={() => load(true)}
         />
       </div>

@@ -6,6 +6,8 @@ import { calculateSalaryBreakout, formatInr, formatNumberInr } from '../salary.u
 interface CompensationModalProps {
   employeeId: number
   employeeName: string
+  /** For professional tax in the preview. */
+  workState?: string | null
   existingCompensation: CompensationView | null
   onClose: () => void
   onSuccess: () => void
@@ -14,6 +16,7 @@ interface CompensationModalProps {
 export function CompensationModal({
   employeeId,
   employeeName,
+  workState,
   existingCompensation,
   onClose,
   onSuccess,
@@ -48,7 +51,7 @@ export function CompensationModal({
   const [error, setError] = useState<string | null>(null)
 
   const parsedCtc = Math.max(0, Number(ctc) || 0)
-  const breakout = calculateSalaryBreakout(parsedCtc)
+  const breakout = calculateSalaryBreakout(parsedCtc, workState ?? '')
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -350,9 +353,9 @@ export function CompensationModal({
                     <tr
                       key={idx}
                       style={{
-                        borderBottom: row.isTotal ? 'none' : '1px solid #f1f5f9',
+                        borderBottom: '1px solid #f1f5f9',
                         backgroundColor: row.isTotal ? '#f0fdf4' : idx % 2 === 1 ? '#fafafa' : '#ffffff',
-                        fontWeight: row.isTotal ? 700 : 400,
+                        fontWeight: row.isTotal || row.isSubtotal ? 700 : 400,
                         color: row.isTotal ? '#15803d' : '#1e293b',
                       }}
                     >

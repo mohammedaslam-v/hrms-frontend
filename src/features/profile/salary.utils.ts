@@ -1,3 +1,5 @@
+import { calculatePt, calculateStructure } from '../employees'
+
 /**
  * Indian Rupee formatter — whole rupees with en-IN grouping (e.g. ₹6,00,000).
  */
@@ -20,98 +22,46 @@ export interface SalaryBreakoutRow {
   component: string
   annualAmount: number
   monthlyAmount: number
+  /** The CTC line — highlighted. */
   isTotal?: boolean
+  /** Gross and Net — bold, not highlighted. */
+  isSubtotal?: boolean
 }
 
 export interface SalaryBreakout {
   ctc: number
+  /** Gross, not CTC — the two differ by employer PF and gratuity. */
   monthlyGross: number
   rows: SalaryBreakoutRow[]
 }
 
 /**
- * Calculates salary breakout matching company policy & statutory provisions:
- * - Basic Salary = 40% of CTC
- * - HRA = 40% of Basic
- * - Employee Contribution = 12% of Basic (capped at ₹1,800/month statutory wage ceiling)
- * - Employer Contribution = 12% of Basic policy rate (4.8% of Basic = ₹960/month on ₹20k basic)
- * - Gratuity = 4.81% of Basic (15 days / 26 days / 12 months)
- * - Other Allowances = Balancing figure reconciling back to exactly CTC
- * - Total = CTC
+ * The breakout on My Page and in the compensation editor.
+ *
+ * This used to carry its own copy of the maths, on an older formula — Basic as
+ * 40% of CTC, HRA at 40% of Basic, employer PF at an undeclared 4.8% while the
+ * label said 12%, and employee PF counted inside the CTC total. The payslip had
+ * moved on and this had not, so the profile and the slip disagreed. It now
+ * reads the same calculateStructure the Add Employee form and the payslip use,
+ * and only decides how to lay the numbers out.
  */
-export function calculateSalaryBreakout(ctc: number): SalaryBreakout {
-  const annualCtc = Math.max(0, Math.round(ctc || 0))
-  const monthlyCtc = Math.round(annualCtc / 12)
-
-  if (annualCtc === 0) {
-    return {
-      ctc: 0,
-      monthlyGross: 0,
-      rows: [
-        { component: 'Basic Salary (40%)', annualAmount: 0, monthlyAmount: 0 },
-        { component: 'HRA (40% of Basic)', annualAmount: 0, monthlyAmount: 0 },
-        { component: 'Other Allowances', annualAmount: 0, monthlyAmount: 0 },
-        { component: 'Employee Contribution (12% of Basic)', annualAmount: 0, monthlyAmount: 0 },
-        { component: 'Employer Contribution (12% of Basic)', annualAmount: 0, monthlyAmount: 0 },
-        { component: 'Gratuity (4.81% of Basic)', annualAmount: 0, monthlyAmount: 0 },
-        { component: '✅ Total', annualAmount: 0, monthlyAmount: 0, isTotal: true },
-      ],
-    }
-  }
-
-  // 1. Basic Salary (40% of CTC)
-  const basicAnnual = Math.round(annualCtc * 0.4)
-  const basicMonthly = Math.round(basicAnnual / 12)
-
-  // 2. HRA (40% of Basic)
-  const hraAnnual = Math.round(basicAnnual * 0.4)
-  const hraMonthly = Math.round(hraAnnual / 12)
-
-  // 3. Employee Contribution (12% of Basic, capped at statutory wage ceiling ₹15,000 -> ₹1,800/mo)
-  const eePfMonthly = Math.min(Math.round(basicMonthly * 0.12), 1800)
-  const eePfAnnual = eePfMonthly * 12
-
-  // 4. Employer Contribution (12% of Basic policy rate = 4.8% of Basic)
-  // For 600,000 CTC (240k basic) -> 240,000 * 0.048 = 11,520 annual, 960/mo
-  const erPfAnnual = Math.round(basicAnnual * 0.048)
-  const erPfMonthly = Math.round(erPfAnnual / 12)
-
-  // 5. Gratuity (4.81% of Basic)
-  // 15 days of last drawn basic / 26 working days / 12 months = 4.8077% -> 4.81%
-  const gratAnnual = Math.round(basicAnnual * 0.0481)
-  const gratMonthly = Math.round(gratAnnual / 12)
-
-  // 6. Other Allowances (Balancing figure)
-  const otherAnnual = Math.max(
-    0,
-    annualCtc - (basicAnnual + hraAnnual + eePfAnnual + erPfAnnual + gratAnnual),
-  )
-  const otherMonthly = Math.max(
-    0,
-    monthlyCtc - (basicMonthly + hraMonthly + eePfMonthly + erPfMonthly + gratMonthly),
-  )
+export function calculateSalaryBreakout(ctc: number, workState = ''): SalaryBreakout {
+  const s = calculateStructure(ctc)
+  const ptM = calculatePt(workState, s.grossM)
+  const netM = s.grossM - s.eePfM - ptM
 
   const rows: SalaryBreakoutRow[] = [
-    { component: 'Basic Salary (40%)', annualAmount: basicAnnual, monthlyAmount: basicMonthly },
-    { component: 'HRA (40% of Basic)', annualAmount: hraAnnual, monthlyAmount: hraMonthly },
-    { component: 'Other Allowances', annualAmount: otherAnnual, monthlyAmount: otherMonthly },
-    {
-      component: 'Employee Contribution (12% of Basic)',
-      annualAmount: eePfAnnual,
-      monthlyAmount: eePfMonthly,
-    },
-    {
-      component: 'Employer Contribution (12% of Basic)',
-      annualAmount: erPfAnnual,
-      monthlyAmount: erPfMonthly,
-    },
-    { component: 'Gratuity (4.81% of Basic)', annualAmount: gratAnnual, monthlyAmount: gratMonthly },
-    { component: '✅ Total', annualAmount: annualCtc, monthlyAmount: monthlyCtc, isTotal: true },
+    { component: 'Basic (40% of Gross)', annualAmount: s.basicA, monthlyAmount: s.basicM },
+    { component: 'HRA (50% of Basic)', annualAmount: s.hraA, monthlyAmount: s.hraM },
+    { component: 'Special allowance (balance)', annualAmount: s.specialA, monthlyAmount: s.specialM },
+    { component: 'Gross', annualAmount: s.grossA, monthlyAmount: s.grossM, isSubtotal: true },
+    { component: 'Employer PF (12% of Basic, max ₹1,800/mo)', annualAmount: s.erPfA, monthlyAmount: s.erPfM },
+    { component: 'Gratuity (4.81% of Basic)', annualAmount: s.gratA, monthlyAmount: s.gratM },
+    { component: 'CTC', annualAmount: s.ctc, monthlyAmount: s.grossM + s.erPfM + s.gratM, isTotal: true },
+    { component: 'Less: Employee PF (12% of Basic, max ₹1,800/mo)', annualAmount: s.eePfM * 12, monthlyAmount: s.eePfM },
+    { component: 'Less: Professional tax', annualAmount: ptM * 12, monthlyAmount: ptM },
+    { component: 'Net salary', annualAmount: netM * 12, monthlyAmount: netM, isSubtotal: true },
   ]
 
-  return {
-    ctc: annualCtc,
-    monthlyGross: monthlyCtc,
-    rows,
-  }
+  return { ctc: s.ctc, monthlyGross: s.grossM, rows }
 }

@@ -53,7 +53,10 @@ export interface CreateEmployeeResponseDto {
   employeeCode: string
   fullName: string
   workEmail: string
-  temporaryPassword: string
+  /** Null when an existing portal login was linked rather than created. */
+  temporaryPassword: string | null
+  /** The person already had a portal account; only the HRMS record was added. */
+  linkedExistingAccount: boolean
 }
 
 export interface EmployeeFormState {
@@ -74,10 +77,6 @@ export interface EmployeeFormState {
   openingLeave: number
 
   ctc: number
-  variablePay: number
-  bonus: number
-  esopUnits: number
-  esopVesting: string
   payCycle: string
 
   workMode: WorkMode

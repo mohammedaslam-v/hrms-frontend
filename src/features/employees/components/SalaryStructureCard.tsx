@@ -1,11 +1,6 @@
 import { useMemo } from 'react'
 import type { EmployeeFormState, EmployeeMetaDto } from '../types/employee-form.types'
-import {
-  calculateIncomeTax,
-  calculatePt,
-  calculateStructure,
-  formatInr,
-} from '../utils/salary-calculator'
+import { calculatePt, calculateStructure, formatInr } from '../utils/salary-calculator'
 
 interface SalaryStructureCardProps {
   form: EmployeeFormState
@@ -13,14 +8,36 @@ interface SalaryStructureCardProps {
   onChange: <K extends keyof EmployeeFormState>(field: K, value: EmployeeFormState[K]) => void
 }
 
-export function SalaryStructureCard({ form, meta, onChange }: SalaryStructureCardProps) {
-  const preview = useMemo(() => {
+/**
+ * Only CTC is typed; every component below is derived from it with the same
+ * rules the payslip uses (see calculateStructure), so what HR sees here is what
+ * the employee will see on their first slip.
+ */
+export function SalaryStructureCard({ form, onChange }: SalaryStructureCardProps) {
+  const rows = useMemo(() => {
     if (!form.ctc || form.ctc <= 0) return null
     const s = calculateStructure(form.ctc)
-    const pt = calculatePt(form.workState, s.grossM)
-    const tax = calculateIncomeTax(s.grossA, form.variablePay, form.bonus)
-    return { s, pt, tax }
-  }, [form.ctc, form.workState, form.variablePay, form.bonus])
+    const ptM = calculatePt(form.workState, s.grossM)
+    const netM = s.grossM - s.eePfM - ptM
+    return {
+      earnings: [
+        { label: 'Basic', rule: '40% of Gross', m: s.basicM, a: s.basicA },
+        { label: 'HRA', rule: '50% of Basic', m: s.hraM, a: s.hraA },
+        { label: 'Special allowance', rule: 'Balance', m: s.specialM, a: s.specialA },
+      ],
+      gross: { m: s.grossM, a: s.grossA },
+      employer: [
+        { label: 'Employer PF', rule: '12% of Basic, PF wage capped at ₹15,000', m: s.erPfM, a: s.erPfA },
+        { label: 'Gratuity', rule: '4.81% of Basic', m: s.gratM, a: s.gratA },
+      ],
+      ctc: { m: s.grossM + s.erPfM + s.gratM, a: s.ctc },
+      deductions: [
+        { label: 'Employee PF', rule: '12% of Basic, PF wage capped at ₹15,000', m: s.eePfM, a: s.eePfM * 12 },
+        { label: 'Professional tax', rule: `As applicable (${form.workState || 'state not set'})`, m: ptM, a: ptM * 12 },
+      ],
+      net: { m: netM, a: netM * 12 },
+    }
+  }, [form.ctc, form.workState])
 
   return (
     <>
@@ -43,63 +60,8 @@ export function SalaryStructureCard({ form, meta, onChange }: SalaryStructureCar
         </div>
 
         <div className="f">
-          <label>Variable pay (₹ / yr)</label>
-          <input
-            id="nVar"
-            type="number"
-            min={0}
-            step={5000}
-            placeholder="150000"
-            value={form.variablePay || ''}
-            onChange={(e) => onChange('variablePay', Math.max(0, Number(e.target.value) || 0))}
-          />
-        </div>
-
-        <div className="f">
-          <label>Joining bonus (₹)</label>
-          <input
-            id="nBonus"
-            type="number"
-            min={0}
-            step={5000}
-            placeholder="50000"
-            value={form.bonus || ''}
-            onChange={(e) => onChange('bonus', Math.max(0, Number(e.target.value) || 0))}
-          />
-        </div>
-
-        <div className="f">
-          <label>ESOPs (units)</label>
-          <input
-            id="nEsop"
-            type="number"
-            min={0}
-            placeholder="500"
-            value={form.esopUnits || ''}
-            onChange={(e) => onChange('esopUnits', Math.max(0, Number(e.target.value) || 0))}
-          />
-        </div>
-
-        <div className="f">
-          <label>ESOP vesting</label>
-          <select
-            value={form.esopVesting}
-            onChange={(e) => onChange('esopVesting', e.target.value)}
-          >
-            {meta.esopVestingOptions.map((opt) => (
-              <option key={opt} value={opt}>
-                {opt}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="f">
           <label>Pay cycle</label>
-          <select
-            value={form.payCycle}
-            onChange={(e) => onChange('payCycle', e.target.value)}
-          >
+          <select value={form.payCycle} onChange={(e) => onChange('payCycle', e.target.value)}>
             <option value="Monthly">Monthly</option>
             <option value="Fortnightly">Fortnightly</option>
           </select>
@@ -107,20 +69,62 @@ export function SalaryStructureCard({ form, meta, onChange }: SalaryStructureCar
       </div>
 
       <div id="structPreview" style={{ marginTop: '14px' }}>
-        {preview ? (
-          <div className="notice blue">
-            <b>Monthly:</b> basic {formatInr(preview.s.basicM)} · HRA {formatInr(preview.s.hraM)} · special {formatInr(preview.s.specialM)} · gross <b>{formatInr(preview.s.grossM)}</b>
-            <br />
-            <b>Deductions:</b> PF {formatInr(preview.s.eePfM)} · professional tax {formatInr(preview.pt)} · TDS {formatInr(preview.tax.monthly)}
-            <br />
-            <b>Annual tax under the new regime:</b> {formatInr(preview.tax.total)} on a taxable income of {formatInr(preview.tax.taxable)}
-          </div>
+        {rows ? (
+          <table>
+            <thead>
+              <tr>
+                <th>Component</th>
+                <th>Formula</th>
+                <th style={{ textAlign: 'right' }}>Monthly</th>
+                <th style={{ textAlign: 'right' }}>Annual</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.earnings.map((r) => (
+                <Line key={r.label} {...r} />
+              ))}
+              <Line label="Gross" rule="Basic + HRA + Special" m={rows.gross.m} a={rows.gross.a} strong />
+              {rows.employer.map((r) => (
+                <Line key={r.label} {...r} />
+              ))}
+              <Line label="CTC" rule="Gross + Employer PF + Gratuity" m={rows.ctc.m} a={rows.ctc.a} strong />
+              {rows.deductions.map((r) => (
+                <Line key={r.label} {...r} deduction />
+              ))}
+              <Line label="Net salary" rule="Gross − Employee PF − PT" m={rows.net.m} a={rows.net.a} strong />
+            </tbody>
+          </table>
         ) : (
-          <div className="hint">
-            Enter a CTC to see the monthly break-up and the tax under the new regime.
-          </div>
+          <div className="hint">Enter an annual CTC to see the full salary breakdown.</div>
         )}
       </div>
     </>
+  )
+}
+
+function Line({
+  label,
+  rule,
+  m,
+  a,
+  strong,
+  deduction,
+}: {
+  label: string
+  rule: string
+  m: number
+  a: number
+  strong?: boolean
+  deduction?: boolean
+}) {
+  const fmt = (n: number) => (deduction && n > 0 ? `− ${formatInr(n)}` : formatInr(n))
+  const weight = strong ? 700 : 400
+  return (
+    <tr>
+      <td style={{ fontWeight: weight }}>{label}</td>
+      <td style={{ color: 'var(--muted)', fontSize: 12 }}>{rule}</td>
+      <td style={{ textAlign: 'right', fontWeight: weight }}>{fmt(m)}</td>
+      <td style={{ textAlign: 'right', fontWeight: weight }}>{fmt(a)}</td>
+    </tr>
   )
 }

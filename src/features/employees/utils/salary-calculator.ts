@@ -13,6 +13,7 @@ export interface SalaryStructure {
   pfWage: number
   eePfM: number
   erPfM: number
+  gratM: number
 }
 
 export interface TaxComputationResult {
@@ -57,31 +58,59 @@ export function formatInr(n: number): string {
   return '₹' + Math.round(n).toLocaleString('en-IN')
 }
 
+/**
+ * MIRROR OF the backend's structure() in hrms-backend
+ * src/modules/salary/salary.domain.ts — change both together.
+ *
+ * The form needs a breakdown on every keystroke, so it computes locally rather
+ * than calling the server; the numbers must still match the payslip to the
+ * rupee, which is why the logic is copied line for line, not approximated.
+ *
+ *   Basic 40% of Gross · HRA 50% of Basic · Special = balance
+ *   PF 12% of Basic on a wage capped at ₹15,000/month (employer and employee)
+ *   Gratuity 4.81% of Basic · CTC = Gross + Employer PF + Gratuity
+ */
+const RULES = { basicPctOfGross: 0.4, hraPctOfBasic: 0.5, pfRate: 0.12, gratuityPctOfBasic: 0.0481 }
+
+function grossFromCtc(ctc: number, pfWageCeiling: number): number {
+  const b = RULES.basicPctOfGross
+  const uncapped = ctc / (1 + b * RULES.pfRate + b * RULES.gratuityPctOfBasic)
+  if (b * uncapped <= pfWageCeiling) return uncapped
+  return (ctc - RULES.pfRate * pfWageCeiling) / (1 + b * RULES.gratuityPctOfBasic)
+}
+
+function split(ctc: number, pfWageCeiling: number) {
+  const basic = Math.round(grossFromCtc(ctc, pfWageCeiling) * RULES.basicPctOfGross)
+  const hra = Math.round(basic * RULES.hraPctOfBasic)
+  const pfWage = Math.min(basic, pfWageCeiling)
+  const pf = Math.round(pfWage * RULES.pfRate)
+  const gratuity = Math.round(basic * RULES.gratuityPctOfBasic)
+  const gross = Math.round(ctc) - pf - gratuity
+  const special = Math.max(0, gross - basic - hra)
+  return { basic, hra, special, gross, pf, pfWage, gratuity }
+}
+
 export function calculateStructure(ctc: number): SalaryStructure {
-  const basicA = Math.round(ctc * 0.4)
-  const hraA = Math.round(basicA * 0.5)
-  const pfWage = Math.min(Math.round(basicA / 12), CFG.pfCeiling)
-  const erPfM = Math.round(pfWage * CFG.pfRate)
-  const erPfA = erPfM * 12
-  const gratA = Math.round(basicA * 0.0481)
-  const specialA = Math.max(0, ctc - basicA - hraA - erPfA - gratA)
-  const grossA = basicA + hraA + specialA
+  const annualCtc = Math.max(0, Math.round(ctc || 0))
+  const m = split(annualCtc / 12, CFG.pfCeiling)
+  const a = split(annualCtc, CFG.pfCeiling * 12)
 
   return {
-    ctc,
-    basicA,
-    hraA,
-    specialA,
-    erPfA,
-    gratA,
-    grossA,
-    basicM: Math.round(basicA / 12),
-    hraM: Math.round(hraA / 12),
-    specialM: Math.round(specialA / 12),
-    grossM: Math.round(grossA / 12),
-    pfWage,
-    eePfM: Math.round(pfWage * CFG.pfRate),
-    erPfM,
+    ctc: annualCtc,
+    basicA: a.basic,
+    hraA: a.hra,
+    specialA: a.special,
+    erPfA: a.pf,
+    gratA: a.gratuity,
+    grossA: a.gross,
+    basicM: m.basic,
+    hraM: m.hra,
+    specialM: m.special,
+    grossM: m.gross,
+    pfWage: m.pfWage,
+    eePfM: m.pf,
+    erPfM: m.pf,
+    gratM: m.gratuity,
   }
 }
 

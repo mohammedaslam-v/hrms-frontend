@@ -49,10 +49,6 @@ export function AddEmployeePage() {
     openingLeave: 0,
 
     ctc: 900000,
-    variablePay: 0,
-    bonus: 0,
-    esopUnits: 0,
-    esopVesting: '4 yr · 1 yr cliff',
     payCycle: 'Monthly',
 
     workMode: 'WFO',
@@ -145,10 +141,6 @@ export function AddEmployeePage() {
       hrmsRole: 'employee',
 
       ctc: form.ctc,
-      variablePay: form.variablePay,
-      bonus: form.bonus,
-      esopUnits: form.esopUnits,
-      esopVesting: form.esopVesting,
 
       workMode: form.workMode,
       shiftStart: form.shiftStart ? `${form.shiftStart}:00` : '10:00:00',
@@ -160,7 +152,11 @@ export function AddEmployeePage() {
       setSubmitting(true)
       const res = await employeeFormApi.createEmployee(payload)
       setToast({
-        text: `${res.fullName} added — ${res.employeeCode}. Account created in admins. Leave starts accruing at 2 days/month.`,
+        // Linking keeps their existing portal password; saying a new account
+        // was created would send HR off to hand out a password that is wrong.
+        text: res.linkedExistingAccount
+          ? `${res.fullName} added — ${res.employeeCode}. Linked to their existing portal login; password unchanged.`
+          : `${res.fullName} added — ${res.employeeCode}. Account created in admins. Leave starts accruing at 2 days/month.`,
         tone: 'good',
       })
       setTimeout(() => {

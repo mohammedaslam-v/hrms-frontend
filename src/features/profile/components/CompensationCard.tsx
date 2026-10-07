@@ -11,6 +11,8 @@ interface CompensationCardProps {
   employeeName: string
   isAdmin?: boolean
   isContractor?: boolean
+  /** For professional tax, which is set state by state. */
+  workState?: string | null
   onRefresh?: () => void
 }
 
@@ -30,6 +32,7 @@ export function CompensationCard({
   employeeName,
   isAdmin = false,
   isContractor = false,
+  workState,
   onRefresh,
 }: CompensationCardProps) {
   const navigate = useNavigate()
@@ -136,6 +139,7 @@ export function CompensationCard({
           <CompensationModal
             employeeId={employeeId}
             employeeName={employeeName}
+            workState={workState}
             existingCompensation={compensation}
             onClose={() => setShowModal(false)}
             onSuccess={() => {
@@ -186,6 +190,7 @@ export function CompensationCard({
           <CompensationModal
             employeeId={employeeId}
             employeeName={employeeName}
+            workState={workState}
             existingCompensation={null}
             onClose={() => setShowModal(false)}
             onSuccess={() => {
@@ -200,7 +205,7 @@ export function CompensationCard({
 
   const c = compensation
   const vested = Math.min(100, Math.max(0, c.esopVestedPct))
-  const breakout = calculateSalaryBreakout(c.ctc)
+  const breakout = calculateSalaryBreakout(c.ctc, workState ?? '')
 
   return (
     <div className="card top-card" style={{ position: 'relative' }}>
@@ -362,7 +367,7 @@ export function CompensationCard({
                     style={{
                       borderBottom: idx === breakout.rows.length - 1 ? 'none' : '1px solid #e2e8f0',
                       backgroundColor: row.isTotal ? '#f0fdf4' : idx % 2 === 1 ? '#fafafa' : '#ffffff',
-                      fontWeight: row.isTotal ? 700 : 400,
+                      fontWeight: row.isTotal || row.isSubtotal ? 700 : 400,
                       color: row.isTotal ? '#15803d' : '#1e293b',
                     }}
                   >
@@ -445,6 +450,7 @@ export function CompensationCard({
         <CompensationModal
           employeeId={employeeId}
           employeeName={employeeName}
+          workState={workState}
           existingCompensation={compensation}
           onClose={() => setShowModal(false)}
           onSuccess={() => {
