@@ -250,6 +250,7 @@ export function printSlipDocument(slip: SalarySlip, company: CompanySalaryConfig
           <div class="kv"><b>PAN</b><span>${slip.employee.pan}</span></div>
           <div class="kv"><b>UAN</b><span>${slip.employee.uan}</span></div>
           <div class="kv"><b>Bank account</b><span>${slip.employee.bankAccount}</span></div>
+          <div class="kv"><b>IFSC code</b><span>${slip.employee.ifsc || '—'}</span></div>
           <div class="kv"><b>Days paid</b><span>${slip.payableDays} of ${slip.monthDays}${slip.lopDays ? ` · ${slip.lopDays} LOP` : ''}</span></div>
           <div class="kv"><b>Work location</b><span>${slip.employee.workState}</span></div>
         </div>

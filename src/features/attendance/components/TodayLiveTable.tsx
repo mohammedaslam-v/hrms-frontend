@@ -96,7 +96,7 @@ export function TodayLiveTable({ rows }: { rows: TodayBoardRow[] }) {
 
                   <td>
                     <span>{row.loginAt ?? '—'}</span>
-                    {row.lateByMinutes > 15 && (
+                    {row.status === 'Late' && row.lateByMinutes > 15 && (
                       <span className="chip c-pend" style={{ marginLeft: 6, fontSize: 11 }}>
                         +{row.lateByMinutes}m
                       </span>

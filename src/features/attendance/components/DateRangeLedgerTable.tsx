@@ -82,7 +82,7 @@ export function DateRangeLedgerTable({
       r.loginAt ?? '—',
       r.logoutAt ?? '—',
       r.activeHours > 0 ? r.activeHours.toFixed(2) : '0.00',
-      r.lateByMinutes > 15 ? String(r.lateByMinutes) : '0',
+      r.status === 'Late' && r.lateByMinutes > 15 ? String(r.lateByMinutes) : '0',
       r.status,
     ])
 
@@ -314,7 +314,7 @@ export function DateRangeLedgerTable({
                     </td>
 
                     <td className="num-col">
-                      {row.lateByMinutes > 15 ? (
+                      {row.status === 'Late' && row.lateByMinutes > 15 ? (
                         <span style={{ color: 'var(--coral)', fontWeight: 600 }}>
                           +{row.lateByMinutes}m
                         </span>

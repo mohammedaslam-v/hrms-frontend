@@ -211,6 +211,10 @@ export function SalarySlipCard({
                   <span>{slip.employee.bankAccount}</span>
                 </div>
                 <div className="kv">
+                  <b>IFSC code</b>
+                  <span>{slip.employee.ifsc || '—'}</span>
+                </div>
+                <div className="kv">
                   <b>Days paid</b>
                   <span>
                     {slip.payableDays} of {slip.monthDays}
