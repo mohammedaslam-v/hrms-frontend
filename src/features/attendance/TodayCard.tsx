@@ -144,7 +144,7 @@ export function TodayCard({ employeeId, isSelf, employeeName }: TodayCardProps) 
         <b>Check-in</b>
         <span>
           {view.loginAt ?? '—'}
-          {view.lateByMinutes > 0 && (
+          {(view.status === 'Late' || view.lateByMinutes > 15) && (
             <span className="hint" style={{ color: 'var(--red)', marginLeft: 6 }}>
               {view.lateByMinutes} min late
             </span>
