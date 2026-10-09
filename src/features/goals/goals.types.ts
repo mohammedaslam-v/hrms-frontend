@@ -1,3 +1,18 @@
+/**
+ * Mirrors GOAL_LIMITS in the backend's goals.model.ts, which in turn mirrors the
+ * column widths in `hrms_goals`.
+ *
+ * Kept here because the form needs the numbers to cap typing, and a limit the
+ * user only discovers on submit is the bug this fixes: a paragraph in Notes
+ * (varchar(500)) came back as a bare "Internal server error". The server still
+ * validates — this just means nobody reaches that error by typing.
+ */
+export const GOAL_LIMITS = {
+  title: 255,
+  unit: 10,
+  note: 1000,
+} as const
+
 export type GoalType = 'metric' | 'milestone'
 export type GoalPeriod = 'Q1' | 'Q2' | 'Q3' | 'Q4' | 'H1' | 'H2' | 'FY'
 export type GoalDirection = 'up' | 'down'

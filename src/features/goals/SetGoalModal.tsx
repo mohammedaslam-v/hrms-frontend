@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Modal } from '../../shared/ui/Modal'
 import { messageOf } from '../../shared/api/errors'
 import { goalsApi } from './goals.api'
+import { GOAL_LIMITS } from './goals.types'
 import type {
   CreateGoalDto,
   GoalDirection,
@@ -449,6 +450,7 @@ export function SetGoalModal({
           onChange={(e) => setTitle(e.target.value)}
           disabled={busy}
           required
+          maxLength={GOAL_LIMITS.title}
         />
       </div>
 
@@ -520,6 +522,7 @@ export function SetGoalModal({
                 onChange={(e) => setUnit(e.target.value)}
                 placeholder="e.g. %, ₹, demos, bugs"
                 disabled={busy}
+                maxLength={GOAL_LIMITS.unit}
               />
             </div>
             <div className="f">
@@ -597,7 +600,15 @@ export function SetGoalModal({
           value={note}
           onChange={(e) => setNote(e.target.value)}
           disabled={busy}
+          maxLength={GOAL_LIMITS.note}
         />
+        {/* Two visible rows hide how much has been typed, and the column stops
+            at 500 — so the count appears once it is close enough to matter. */}
+        {note.length > GOAL_LIMITS.note * 0.8 && (
+          <div className="sub" style={{ textAlign: 'right' }}>
+            {note.length} / {GOAL_LIMITS.note}
+          </div>
+        )}
       </div>
     </Modal>
   )
