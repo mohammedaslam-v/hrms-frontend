@@ -15,6 +15,7 @@ export function TeamGoalsPage() {
   const [period, setPeriod] = useState('all')
   const [person, setPerson] = useState('all')
   const [status, setStatus] = useState('all')
+  const [search, setSearch] = useState('')
 
   // Modal state
   const [modalOpen, setModalOpen] = useState(false)
@@ -114,7 +115,7 @@ export function TeamGoalsPage() {
   }
 
   const downloadCsv = () => {
-    if (!summary || summary.members.length === 0) return
+    if (!summary || filteredMembers.length === 0) return
     const headers = [
       'Employee Code',
       'Employee Name',
@@ -133,7 +134,7 @@ export function TeamGoalsPage() {
     ]
 
     const rows: string[][] = []
-    for (const member of summary.members) {
+    for (const member of filteredMembers) {
       for (const g of member.goals) {
         rows.push([
           member.employeeCode,
@@ -179,6 +180,12 @@ export function TeamGoalsPage() {
       employeeCode: m.employeeCode,
       designation: m.designation,
     })) || []
+
+  const filteredMembers = (summary?.members || []).filter((m) => {
+    if (!search.trim()) return true
+    const q = search.trim().toLowerCase()
+    return m.fullName.toLowerCase().includes(q) || m.employeeCode.toLowerCase().includes(q)
+  })
 
   return (
     <div className="page">
@@ -404,6 +411,72 @@ export function TeamGoalsPage() {
                   <option value="Rejected">Rejected</option>
                 </select>
               </div>
+
+              <div style={{ position: 'relative', width: 210 }}>
+                <svg
+                  width="13"
+                  height="13"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  style={{
+                    position: 'absolute',
+                    left: 10,
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    color: 'var(--muted, #94a3b8)',
+                    pointerEvents: 'none',
+                  }}
+                >
+                  <circle cx="11" cy="11" r="8" />
+                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                </svg>
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search by name..."
+                  aria-label="Search employee by name"
+                  style={{
+                    width: '100%',
+                    padding: '6px 26px 6px 28px',
+                    fontSize: 12.5,
+                    borderRadius: 8,
+                    border: '1px solid var(--line)',
+                    backgroundColor: '#fff',
+                    outline: 'none',
+                    color: 'var(--ink)',
+                    boxSizing: 'border-box',
+                    height: 32,
+                  }}
+                />
+                {search && (
+                  <button
+                    type="button"
+                    onClick={() => setSearch('')}
+                    aria-label="Clear search"
+                    title="Clear search"
+                    style={{
+                      position: 'absolute',
+                      right: 6,
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      border: 'none',
+                      background: 'transparent',
+                      color: 'var(--muted, #94a3b8)',
+                      cursor: 'pointer',
+                      fontSize: 13,
+                      lineHeight: 1,
+                      padding: '2px 4px',
+                    }}
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
             </div>
 
             <div>
@@ -420,15 +493,21 @@ export function TeamGoalsPage() {
 
           {/* Member Groups */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-            {summary.members.length === 0 ? (
+            {filteredMembers.length === 0 ? (
               <div className="card empty" style={{ textAlign: 'center', padding: '40px 20px' }}>
-                <b style={{ fontSize: 16 }}>No team members or goals found</b>
+                <b style={{ fontSize: 16 }}>
+                  {search.trim()
+                    ? `No team members found matching "${search.trim()}"`
+                    : 'No team members or goals found'}
+                </b>
                 <p style={{ color: 'var(--muted)', marginTop: 6, fontSize: 13 }}>
-                  Try changing your filter settings or set a new goal for your team.
+                  {search.trim()
+                    ? 'Try checking the name or clearing the search field.'
+                    : 'Try changing your filter settings or set a new goal for your team.'}
                 </p>
               </div>
             ) : (
-              summary.members.map((member) => (
+              filteredMembers.map((member) => (
                 <div
                   key={member.employeeId}
                   className="card"
