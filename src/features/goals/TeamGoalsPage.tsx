@@ -5,7 +5,7 @@ import { SearchableDropdown, type SearchableDropdownOption } from '../../shared/
 import { goalsApi } from './goals.api'
 import { GoalItem } from './GoalItem'
 import { SetGoalModal } from './SetGoalModal'
-import type { GoalView, TeamGoalsFilter, TeamGoalsSummaryView } from './goals.types'
+import { GOAL_CHIP, type GoalView, type TeamGoalsFilter, type TeamGoalsSummaryView } from './goals.types'
 
 export function TeamGoalsPage() {
   const [summary, setSummary] = useState<TeamGoalsSummaryView | null>(null)
@@ -22,6 +22,7 @@ export function TeamGoalsPage() {
 
   // Pagination & card expansion
   const [pageSize, setPageSize] = useState(10)
+  const [expandedMemberIds, setExpandedMemberIds] = useState<Record<number, boolean>>({})
   const [expandedGoalIds, setExpandedGoalIds] = useState<Record<number, boolean>>({})
 
   // Modal state
@@ -305,6 +306,13 @@ export function TeamGoalsPage() {
     page.setPage(1)
   }, [search, period, person, manager, status, pageSize])
 
+  const handleToggleMember = (employeeId: number) => {
+    setExpandedMemberIds((prev) => ({
+      ...prev,
+      [employeeId]: !prev[employeeId],
+    }))
+  }
+
   const handleToggleGoal = (goalId: number) => {
     setExpandedGoalIds((prev) => ({
       ...prev,
@@ -312,19 +320,23 @@ export function TeamGoalsPage() {
     }))
   }
 
-  // Goal IDs currently visible on the page
-  const currentPageGoalIds = page.items.flatMap((m) => m.goals.map((g) => g.id))
-  const allExpanded =
-    currentPageGoalIds.length > 0 &&
-    currentPageGoalIds.every((id) => expandedGoalIds[id] === true)
+  // Members with goals currently visible on the page
+  const currentPageMembersWithGoals = page.items.filter((m) => m.goals.length > 0)
+  const allMembersExpanded =
+    currentPageMembersWithGoals.length > 0 &&
+    currentPageMembersWithGoals.every((m) => expandedMemberIds[m.employeeId] === true)
 
   const toggleExpandAll = () => {
-    const nextState = !allExpanded
-    const next: Record<number, boolean> = { ...expandedGoalIds }
-    for (const id of currentPageGoalIds) {
-      next[id] = nextState
+    if (allMembersExpanded) {
+      setExpandedMemberIds({})
+      setExpandedGoalIds({})
+    } else {
+      const nextMembers: Record<number, boolean> = { ...expandedMemberIds }
+      for (const m of currentPageMembersWithGoals) {
+        nextMembers[m.employeeId] = true
+      }
+      setExpandedMemberIds(nextMembers)
     }
-    setExpandedGoalIds(next)
   }
 
   if (loading) return <div className="boot">Loading team goals…</div>
@@ -720,13 +732,13 @@ export function TeamGoalsPage() {
             )}
 
             {/* Expand / Collapse All */}
-            {currentPageGoalIds.length > 0 && (
+            {currentPageMembersWithGoals.length > 0 && (
               <div style={{ flexShrink: 0 }}>
                 <button
                   type="button"
                   className="btn ghost sm"
                   onClick={toggleExpandAll}
-                  title={allExpanded ? 'Collapse all visible goals' : 'Expand all visible goals'}
+                  title={allMembersExpanded ? 'Collapse all visible team members' : 'Expand all visible team members'}
                   style={{
                     fontSize: 11.5,
                     display: 'inline-flex',
@@ -747,13 +759,13 @@ export function TeamGoalsPage() {
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     style={{
-                      transform: allExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                      transform: allMembersExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
                       transition: 'transform 0.2s ease',
                     }}
                   >
                     <polyline points="6 9 12 15 18 9" />
                   </svg>
-                  <span>{allExpanded ? 'Collapse all' : 'Expand all'}</span>
+                  <span>{allMembersExpanded ? 'Collapse all' : 'Expand all'}</span>
                 </button>
               </div>
             )}
@@ -775,15 +787,23 @@ export function TeamGoalsPage() {
                 </p>
               </div>
             ) : (
-              page.items.map((member) => (
+              page.items.map((member) => {
+              const isMemberExpanded = expandedMemberIds[member.employeeId] ?? false
+              const statusCounts = member.goals.reduce<Record<string, number>>((acc, g) => {
+                acc[g.status] = (acc[g.status] || 0) + 1
+                return acc
+              }, {})
+
+              return (
                 <div
                   key={member.employeeId}
                   className="card"
                   style={{
-                    padding: '20px 22px',
+                    padding: '16px 20px',
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: 16,
+                    gap: 12,
+                    background: '#ffffff',
                   }}
                 >
                   {/* Member Header */}
@@ -794,8 +814,6 @@ export function TeamGoalsPage() {
                       justifyContent: 'space-between',
                       alignItems: 'center',
                       gap: 12,
-                      paddingBottom: 14,
-                      borderBottom: '1px solid var(--line)',
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -811,6 +829,7 @@ export function TeamGoalsPage() {
                           justifyContent: 'center',
                           fontWeight: 700,
                           fontSize: 14,
+                          flexShrink: 0,
                         }}
                       >
                         {member.fullName
@@ -834,7 +853,7 @@ export function TeamGoalsPage() {
                       </div>
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                       <span
                         style={{
                           background: '#f1ede7',
@@ -855,39 +874,271 @@ export function TeamGoalsPage() {
                       >
                         + Add goal
                       </button>
+                      {member.goals.length > 0 && (
+                        <button
+                          type="button"
+                          className="btn ghost sm"
+                          onClick={() => handleToggleMember(member.employeeId)}
+                          title={isMemberExpanded ? 'Collapse goals' : 'Expand goals'}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 5,
+                            fontSize: 12,
+                            fontWeight: 600,
+                            padding: '4px 10px',
+                            height: 30,
+                            color: isMemberExpanded ? 'var(--blue, #2563eb)' : 'var(--ink)',
+                            backgroundColor: isMemberExpanded ? 'var(--blue-soft, #eff6ff)' : '#fff',
+                            borderColor: isMemberExpanded ? 'var(--blue, #2563eb)' : 'var(--line)',
+                          }}
+                        >
+                          <span>{isMemberExpanded ? 'Collapse' : 'Expand'}</span>
+                          <svg
+                            width="12"
+                            height="12"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2.4"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            style={{
+                              transform: isMemberExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                              transition: 'transform 0.2s ease',
+                            }}
+                          >
+                            <polyline points="6 9 12 15 18 9" />
+                          </svg>
+                        </button>
+                      )}
                     </div>
                   </div>
 
-                  {/* Member's Goals */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                    {member.goals.length === 0 ? (
-                      <div
+                  {/* Member's Goals / Collapsed Informative Preview */}
+                  {member.goals.length === 0 ? (
+                    <div
+                      style={{
+                        fontSize: 13,
+                        color: 'var(--muted)',
+                        padding: '12px 14px',
+                        background: '#faf8f5',
+                        borderRadius: 8,
+                      }}
+                    >
+                      No goals found matching current filters.{' '}
+                      <button
+                        type="button"
+                        onClick={() => openSetGoal(member.employeeId)}
                         style={{
-                          fontSize: 13,
-                          color: 'var(--muted)',
-                          padding: '12px 14px',
-                          background: '#faf8f5',
-                          borderRadius: 8,
+                          background: 'none',
+                          border: 'none',
+                          color: 'var(--brand)',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          padding: 0,
                         }}
                       >
-                        No goals found matching current filters.{' '}
-                        <button
-                          type="button"
-                          onClick={() => openSetGoal(member.employeeId)}
+                        Set a goal
+                      </button>
+                    </div>
+                  ) : !isMemberExpanded ? (
+                    /* Informative Collapsed Preview Bar */
+                    <div
+                      onClick={() => handleToggleMember(member.employeeId)}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          handleToggleMember(member.employeeId)
+                        }
+                      }}
+                      style={{
+                        padding: '10px 14px',
+                        background: '#faf8f5',
+                        border: '1px solid var(--line2, #ede8e1)',
+                        borderRadius: 9,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: 12,
+                        cursor: 'pointer',
+                        transition: 'background-color 0.15s, border-color 0.15s',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = '#f4efe8'
+                        e.currentTarget.style.borderColor = 'var(--blue, #2563eb)'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = '#faf8f5'
+                        e.currentTarget.style.borderColor = 'var(--line2, #ede8e1)'
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 10,
+                          flexWrap: 'wrap',
+                          flex: 1,
+                          minWidth: 0,
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                          <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--ink)' }}>
+                            🎯 {member.goals.length} Goal{member.goals.length === 1 ? '' : 's'}
+                          </span>
+                          <span style={{ color: 'var(--line2)' }}>•</span>
+                          <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)' }}>
+                            {member.averageProgress}% avg
+                          </span>
+                        </div>
+
+                        {/* Status breakdown badges */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
+                          {Object.entries(statusCounts).map(([st, count]) => {
+                            const chipClass = GOAL_CHIP[st as keyof typeof GOAL_CHIP] || 'chip'
+                            return (
+                              <span
+                                key={st}
+                                className={`chip ${chipClass}`}
+                                style={{ fontSize: 11, padding: '2px 7px', fontWeight: 600 }}
+                              >
+                                {count} {st}
+                              </span>
+                            )
+                          })}
+                        </div>
+
+                        {/* Goal titles preview snippet */}
+                        <div
                           style={{
-                            background: 'none',
-                            border: 'none',
-                            color: 'var(--brand)',
-                            fontWeight: 600,
-                            cursor: 'pointer',
-                            padding: 0,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 6,
+                            flexWrap: 'wrap',
+                            flex: 1,
+                            minWidth: 120,
                           }}
                         >
-                          Set a goal
-                        </button>
+                          {member.goals.slice(0, 3).map((g) => (
+                            <span
+                              key={g.id}
+                              style={{
+                                fontSize: 11.5,
+                                padding: '2px 8px',
+                                borderRadius: 6,
+                                background: '#ffffff',
+                                border: '1px solid var(--line, #e2ded8)',
+                                color: 'var(--ink2)',
+                                maxWidth: 220,
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                              }}
+                              title={g.title}
+                            >
+                              {g.title}
+                            </span>
+                          ))}
+                          {member.goals.length > 3 && (
+                            <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600 }}>
+                              +{member.goals.length - 3} more
+                            </span>
+                          )}
+                        </div>
                       </div>
-                    ) : (
-                      member.goals.map((g) => (
+
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 5,
+                          flexShrink: 0,
+                          color: 'var(--blue, #2563eb)',
+                          fontSize: 12,
+                          fontWeight: 600,
+                        }}
+                      >
+                        <span>View goals</span>
+                        <svg
+                          width="12"
+                          height="12"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2.4"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <polyline points="6 9 12 15 18 9" />
+                        </svg>
+                      </div>
+                    </div>
+                  ) : (
+                    /* Expanded Goals List */
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                      {/* Compact collapse bar */}
+                      <div
+                        onClick={() => handleToggleMember(member.employeeId)}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault()
+                            handleToggleMember(member.employeeId)
+                          }
+                        }}
+                        style={{
+                          padding: '7px 12px',
+                          background: '#faf8f5',
+                          border: '1px solid var(--line2, #ede8e1)',
+                          borderRadius: 8,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          gap: 12,
+                          cursor: 'pointer',
+                          fontSize: 12,
+                          color: 'var(--muted)',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span style={{ fontWeight: 600, color: 'var(--ink)' }}>
+                            🎯 {member.goals.length} Goal{member.goals.length === 1 ? '' : 's'}
+                          </span>
+                          <span>•</span>
+                          <span>{member.averageProgress}% avg</span>
+                        </div>
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 5,
+                            color: 'var(--blue, #2563eb)',
+                            fontWeight: 600,
+                          }}
+                        >
+                          <span>Hide goals</span>
+                          <svg
+                            width="12"
+                            height="12"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2.4"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            style={{ transform: 'rotate(180deg)' }}
+                          >
+                            <polyline points="6 9 12 15 18 9" />
+                          </svg>
+                        </div>
+                      </div>
+
+                      {/* Goal cards */}
+                      {member.goals.map((g) => (
                         <GoalItem
                           key={g.id}
                           goal={g}
@@ -901,12 +1152,13 @@ export function TeamGoalsPage() {
                           onApprove={handleApproveGoal}
                           onReject={handleRejectGoal}
                         />
-                      ))
-                    )}
-                  </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              ))
-            )}
+              )
+            })
+          )}
 
             {/* Pagination Controls */}
             {filteredMembers.length > 0 && (
