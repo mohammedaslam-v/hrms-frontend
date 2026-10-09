@@ -1,5 +1,7 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { PageHero } from '../../shared/ui/PageHero'
+import { usePage } from '../../shared/ui/Pagination'
+import { SearchableDropdown, type SearchableDropdownOption } from '../../shared/ui/SearchableDropdown'
 import { goalsApi } from './goals.api'
 import { GoalItem } from './GoalItem'
 import { SetGoalModal } from './SetGoalModal'
@@ -14,8 +16,13 @@ export function TeamGoalsPage() {
   // Filters
   const [period, setPeriod] = useState('all')
   const [person, setPerson] = useState('all')
+  const [manager, setManager] = useState('all')
   const [status, setStatus] = useState('all')
   const [search, setSearch] = useState('')
+
+  // Pagination & card expansion
+  const [pageSize, setPageSize] = useState(10)
+  const [expandedGoalIds, setExpandedGoalIds] = useState<Record<number, boolean>>({})
 
   // Modal state
   const [modalOpen, setModalOpen] = useState(false)
@@ -171,25 +178,183 @@ export function TeamGoalsPage() {
     document.body.removeChild(link)
   }
 
-  if (loading) return <div className="boot">Loading team goals…</div>
+  // Unique reporting managers from the team roster
+  const managerOptions = useMemo(() => {
+    const map = new Map<string, { key: string; id?: number; name: string }>()
+    for (const m of summary?.members || []) {
+      if (m.managerName && m.managerName.trim()) {
+        const name = m.managerName.trim()
+        const key = m.managerId ? String(m.managerId) : name.toLowerCase()
+        if (!map.has(key)) {
+          map.set(key, { key, id: m.managerId ?? undefined, name })
+        }
+      }
+    }
+    return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name))
+  }, [summary?.members])
 
-  const memberOptions =
-    summary?.members.map((m) => ({
+  // Set of employee IDs belonging to the selected reporting manager's team
+  const managerTeamEmployeeIds = useMemo(() => {
+    if (manager === 'all' || !summary?.members) return null
+
+    const allMembers = summary.members
+    const selectedOpt = managerOptions.find((opt) => opt.key === manager)
+    const mgrId = selectedOpt?.id
+    const mgrName = (selectedOpt?.name || manager).toLowerCase()
+
+    // Find the manager's own employee record if they are on the team
+    const managerMember = allMembers.find(
+      (m) => (mgrId !== undefined && m.employeeId === mgrId) || m.fullName.toLowerCase() === mgrName,
+    )
+
+    const teamIds = new Set<number>()
+    if (managerMember) {
+      teamIds.add(managerMember.employeeId)
+    } else if (mgrId !== undefined) {
+      teamIds.add(mgrId)
+    }
+
+    // Direct reports and recursive reporting tree
+    let added = true
+    while (added) {
+      added = false
+      for (const m of allMembers) {
+        if (teamIds.has(m.employeeId)) continue
+
+        const reportsDirectly =
+          (mgrId !== undefined && m.managerId === mgrId) ||
+          (m.managerName && m.managerName.toLowerCase() === mgrName)
+
+        const reportsIndirectly =
+          m.managerId !== null && m.managerId !== undefined && teamIds.has(m.managerId)
+
+        if (reportsDirectly || reportsIndirectly) {
+          teamIds.add(m.employeeId)
+          added = true
+        }
+      }
+    }
+
+    return teamIds
+  }, [manager, summary?.members, managerOptions])
+
+  const memberOptions = useMemo(() => {
+    const list = summary?.members || []
+    const scoped =
+      managerTeamEmployeeIds !== null
+        ? list.filter((m) => managerTeamEmployeeIds.has(m.employeeId))
+        : list
+    return scoped.map((m) => ({
       id: m.employeeId,
       fullName: m.fullName,
       employeeCode: m.employeeCode,
       designation: m.designation,
-    })) || []
+    }))
+  }, [summary?.members, managerTeamEmployeeIds])
+
+  const personDropdownOptions = useMemo<SearchableDropdownOption[]>(() => {
+    const opts: SearchableDropdownOption[] = [
+      { value: 'all', label: 'All team members' },
+    ]
+    for (const m of memberOptions) {
+      opts.push({
+        value: String(m.id),
+        label: m.fullName,
+        subLabel: `${m.employeeCode}${m.designation ? ` · ${m.designation}` : ''}`,
+      })
+    }
+    return opts
+  }, [memberOptions])
+
+  const managerDropdownOptions = useMemo<SearchableDropdownOption[]>(() => {
+    const opts: SearchableDropdownOption[] = [
+      { value: 'all', label: 'All managers' },
+    ]
+    for (const mgr of managerOptions) {
+      opts.push({
+        value: mgr.key,
+        label: mgr.name,
+        subLabel: mgr.id ? `Manager #${mgr.id}` : undefined,
+      })
+    }
+    return opts
+  }, [managerOptions])
 
   const filteredMembers = (summary?.members || []).filter((m) => {
-    if (!search.trim()) return true
-    const q = search.trim().toLowerCase()
-    return m.fullName.toLowerCase().includes(q) || m.employeeCode.toLowerCase().includes(q)
+    // Reporting Manager filter
+    if (managerTeamEmployeeIds !== null && !managerTeamEmployeeIds.has(m.employeeId)) {
+      return false
+    }
+
+    // Live search query (by employee name, code, or reporting manager name)
+    if (search.trim()) {
+      const q = search.trim().toLowerCase()
+      const matchesName = m.fullName.toLowerCase().includes(q)
+      const matchesCode = m.employeeCode.toLowerCase().includes(q)
+      const matchesMgr = (m.managerName || '').toLowerCase().includes(q)
+      if (!matchesName && !matchesCode && !matchesMgr) return false
+    }
+
+    return true
   })
+
+  const page = usePage(filteredMembers, pageSize)
+
+  // Reset to first page whenever search query or filters change
+  useEffect(() => {
+    page.setPage(1)
+  }, [search, period, person, manager, status, pageSize])
+
+  const handleToggleGoal = (goalId: number) => {
+    setExpandedGoalIds((prev) => ({
+      ...prev,
+      [goalId]: !prev[goalId],
+    }))
+  }
+
+  // Goal IDs currently visible on the page
+  const currentPageGoalIds = page.items.flatMap((m) => m.goals.map((g) => g.id))
+  const allExpanded =
+    currentPageGoalIds.length > 0 &&
+    currentPageGoalIds.every((id) => expandedGoalIds[id] === true)
+
+  const toggleExpandAll = () => {
+    const nextState = !allExpanded
+    const next: Record<number, boolean> = { ...expandedGoalIds }
+    for (const id of currentPageGoalIds) {
+      next[id] = nextState
+    }
+    setExpandedGoalIds(next)
+  }
+
+  if (loading) return <div className="boot">Loading team goals…</div>
 
   return (
     <div className="page">
       <PageHero navKey="teamgoals" eyebrow="Manager access / Team goals">
+        <button
+          type="button"
+          className="btn ghost sm"
+          onClick={downloadCsv}
+          disabled={!summary || filteredMembers.length === 0}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+        >
+          <svg
+            width="13"
+            height="13"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="7 10 12 15 17 10" />
+            <line x1="12" y1="15" x2="12" y2="3" />
+          </svg>
+          <span>Download CSV</span>
+        </button>
         <button
           className="btn primary sm"
           type="button"
@@ -339,80 +504,121 @@ export function TeamGoalsPage() {
             </div>
           </div>
 
-          {/* Filters and CSV toolbar */}
+          {/* Filters toolbar (full width) */}
           <div
             className="card"
             style={{
               padding: '12px 18px',
-              marginBottom: 24,
+              marginBottom: 20,
               display: 'flex',
               flexWrap: 'wrap',
               gap: 12,
               alignItems: 'center',
-              justifyContent: 'space-between',
+              width: '100%',
+              boxSizing: 'border-box',
               background: 'var(--panel)',
             }}
           >
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase' }}>
-                  Period:
-                </span>
-                <select
-                  value={period}
-                  onChange={(e) => setPeriod(e.target.value)}
-                  style={{ padding: '6px 10px', fontSize: 12.5, borderRadius: 8, border: '1px solid var(--line)' }}
-                >
-                  <option value="all">All periods</option>
-                  <option value="Q1">Q1 (Jan–Mar)</option>
-                  <option value="Q2">Q2 (Apr–Jun)</option>
-                  <option value="Q3">Q3 (Jul–Sep)</option>
-                  <option value="Q4">Q4 (Oct–Dec)</option>
-                  <option value="H1">H1 (Jan–Jun)</option>
-                  <option value="H2">H2 (Jul–Dec)</option>
-                  <option value="FY">Full year</option>
-                </select>
-              </div>
+            {/* Period */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: '1 1 130px', minWidth: 120 }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', flexShrink: 0 }}>
+                Period:
+              </span>
+              <select
+                value={period}
+                onChange={(e) => setPeriod(e.target.value)}
+                style={{
+                  width: '100%',
+                  height: 32,
+                  padding: '5px 8px',
+                  fontSize: 12.5,
+                  borderRadius: 8,
+                  border: '1px solid var(--line)',
+                  backgroundColor: '#fff',
+                  color: 'var(--ink)',
+                  boxSizing: 'border-box',
+                }}
+              >
+                <option value="all">All periods</option>
+                <option value="Q1">Q1 (Jan–Mar)</option>
+                <option value="Q2">Q2 (Apr–Jun)</option>
+                <option value="Q3">Q3 (Jul–Sep)</option>
+                <option value="Q4">Q4 (Oct–Dec)</option>
+                <option value="H1">H1 (Jan–Jun)</option>
+                <option value="H2">H2 (Jul–Dec)</option>
+                <option value="FY">Full year</option>
+              </select>
+            </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase' }}>
-                  Person:
-                </span>
-                <select
+            {/* Person (Searchable Dropdown) */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: '1.8 1 200px', minWidth: 160 }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', flexShrink: 0 }}>
+                Person:
+              </span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <SearchableDropdown
                   value={person}
-                  onChange={(e) => setPerson(e.target.value)}
-                  style={{ padding: '6px 10px', fontSize: 12.5, borderRadius: 8, border: '1px solid var(--line)' }}
-                >
-                  <option value="all">All team members</option>
-                  {memberOptions.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.fullName}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(val) => setPerson(val)}
+                  options={personDropdownOptions}
+                  placeholder="All team members"
+                  searchPlaceholder="Search by name or code..."
+                />
               </div>
+            </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase' }}>
-                  Status:
-                </span>
-                <select
-                  value={status}
-                  onChange={(e) => setStatus(e.target.value)}
-                  style={{ padding: '6px 10px', fontSize: 12.5, borderRadius: 8, border: '1px solid var(--line)' }}
-                >
-                  <option value="all">All statuses</option>
-                  <option value="Pending Approval">Pending Approval</option>
-                  <option value="On track">On track</option>
-                  <option value="At risk">At risk</option>
-                  <option value="Achieved">Achieved</option>
-                  <option value="Missed">Missed</option>
-                  <option value="Not started">Not started</option>
-                  <option value="Rejected">Rejected</option>
-                </select>
+            {/* Manager (Searchable Dropdown) */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: '1.6 1 180px', minWidth: 150 }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', flexShrink: 0 }}>
+                Manager:
+              </span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <SearchableDropdown
+                  value={manager}
+                  onChange={(val) => {
+                    setManager(val)
+                    setPerson('all')
+                  }}
+                  options={managerDropdownOptions}
+                  placeholder="All managers"
+                  searchPlaceholder="Search reporting manager..."
+                />
               </div>
+            </div>
 
-              <div style={{ position: 'relative', width: 210 }}>
+            {/* Status */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: '1.2 1 140px', minWidth: 125 }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', flexShrink: 0 }}>
+                Status:
+              </span>
+              <select
+                value={status}
+                onChange={(e) => setStatus(e.target.value)}
+                style={{
+                  width: '100%',
+                  height: 32,
+                  padding: '5px 8px',
+                  fontSize: 12.5,
+                  borderRadius: 8,
+                  border: '1px solid var(--line)',
+                  backgroundColor: '#fff',
+                  color: 'var(--ink)',
+                  boxSizing: 'border-box',
+                }}
+              >
+                <option value="all">All statuses</option>
+                <option value="Pending Approval">Pending Approval</option>
+                <option value="On track">On track</option>
+                <option value="At risk">At risk</option>
+                <option value="Achieved">Achieved</option>
+                <option value="Missed">Missed</option>
+                <option value="Not started">Not started</option>
+                <option value="Rejected">Rejected</option>
+              </select>
+            </div>
+
+            {/* Live Search */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: '2 1 210px', minWidth: 170 }}>
+              <div style={{ position: 'relative', width: '100%' }}>
                 <svg
                   width="13"
                   height="13"
@@ -438,11 +644,11 @@ export function TeamGoalsPage() {
                   type="text"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search by name..."
+                  placeholder="Search by name, BAM code..."
                   aria-label="Search employee by name"
                   style={{
                     width: '100%',
-                    padding: '6px 26px 6px 28px',
+                    padding: '5px 26px 5px 30px',
                     fontSize: 12.5,
                     borderRadius: 8,
                     border: '1px solid var(--line)',
@@ -468,7 +674,7 @@ export function TeamGoalsPage() {
                       background: 'transparent',
                       color: 'var(--muted, #94a3b8)',
                       cursor: 'pointer',
-                      fontSize: 13,
+                      fontSize: 12,
                       lineHeight: 1,
                       padding: '2px 4px',
                     }}
@@ -479,16 +685,78 @@ export function TeamGoalsPage() {
               </div>
             </div>
 
-            <div>
-              <button
-                type="button"
-                className="btn ghost sm"
-                onClick={downloadCsv}
-                style={{ fontSize: 12 }}
-              >
-                Download CSV
-              </button>
-            </div>
+            {/* Reset Filters (when active) */}
+            {(period !== 'all' || person !== 'all' || manager !== 'all' || status !== 'all' || Boolean(search.trim())) && (
+              <div style={{ flexShrink: 0 }}>
+                <button
+                  type="button"
+                  className="btn ghost sm"
+                  onClick={() => {
+                    setPeriod('all')
+                    setPerson('all')
+                    setManager('all')
+                    setStatus('all')
+                    setSearch('')
+                  }}
+                  title="Reset all filters"
+                  style={{
+                    fontSize: 11.5,
+                    height: 32,
+                    padding: '5px 10px',
+                    color: 'var(--rose, #e11d48)',
+                    whiteSpace: 'nowrap',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 4,
+                  }}
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                  <span>Reset</span>
+                </button>
+              </div>
+            )}
+
+            {/* Expand / Collapse All */}
+            {currentPageGoalIds.length > 0 && (
+              <div style={{ flexShrink: 0 }}>
+                <button
+                  type="button"
+                  className="btn ghost sm"
+                  onClick={toggleExpandAll}
+                  title={allExpanded ? 'Collapse all visible goals' : 'Expand all visible goals'}
+                  style={{
+                    fontSize: 11.5,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 5,
+                    padding: '5px 10px',
+                    height: 32,
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  <svg
+                    width="12"
+                    height="12"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.3"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    style={{
+                      transform: allExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                      transition: 'transform 0.2s ease',
+                    }}
+                  >
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
+                  <span>{allExpanded ? 'Collapse all' : 'Expand all'}</span>
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Member Groups */}
@@ -507,7 +775,7 @@ export function TeamGoalsPage() {
                 </p>
               </div>
             ) : (
-              filteredMembers.map((member) => (
+              page.items.map((member) => (
                 <div
                   key={member.employeeId}
                   className="card"
@@ -561,6 +829,7 @@ export function TeamGoalsPage() {
                         <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>
                           {member.designation || 'Team Member'}
                           {member.department ? ` · ${member.department}` : ''}
+                          {member.managerName ? ` · Reports to: ${member.managerName}` : ''}
                         </div>
                       </div>
                     </div>
@@ -623,6 +892,8 @@ export function TeamGoalsPage() {
                           key={g.id}
                           goal={g}
                           canManage={true}
+                          isExpanded={expandedGoalIds[g.id] ?? false}
+                          onToggleExpand={() => handleToggleGoal(g.id)}
                           onUpdateMetric={handleUpdateMetric}
                           onToggleMilestone={handleToggleMilestone}
                           onDelete={handleDeleteGoal}
@@ -635,6 +906,78 @@ export function TeamGoalsPage() {
                   </div>
                 </div>
               ))
+            )}
+
+            {/* Pagination Controls */}
+            {filteredMembers.length > 0 && (
+              <div
+                className="card"
+                style={{
+                  padding: '12px 18px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: 12,
+                  background: '#fff',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 12.5, color: 'var(--muted)' }}>
+                  <span>
+                    Showing <b style={{ color: 'var(--ink)' }}>{page.from}–{page.to}</b> of <b style={{ color: 'var(--ink)' }}>{page.total}</b> team members
+                  </span>
+                  <span style={{ color: 'var(--line2)' }}>•</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span>Show</span>
+                    <select
+                      value={pageSize}
+                      onChange={(e) => {
+                        setPageSize(Number(e.target.value))
+                      }}
+                      aria-label="Members per page"
+                      style={{
+                        padding: '3px 8px',
+                        fontSize: 12,
+                        borderRadius: 6,
+                        border: '1px solid var(--line)',
+                        background: '#fff',
+                        color: 'var(--ink)',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <option value={10}>10</option>
+                      <option value={20}>20</option>
+                      <option value={50}>50</option>
+                      <option value={100}>100</option>
+                    </select>
+                    <span>per page</span>
+                  </div>
+                </div>
+
+                {page.pageCount > 1 && (
+                  <div className="pager-nav" style={{ margin: 0 }}>
+                    <button
+                      type="button"
+                      className="btn ghost sm"
+                      onClick={() => page.setPage(page.page - 1)}
+                      disabled={page.page === 1}
+                    >
+                      ‹ Previous
+                    </button>
+                    <span className="hint" style={{ fontSize: 12.5, color: 'var(--muted)', minWidth: 80, textAlign: 'center' }}>
+                      Page <b>{page.page}</b> of <b>{page.pageCount}</b>
+                    </span>
+                    <button
+                      type="button"
+                      className="btn ghost sm"
+                      onClick={() => page.setPage(page.page + 1)}
+                      disabled={page.page === page.pageCount}
+                    >
+                      Next ›
+                    </button>
+                  </div>
+                )}
+              </div>
             )}
           </div>
         </>

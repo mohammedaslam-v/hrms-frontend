@@ -261,6 +261,7 @@ export function MyGoalsPage() {
                 <GoalItem
                   key={goal.id}
                   goal={goal}
+                  defaultExpanded={true}
                   onUpdateMetric={handleUpdateMetric}
                   onToggleMilestone={handleToggleMilestone}
                   onEdit={(g) => {

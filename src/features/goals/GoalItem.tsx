@@ -4,6 +4,9 @@ import { GOAL_CHIP, GOAL_TONE, type GoalView } from './goals.types'
 interface GoalItemProps {
   goal: GoalView
   canManage?: boolean
+  defaultExpanded?: boolean
+  isExpanded?: boolean
+  onToggleExpand?: () => void
   onUpdateMetric?: (goalId: number, value: number) => Promise<void>
   onToggleMilestone?: (goalId: number, milestoneId: number, isDone: boolean) => Promise<void>
   onDelete?: (goalId: number) => Promise<void>
@@ -38,6 +41,9 @@ const fmtDate = (dateStr: string): string => {
 export function GoalItem({
   goal,
   canManage = false,
+  defaultExpanded = false,
+  isExpanded: controlledExpanded,
+  onToggleExpand,
   onUpdateMetric,
   onToggleMilestone,
   onDelete,
@@ -45,6 +51,17 @@ export function GoalItem({
   onApprove,
   onReject,
 }: GoalItemProps) {
+  const [internalExpanded, setInternalExpanded] = useState<boolean>(defaultExpanded)
+  const isExpanded = controlledExpanded !== undefined ? controlledExpanded : internalExpanded
+
+  const toggleExpand = () => {
+    if (onToggleExpand) {
+      onToggleExpand()
+    } else {
+      setInternalExpanded((prev) => !prev)
+    }
+  }
+
   const [metricInput, setMetricInput] = useState<string>(
     goal.currentValue !== null ? String(goal.currentValue) : '0',
   )
@@ -53,7 +70,6 @@ export function GoalItem({
   const [isDeleting, setIsDeleting] = useState(false)
   const [isApproving, setIsApproving] = useState(false)
   const [isRejecting, setIsRejecting] = useState(false)
-  const [isExpanded, setIsExpanded] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const isApproved = goal.approvalStatus === 'approved'
@@ -139,15 +155,25 @@ export function GoalItem({
         background: 'var(--panel)',
         border: '1px solid var(--line)',
         borderRadius: 14,
-        padding: '18px 20px',
+        padding: isExpanded ? '18px 20px' : '14px 18px',
         display: 'flex',
         flexDirection: 'column',
-        gap: 12,
+        gap: isExpanded ? 14 : 0,
         transition: 'all 0.15s ease',
       }}
     >
-      {/* Top row: Title and Progress % */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16 }}>
+      {/* Top row: Title, Badges, Progress % & Expand/Collapse Toggle */}
+      <div
+        onClick={toggleExpand}
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          gap: 16,
+          cursor: 'pointer',
+          userSelect: 'none',
+        }}
+      >
         <div style={{ flex: 1, minWidth: 0 }}>
           <h4 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: 'var(--ink)' }}>
             {goal.title}
@@ -191,9 +217,7 @@ export function GoalItem({
             </span>
 
             {goal.note && (
-              <button
-                type="button"
-                onClick={() => setIsExpanded((prev) => !prev)}
+              <span
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
@@ -205,28 +229,11 @@ export function GoalItem({
                   borderRadius: 99,
                   fontSize: 11.5,
                   fontWeight: 600,
-                  cursor: 'pointer',
                 }}
-                title={isExpanded ? 'Hide details' : 'Show details'}
+                title={goal.note}
               >
                 <span>💡 Details</span>
-                <svg
-                  width="11"
-                  height="11"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.4"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  style={{
-                    transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
-                    transition: 'transform 0.15s ease',
-                  }}
-                >
-                  <polyline points="6 9 12 15 18 9" />
-                </svg>
-              </button>
+              </span>
             )}
           </div>
         </div>
@@ -236,49 +243,53 @@ export function GoalItem({
             {goal.progress}%
           </div>
 
-          {goal.note && (
-            <button
-              type="button"
-              onClick={() => setIsExpanded((prev) => !prev)}
-              title={isExpanded ? 'Hide details' : 'Show details'}
-              aria-label={isExpanded ? 'Hide details' : 'Show details'}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              toggleExpand()
+            }}
+            title={isExpanded ? 'Collapse goal details' : 'Expand goal details'}
+            aria-label={isExpanded ? 'Collapse goal details' : 'Expand goal details'}
+            style={{
+              background: isExpanded ? '#efeae1' : '#f8f6f2',
+              border: '1px solid var(--line, #e2e8f0)',
+              borderRadius: 8,
+              width: 32,
+              height: 32,
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              color: 'var(--ink2, #334155)',
+              transition: 'all 0.15s ease',
+              padding: 0,
+            }}
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.3"
+              strokeLinecap="round"
+              strokeLinejoin="round"
               style={{
-                background: isExpanded ? '#efeae1' : '#f8f6f2',
-                border: '1px solid var(--line, #e2e8f0)',
-                borderRadius: 8,
-                width: 32,
-                height: 32,
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                color: 'var(--ink2, #334155)',
-                transition: 'all 0.15s ease',
-                padding: 0,
+                transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                transition: 'transform 0.2s ease',
               }}
             >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.3"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                style={{
-                  transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
-                  transition: 'transform 0.2s ease',
-                }}
-              >
-                <polyline points="6 9 12 15 18 9" />
-              </svg>
-            </button>
-          )}
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </button>
         </div>
       </div>
 
-      {/* Progress bar */}
+      {/* Expanded Goal Body: Progress bar, milestones/checklists, metric updates, note & actions */}
+      {isExpanded && (
+        <>
+          {/* Progress bar */}
       <div className="bar" style={{ height: 7, borderRadius: 99, background: '#eee8e0', overflow: 'hidden' }}>
         <i
           style={{
@@ -498,8 +509,8 @@ export function GoalItem({
         </div>
       )}
 
-      {/* Note / Guidance if expanded */}
-      {goal.note && isExpanded && (
+      {/* Note / Guidance if note present */}
+      {goal.note && (
         <div
           style={{
             background: '#faf8f5',
@@ -580,6 +591,8 @@ export function GoalItem({
           )}
         </div>
       </div>
+        </>
+      )}
     </div>
   )
 }
