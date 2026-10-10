@@ -208,7 +208,9 @@ export const ReportsCenterPage: React.FC = () => {
         const filter: ReportFilterDto = {
           type,
           period,
-          date: day || undefined,
+          // The Date field only exists for a single day or a month; sending it
+          // with a week or range made the server report just that one day.
+          date: (period === 'daily' || period === 'monthly') && day ? day : undefined,
           week: period === 'weekly' ? week : undefined,
           month: period === 'monthly' ? month : undefined,
           from: period === 'range' ? fromDate : undefined,
@@ -239,7 +241,7 @@ export const ReportsCenterPage: React.FC = () => {
       const filter: ReportFilterDto = {
         type: selectedType,
         period,
-        date: day || undefined,
+        date: (period === 'daily' || period === 'monthly') && day ? day : undefined,
         week: period === 'weekly' ? week : undefined,
         month: period === 'monthly' ? month : undefined,
         from: period === 'range' ? fromDate : undefined,
