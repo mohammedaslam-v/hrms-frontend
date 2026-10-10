@@ -5,11 +5,15 @@ import type {
   LeavePreview,
   LeaveType,
   MyLeaveView,
+  OnLeaveEmployee,
 } from './leave.types'
 import { request } from '../../shared/api/client'
 
 export const leaveApi = {
   getMine: () => request<MyLeaveView>('/leave/me'),
+
+  /** Employees currently on approved leave today. */
+  getOnLeaveToday: () => request<OnLeaveEmployee[]>('/leave/on-leave-today'),
 
   /** Get leave record for an employee in reporting line or as admin. */
   getForEmployee: (employeeId: number) =>

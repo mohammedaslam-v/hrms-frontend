@@ -11,6 +11,7 @@ import { DocumentGatePopup } from '../components/DocumentGatePopup'
 import { DOCUMENT_OPTIONS } from '../components/UploadDocumentModal'
 import { TodayCard, WeekCard } from '../../attendance'
 import { AdminLifecycleControls } from '../components/AdminLifecycleControls'
+import { OnLeaveTodayBanner } from '../components/OnLeaveTodayBanner'
 import { EditPersonalDetailsModal } from '../components/EditPersonalDetailsModal'
 import { Toast, type ToastMessage } from '../../../shared/ui/Toast'
 import { WORK_MODE_CLASS, type ProfileView, type WorkMode } from '../profile.types'
@@ -304,6 +305,9 @@ export function MyPage() {
       {!view.isSelf && view.access === 'admin' && (
         <AdminLifecycleControls employee={view} onRefresh={() => load(true)} />
       )}
+
+      {/* On Leave Today: Shown to employees on their own page, hidden when admin/manager visits another employee */}
+      {view.isSelf && <OnLeaveTodayBanner />}
 
       <div className="grid g3">
         <TodayCard employeeId={view.employeeId} isSelf={view.isSelf} employeeName={view.fullName} />
