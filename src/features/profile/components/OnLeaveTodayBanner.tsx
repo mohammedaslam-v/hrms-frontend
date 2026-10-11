@@ -100,7 +100,7 @@ export function OnLeaveTodayBanner() {
   }
 
   if (error || leaves.length === 0) {
-    // If empty or error: clean, slim friendly message
+    // If empty: clean, slim friendly message
     if (leaves.length === 0) {
       return (
         <div
@@ -358,7 +358,7 @@ export function OnLeaveTodayBanner() {
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: 10,
+              gap: 8,
               marginLeft: 'auto',
               flexShrink: 0,
             }}
@@ -493,7 +493,7 @@ export function OnLeaveTodayBanner() {
                   >
                     All ({count})
                   </button>
-                  {departments.slice(0, 4).map(([dept, dCount]) => (
+                  {departments.slice(0, 5).map(([dept, dCount]) => (
                     <button
                       key={dept}
                       type="button"
