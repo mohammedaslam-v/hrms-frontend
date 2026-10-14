@@ -1,5 +1,6 @@
-import { useMemo } from 'react'
+import { useMemo, useRef } from 'react'
 import type { CompanyPolicy } from '../policies.types'
+import { usePolicyFiles } from '../policyFiles'
 
 interface PolicyViewModalProps {
   policy: CompanyPolicy
@@ -57,6 +58,9 @@ const formatDate = (isoString: string): string => {
 
 export function PolicyViewModal({ policy, onClose, onEdit }: PolicyViewModalProps) {
   const attachments = useMemo(() => extractAttachments(policy.description), [policy.description])
+  // Covers both the download bar and the rendered body.
+  const cardRef = useRef<HTMLDivElement>(null)
+  usePolicyFiles(cardRef, policy.description)
 
   return (
     <div
@@ -76,6 +80,7 @@ export function PolicyViewModal({ policy, onClose, onEdit }: PolicyViewModalProp
       }}
     >
       <div
+        ref={cardRef}
         style={{
           background: '#FFFFFF',
           borderRadius: 16,

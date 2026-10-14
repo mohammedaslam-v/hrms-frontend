@@ -1,6 +1,7 @@
 import { useRef, useState, type FormEvent } from 'react'
 import { policiesApi } from '../policies.api'
 import type { CompanyPolicy, PolicyStatus } from '../policies.types'
+import { openPolicyFile } from '../policyFiles'
 import { RichTextEditor } from './RichTextEditor'
 
 const PRESET_CATEGORIES = [
@@ -526,8 +527,10 @@ export function PolicyFormModal({ policy, onClose, onSuccess }: PolicyFormModalP
                         </div>
                         <a
                           href={f.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
+                          onClick={(e) => {
+                            e.preventDefault()
+                            void openPolicyFile(f.url, f.fileName)
+                          }}
                           style={{
                             color: 'var(--blue, #2563EB)',
                             fontWeight: 600,
