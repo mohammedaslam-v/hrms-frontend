@@ -45,6 +45,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { key: 'mygoals', path: '/goals', label: 'My goals', tier: 'all', color: '#DD8B08', built: true, icon: icon.target },
       { key: 'mypay', path: '/pay', label: 'My salary & payslips', tier: 'all', color: '#0C8CD4', built: true, icon: icon.wallet },
       { key: 'mytax', path: '/tax', label: 'My tax & TDS', tier: 'all', color: '#DC3E43', built: true, icon: icon.percent },
+      { key: 'policies', path: '/policies', label: 'Company policies', tier: 'all', color: '#6366F1', built: true, icon: icon.policyDoc },
     ],
   },
   {
@@ -67,6 +68,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { key: 'payroll', path: '/payroll', label: 'Payroll register', tier: 'adm', color: '#0C8CD4', built: true, icon: icon.banknote },
       { key: 'reimbursements', path: '/reimbursement-approvals', label: 'Reimbursement & Loan', tier: 'adm', color: '#10B981', built: true, icon: icon.receipt },
       { key: 'alltax', path: '/tax-register', label: 'Company TDS register', tier: 'adm', color: '#DC3E43', built: true, icon: icon.ledger },
+      { key: 'admin_policies', path: '/admin/policies', label: 'Manage policies', tier: 'adm', color: '#6366F1', built: true, icon: icon.policyDoc },
     ],
   },
 ]
