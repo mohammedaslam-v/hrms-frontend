@@ -1,9 +1,45 @@
+import { useMemo } from 'react'
 import type { CompanyPolicy } from '../policies.types'
 
 interface PolicyViewModalProps {
   policy: CompanyPolicy
   onClose: () => void
   onEdit?: (policy: CompanyPolicy) => void
+}
+
+interface ExtractedAttachment {
+  url: string
+  name: string
+}
+
+function extractAttachments(html: string): ExtractedAttachment[] {
+  try {
+    const parser = new DOMParser()
+    const doc = parser.parseFromString(html, 'text/html')
+    const results: ExtractedAttachment[] = []
+
+    const cards = doc.querySelectorAll('.policy-attachment-card')
+    cards.forEach((card) => {
+      const url = card.getAttribute('data-url') || card.querySelector('a')?.getAttribute('href') || ''
+      const name = card.getAttribute('data-name') || card.querySelector('strong')?.textContent?.trim() || 'Attached Document'
+      if (url && !results.some((r) => r.url === url)) {
+        results.push({ url, name })
+      }
+    })
+
+    const links = doc.querySelectorAll('a[href*="/company-policies/files/"]')
+    links.forEach((link) => {
+      const url = link.getAttribute('href') || ''
+      const name = link.textContent?.trim() || 'Attached Document'
+      if (url && !results.some((r) => r.url === url)) {
+        results.push({ url, name })
+      }
+    })
+
+    return results
+  } catch {
+    return []
+  }
 }
 
 const formatDate = (isoString: string): string => {
@@ -20,6 +56,8 @@ const formatDate = (isoString: string): string => {
 }
 
 export function PolicyViewModal({ policy, onClose, onEdit }: PolicyViewModalProps) {
+  const attachments = useMemo(() => extractAttachments(policy.description), [policy.description])
+
   return (
     <div
       style={{
@@ -63,7 +101,7 @@ export function PolicyViewModal({ policy, onClose, onEdit }: PolicyViewModalProp
           }}
         >
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
               <span
                 style={{
                   fontSize: 11.5,
@@ -104,6 +142,23 @@ export function PolicyViewModal({ policy, onClose, onEdit }: PolicyViewModalProp
                     ? 'Draft'
                     : 'Archived'}
               </span>
+              {attachments.length > 0 && (
+                <span
+                  style={{
+                    fontSize: 11.5,
+                    fontWeight: 600,
+                    padding: '2px 8px',
+                    borderRadius: 4,
+                    background: '#EFF6FF',
+                    color: '#1D4ED8',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 4,
+                  }}
+                >
+                  📎 {attachments.length} {attachments.length === 1 ? 'Attachment' : 'Attachments'}
+                </span>
+              )}
             </div>
             <h2
               style={{
@@ -139,6 +194,58 @@ export function PolicyViewModal({ policy, onClose, onEdit }: PolicyViewModalProp
             ✕
           </button>
         </div>
+
+        {/* Quick Attachment Download Bar (if attachments exist) */}
+        {attachments.length > 0 && (
+          <div
+            style={{
+              padding: '10px 24px',
+              background: '#F8FAFC',
+              borderBottom: '1px solid #E2E8F0',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 12,
+              flexWrap: 'wrap',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, fontWeight: 600, color: '#334155' }}>
+              <span>📎</span>
+              <span>Available Document Downloads:</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              {attachments.map((att, i) => (
+                <a
+                  key={i}
+                  href={att.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  download={att.name}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    padding: '5px 12px',
+                    borderRadius: 6,
+                    background: '#FFFFFF',
+                    border: '1px solid #CBD5E1',
+                    color: '#1E293B',
+                    fontSize: 12,
+                    fontWeight: 600,
+                    textDecoration: 'none',
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+                  }}
+                >
+                  <span>📄</span>
+                  <span style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {att.name}
+                  </span>
+                  <span style={{ color: '#2563EB', fontSize: 12 }}>⤓</span>
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Content Body */}
         <div
@@ -257,6 +364,42 @@ export function PolicyViewModal({ policy, onClose, onEdit }: PolicyViewModalProp
           overflow-x: auto;
           font-family: monospace;
           font-size: 13px;
+        }
+        .policy-rendered-content .policy-attachment-card {
+          display: flex !important;
+          align-items: center !important;
+          justify-content: space-between !important;
+          gap: 14px !important;
+          background: #F8FAFC !important;
+          border: 1px solid #E2E8F0 !important;
+          border-left: 4px solid #3B49A8 !important;
+          border-radius: 10px !important;
+          padding: 12px 16px !important;
+          margin: 16px 0 !important;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+        }
+        .policy-rendered-content .policy-attachment-card a {
+          display: inline-flex !important;
+          align-items: center !important;
+          gap: 6px !important;
+          padding: 6px 14px !important;
+          border-radius: 6px !important;
+          background: #3B49A8 !important;
+          color: #FFFFFF !important;
+          font-size: 12.5px !important;
+          font-weight: 600 !important;
+          text-decoration: none !important;
+          transition: background 0.15s ease !important;
+        }
+        .policy-rendered-content .policy-attachment-card a:hover {
+          background: #2D3986 !important;
+        }
+        .policy-rendered-content img {
+          max-width: 100% !important;
+          height: auto !important;
+          border-radius: 8px !important;
+          margin: 12px 0 !important;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.08);
         }
       `}</style>
     </div>

@@ -335,22 +335,46 @@ export function EmployeePoliciesPage() {
                       {formatDate(policy.updatedAt || policy.createdAt)}
                     </span>
 
-                    {/* Category Chip */}
-                    <span
-                      style={{
-                        background: 'rgba(255, 255, 255, 0.16)',
-                        border: '1px solid rgba(255, 255, 255, 0.25)',
-                        color: '#FFFFFF',
-                        fontSize: 11,
-                        fontWeight: 600,
-                        padding: '3px 10px',
-                        borderRadius: 20,
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.03em',
-                      }}
-                    >
-                      {policy.category}
-                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      {(policy.description.includes('policy-attachment-card') ||
+                        policy.description.includes('/company-policies/files/')) && (
+                        <span
+                          style={{
+                            background: 'rgba(255, 255, 255, 0.22)',
+                            border: '1px solid rgba(255, 255, 255, 0.35)',
+                            color: '#FFFFFF',
+                            fontSize: 11,
+                            fontWeight: 600,
+                            padding: '3px 8px',
+                            borderRadius: 20,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 4,
+                          }}
+                          title="Contains attached document / handbook"
+                        >
+                          <span>📎</span>
+                          <span>File</span>
+                        </span>
+                      )}
+
+                      {/* Category Chip */}
+                      <span
+                        style={{
+                          background: 'rgba(255, 255, 255, 0.16)',
+                          border: '1px solid rgba(255, 255, 255, 0.25)',
+                          color: '#FFFFFF',
+                          fontSize: 11,
+                          fontWeight: 600,
+                          padding: '3px 10px',
+                          borderRadius: 20,
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.03em',
+                        }}
+                      >
+                        {policy.category}
+                      </span>
+                    </div>
                   </div>
 
                   {/* Title */}

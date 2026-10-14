@@ -326,12 +326,32 @@ export function AdminPoliciesPage() {
                             display: 'flex',
                             alignItems: 'center',
                             gap: 8,
+                            flexWrap: 'wrap',
                           }}
                           onClick={() => setViewingPolicy(p)}
                           title="Click to view full policy"
                         >
                           <span style={{ fontSize: 16 }}>📜</span>
                           <span>{p.title}</span>
+                          {(p.description.includes('policy-attachment-card') ||
+                            p.description.includes('/company-policies/files/')) && (
+                            <span
+                              title="Has attached document"
+                              style={{
+                                fontSize: 11,
+                                fontWeight: 600,
+                                padding: '2px 7px',
+                                borderRadius: 4,
+                                background: '#EFF6FF',
+                                color: '#1D4ED8',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 3,
+                              }}
+                            >
+                              📎 File
+                            </span>
+                          )}
                         </div>
                       </td>
 

@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useRef, useState, type FormEvent } from 'react'
 import { policiesApi } from '../policies.api'
 import type { CompanyPolicy, PolicyStatus } from '../policies.types'
 import { RichTextEditor } from './RichTextEditor'
@@ -20,6 +20,22 @@ interface PolicyFormModalProps {
   onSuccess: () => void
 }
 
+interface AttachedFile {
+  url: string
+  key: string
+  fileName: string
+  fileSize: number
+  mimeType: string
+}
+
+const formatBytes = (bytes: number): string => {
+  if (bytes === 0) return '0 B'
+  const k = 1024
+  const sizes = ['B', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`
+}
+
 export function PolicyFormModal({ policy, onClose, onSuccess }: PolicyFormModalProps) {
   const isEditing = Boolean(policy)
 
@@ -32,8 +48,53 @@ export function PolicyFormModal({ policy, onClose, onSuccess }: PolicyFormModalP
   )
   const [status, setStatus] = useState<PolicyStatus>(policy?.status || 'active')
 
+  // Attached files state
+  const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([])
+  const [uploadingFile, setUploadingFile] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Direct file attachment handler
+  const handleDirectAttach = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    try {
+      setUploadingFile(true)
+      setUploadError(null)
+
+      const result = await policiesApi.uploadAttachment(file)
+      setAttachedFiles((prev) => [...prev, result])
+
+      // Automatically append attachment card to description
+      const isPdf = file.name.toLowerCase().endsWith('.pdf')
+      const iconChar = isPdf ? '📄' : '📎'
+      const cardHtml = `
+        <div class="policy-attachment-card" data-url="${result.url}" data-name="${result.fileName}" data-size="${result.fileSize}" contenteditable="false" style="display: flex; align-items: center; justify-content: space-between; gap: 14px; background: #F8FAFC; border: 1px solid #E2E8F0; border-left: 4px solid #3B49A8; border-radius: 10px; padding: 12px 16px; margin: 14px 0; user-select: none;">
+          <div style="display: flex; align-items: center; gap: 12px; min-width: 0;">
+            <span style="width: 36px; height: 36px; border-radius: 8px; background: #EEF2FF; color: #3B49A8; display: inline-flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0;">${iconChar}</span>
+            <div style="display: flex; flex-direction: column; gap: 2px; min-width: 0;">
+              <strong style="font-size: 13.5px; color: #1E293B; word-break: break-all;">${result.fileName}</strong>
+              <span style="font-size: 11.5px; color: #64748B;">${formatBytes(result.fileSize)} · Attachment</span>
+            </div>
+          </div>
+          <a href="${result.url}" target="_blank" rel="noopener noreferrer" download="${result.fileName}" style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 6px; background: #3B49A8; color: #FFFFFF !important; font-size: 12.5px; font-weight: 600; text-decoration: none; flex-shrink: 0;">
+            Download ⤓
+          </a>
+        </div>
+        <p><br></p>
+      `
+      setDescription((prev) => `${prev || ''}${cardHtml}`)
+    } catch (err: unknown) {
+      setUploadError(err instanceof Error ? err.message : 'Failed to upload attachment.')
+    } finally {
+      setUploadingFile(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
@@ -105,7 +166,7 @@ export function PolicyFormModal({ policy, onClose, onSuccess }: PolicyFormModalP
           background: '#FFFFFF',
           borderRadius: 16,
           width: '100%',
-          maxWidth: 780,
+          maxWidth: 820,
           maxHeight: '92vh',
           display: 'flex',
           flexDirection: 'column',
@@ -131,8 +192,8 @@ export function PolicyFormModal({ policy, onClose, onSuccess }: PolicyFormModalP
             </h3>
             <p style={{ margin: '4px 0 0', fontSize: 13, color: '#78716C' }}>
               {isEditing
-                ? 'Update the policy details or publish status below.'
-                : 'Define a new policy. Active policies will be visible to all employees.'}
+                ? 'Update policy text, attachments, or publication status.'
+                : 'Define a new policy. You can write rich text and attach files (PDF, handbooks, etc.).'}
             </p>
           </div>
           <button
@@ -339,7 +400,7 @@ export function PolicyFormModal({ policy, onClose, onSuccess }: PolicyFormModalP
               </div>
             </div>
 
-            {/* Description (Rich Text Editor) */}
+            {/* Description & Attachments (Rich Text Editor) */}
             <div>
               <div
                 style={{
@@ -359,15 +420,127 @@ export function PolicyFormModal({ policy, onClose, onSuccess }: PolicyFormModalP
                   Policy Description & Content <span style={{ color: '#DC2626' }}>*</span>
                 </label>
                 <span style={{ fontSize: 12, color: '#A8A29E' }}>
-                  Supports rich text, headings, lists & links
+                  Supports rich formatting & document file attachments
                 </span>
               </div>
+
+              {/* Rich Text Editor */}
               <RichTextEditor
                 value={description}
                 onChange={setDescription}
                 placeholder="Enter the full policy terms, guidelines, objectives, eligibility, and rules..."
-                minHeight={260}
+                minHeight={250}
+                onFileUploaded={(uploaded) => {
+                  setAttachedFiles((prev) => [...prev, uploaded])
+                }}
               />
+
+              {/* Dedicated Attachment Row */}
+              <div
+                style={{
+                  marginTop: 10,
+                  padding: '12px 14px',
+                  background: '#F8FAFC',
+                  border: '1px dashed #CBD5E1',
+                  borderRadius: 8,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: 12,
+                  flexWrap: 'wrap',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 18 }}>📎</span>
+                  <div>
+                    <strong style={{ fontSize: 13, color: '#334155', display: 'block' }}>
+                      Attach Policy File / Handbook
+                    </strong>
+                    <span style={{ fontSize: 12, color: '#64748B' }}>
+                      Upload PDF, DOCX, or Image files directly to policy content
+                    </span>
+                  </div>
+                </div>
+
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  style={{ display: 'none' }}
+                  onChange={handleDirectAttach}
+                  accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.png,.jpg,.jpeg,.webp"
+                />
+
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploadingFile || busy}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    padding: '6px 14px',
+                    borderRadius: 6,
+                    border: '1px solid #94A3B8',
+                    background: '#FFFFFF',
+                    color: '#1E293B',
+                    fontSize: 12.5,
+                    fontWeight: 600,
+                    cursor: uploadingFile ? 'wait' : 'pointer',
+                  }}
+                >
+                  <span>{uploadingFile ? '⏳ Uploading…' : '+ Attach Document'}</span>
+                </button>
+              </div>
+
+              {uploadError && (
+                <div style={{ marginTop: 8, fontSize: 12.5, color: '#DC2626' }}>
+                  ⚠️ {uploadError}
+                </div>
+              )}
+
+              {/* List of currently attached files */}
+              {attachedFiles.length > 0 && (
+                <div style={{ marginTop: 10 }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: '#64748B', marginBottom: 6 }}>
+                    Attached in this session ({attachedFiles.length}):
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {attachedFiles.map((f, i) => (
+                      <div
+                        key={i}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          background: '#FFFFFF',
+                          border: '1px solid #E2E8F0',
+                          borderRadius: 6,
+                          padding: '6px 12px',
+                          fontSize: 12.5,
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span>📄</span>
+                          <span style={{ fontWeight: 500, color: '#1E293B' }}>{f.fileName}</span>
+                          <span style={{ color: '#94A3B8' }}>({formatBytes(f.fileSize)})</span>
+                        </div>
+                        <a
+                          href={f.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{
+                            color: 'var(--blue, #2563EB)',
+                            fontWeight: 600,
+                            textDecoration: 'none',
+                          }}
+                        >
+                          View File ↗
+                        </a>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 

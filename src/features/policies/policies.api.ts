@@ -35,4 +35,35 @@ export const policiesApi = {
     request<{ success: boolean }>(`/company-policies/${id}`, {
       method: 'DELETE',
     }),
+
+  uploadAttachment: (
+    file: File,
+  ): Promise<{ url: string; key: string; fileName: string; fileSize: number; mimeType: string }> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = async () => {
+        try {
+          const fileBase64 = reader.result as string
+          const res = await request<{
+            url: string
+            key: string
+            fileName: string
+            fileSize: number
+            mimeType: string
+          }>('/company-policies/upload', {
+            method: 'POST',
+            body: JSON.stringify({
+              fileName: file.name,
+              fileBase64,
+            }),
+          })
+          resolve(res)
+        } catch (err) {
+          reject(err)
+        }
+      }
+      reader.onerror = () => reject(new Error('Failed to read file.'))
+      reader.readAsDataURL(file)
+    })
+  },
 }
