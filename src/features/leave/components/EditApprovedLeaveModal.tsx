@@ -150,13 +150,16 @@ export function EditApprovedLeaveModal({
               fontWeight: 600,
               padding: '3px 9px',
               borderRadius: 6,
-              background: '#F1F5F9',
-              color: '#475569',
+              background: '#DCFCE7',
+              color: '#166534',
               display: 'inline-block',
             }}
           >
-            {leave.leaveType}
+            Approved: {leave.days} day{leave.days === 1 ? '' : 's'}
           </span>
+          <div style={{ fontSize: 11.5, color: '#64748B', marginTop: 2 }}>
+            Original Type: {leave.leaveType}
+          </div>
         </div>
       </div>
 
