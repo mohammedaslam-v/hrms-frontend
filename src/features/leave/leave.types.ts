@@ -35,6 +35,7 @@ export interface LeaveLedger {
 
 export interface LeaveRequest {
   id: number
+  employeeId?: number
   ref: string
   leaveType: LeaveType
   fromDate: string
@@ -164,5 +165,20 @@ export interface OnLeaveEmployee {
   halfDaySession: HalfDaySession | null
   fromDate: string
   toDate: string
+}
+
+export interface EditApprovedLeavePayload {
+  fromDate: string
+  toDate: string
+  isHalfDay: boolean
+  halfDaySession?: HalfDaySession | null
+  leaveType: LeaveType
+  adminNote: string
+}
+
+export interface EditApprovedResult {
+  view: ApprovalsView
+  message: string
+  updatedRequest: LeaveRequest
 }
 

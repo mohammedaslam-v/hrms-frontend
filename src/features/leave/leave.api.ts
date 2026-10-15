@@ -2,6 +2,8 @@ import type {
   ApplyLeavePayload,
   ApprovalsView,
   DecisionResult,
+  EditApprovedLeavePayload,
+  EditApprovedResult,
   LeavePreview,
   LeaveType,
   MyLeaveView,
@@ -56,5 +58,11 @@ export const approvalsApi = {
     request<DecisionResult>(`/leave/approvals/${id}/decide`, {
       method: 'POST',
       body: JSON.stringify({ decision, note }),
+    }),
+
+  editApproved: (id: number, payload: EditApprovedLeavePayload) =>
+    request<EditApprovedResult>(`/leave/approvals/${id}/edit`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
     }),
 }

@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { PageHero } from '../../../shared/ui/PageHero'
 import { Pagination, usePage } from '../../../shared/ui/Pagination'
+import { EditApprovedLeaveModal } from '../components/EditApprovedLeaveModal'
 import { approvalsApi } from '../leave.api'
 import {
   HALF_DAY_LABEL,
   type ApprovalsView,
+  type LeaveRequest,
   type LeaveStatus,
   type PendingApproval,
 } from '../leave.types'
@@ -30,6 +32,7 @@ export function LeaveApprovalsPage() {
     item: PendingApproval
     decision: 'Approved' | 'Rejected'
   } | null>(null)
+  const [editingLeave, setEditingLeave] = useState<(LeaveRequest & { employeeName: string }) | null>(null)
 
   const load = useCallback(async () => {
     try {
@@ -549,12 +552,13 @@ export function LeaveApprovalsPage() {
                   <th>Reason</th>
                   <th>Status</th>
                   <th>Decided by</th>
+                  {view.isAdmin && <th style={{ textAlign: 'right' }}>Actions</th>}
                 </tr>
               </thead>
               <tbody>
                 {filteredLog.length === 0 ? (
                   <tr>
-                    <td colSpan={9}>
+                    <td colSpan={view.isAdmin ? 10 : 9}>
                       <div className="empty">{q ? `No requests match "${search}".` : 'No requests this year.'}</div>
                     </td>
                   </tr>
@@ -574,6 +578,23 @@ export function LeaveApprovalsPage() {
                         <span className={`chip ${STATUS_CLASS[r.status]}`}>{r.status}</span>
                       </td>
                       <td>{r.decidedBy ?? '—'}</td>
+                      {view.isAdmin && (
+                        <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                          {r.status === 'Approved' ? (
+                            <button
+                              type="button"
+                              className="btn ghost sm"
+                              onClick={() => setEditingLeave(r)}
+                              style={{ padding: '4px 10px', fontSize: 12, color: 'var(--blue)' }}
+                              title="Edit approved leave dates, duration, or type"
+                            >
+                              ✏️ Edit
+                            </button>
+                          ) : (
+                            <span style={{ color: 'var(--muted)', fontSize: 12 }}>—</span>
+                          )}
+                        </td>
+                      )}
                     </tr>
                   ))
                 )}
@@ -582,6 +603,19 @@ export function LeaveApprovalsPage() {
           </div>
           <Pagination page={logPage} unit="requests" />
         </div>
+      )}
+
+      {/* Admin Edit Approved Leave Modal */}
+      {editingLeave && (
+        <EditApprovedLeaveModal
+          leave={editingLeave}
+          onClose={() => setEditingLeave(null)}
+          onSuccess={(updatedView, successMsg) => {
+            setView(updatedView)
+            setNotice(successMsg)
+            setEditingLeave(null)
+          }}
+        />
       )}
     </div>
   )
