@@ -8,6 +8,7 @@ import { ALL_NAV_ITEMS, TIER_NAME, type NavItem } from '../navigation/nav-items'
 import { TIER_LABEL } from '../shared/types/session'
 import { Toast, type ToastMessage } from '../shared/ui/Toast'
 import { ChangePasswordForm } from '../features/auth'
+import { OnlineNow } from '../features/presence'
 import { initials } from '../shared/lib/format'
 import * as icon from '../navigation/icons'
 
@@ -98,6 +99,7 @@ export function AppShell() {
           <h1 className="tb-title">{currentTitle}</h1>
 
           <div className="tb-right">
+            <OnlineNow />
             <span className="tb-date">{todayStr}</span>
             <span className="chip c-all nodot">{TIER_LABEL[employee.defaultTier]}</span>
             <div className="tb-menu" ref={menuRef}>

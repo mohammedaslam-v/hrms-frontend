@@ -2582,3 +2582,75 @@ tr.row:focus-visible { outline: 2px solid var(--blue); outline-offset: -2px; }
 @media (max-width: 420px) {
   .auth-card { padding: 22px 20px 20px; }
 }
+
+
+/* ── Header "N online" pill — port of the new admin's OnlineNow ─────────── */
+.on-wrap { position: relative; }
+.on-pill {
+  display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 10px;
+  border-radius: 8px; border: 1px solid #dbeafe; background: #eff6ff;
+  box-shadow: 0 1px 2px rgba(15, 23, 41, 0.05); cursor: pointer; transition: all 0.15s;
+}
+.on-pill:hover, .on-pill.open { background: #ecfdf5; border-color: #a7f3d0; }
+.on-pulse { position: relative; display: flex; width: 8px; height: 8px; }
+.on-pulse-ring {
+  position: absolute; inset: 0; border-radius: 999px; background: #34d399; opacity: 0.6;
+  animation: on-ping 1s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+.on-pulse-dot { position: relative; display: inline-flex; width: 8px; height: 8px; border-radius: 999px; background: #10b981; }
+@keyframes on-ping { 75%, 100% { transform: scale(2); opacity: 0; } }
+.on-count { font: 900 11px 'Inter', sans-serif; font-variant-numeric: tabular-nums; color: #1d4ed8; }
+.on-word { font: 700 10px 'Inter', sans-serif; letter-spacing: 0.02em; color: rgba(29, 78, 216, 0.8); }
+
+.on-menu {
+  position: absolute; right: 0; top: calc(100% + 8px); width: 340px; overflow: hidden;
+  background: #fff; border: 1px solid #e2e8f0; border-radius: 12px;
+  box-shadow: 0 20px 25px -5px rgba(15, 23, 41, 0.1), 0 8px 10px -6px rgba(15, 23, 41, 0.1);
+  z-index: 70;
+}
+.on-menu-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 16px; border-bottom: 1px solid #f1f5f9;
+}
+.on-menu-title { display: flex; align-items: center; gap: 8px; font: 700 14px 'Inter', sans-serif; color: #1e293b; }
+.on-badge { border-radius: 999px; background: #ecfdf5; color: #047857; padding: 2px 8px; font: 700 11px 'Inter', sans-serif; }
+.on-menu-body { max-height: 60vh; overflow-y: auto; }
+.on-empty { padding: 20px 16px; text-align: center; font-size: 14px; color: #94a3b8; }
+.on-section {
+  display: flex; align-items: center; gap: 8px; padding: 8px 16px;
+  border-top: 1px solid #f1f5f9; border-bottom: 1px solid #f1f5f9; background: rgba(248, 250, 252, 0.7);
+  font: 900 10px 'Inter', sans-serif; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8;
+}
+.on-section svg { width: 12px; height: 12px; }
+.on-menu-foot {
+  padding: 8px 16px; border-top: 1px solid #f1f5f9;
+  font: 500 10px 'Inter', sans-serif; color: #94a3b8;
+}
+
+.on-row { display: flex; align-items: center; gap: 12px; min-width: 0; padding: 10px 16px; }
+.on-row-text { min-width: 0; flex: 1; }
+.on-row-name { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.on-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 700 13px 'Inter', sans-serif; color: #1e293b; }
+.on-you { margin-left: 4px; font: 600 11px 'Inter', sans-serif; color: #2563eb; }
+.on-role {
+  display: inline-flex; align-items: center; flex: none; border-radius: 6px; background: #f1f5f9;
+  padding: 2px 6px; font: 700 10px 'Inter', sans-serif; text-transform: uppercase; letter-spacing: 0.03em; color: #64748b;
+}
+.on-line { margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 500 11px 'Inter', sans-serif; color: #94a3b8; }
+.on-line.is-online { color: #047857; }
+
+.on-av {
+  position: relative; display: inline-flex; flex: none; align-items: center; justify-content: center;
+  width: 32px; height: 32px; border-radius: 8px; color: #fff; user-select: none;
+  font: 900 11px 'Inter', sans-serif; letter-spacing: 0.03em; box-shadow: 0 1px 2px rgba(15, 23, 41, 0.05);
+}
+.on-av-dot { position: absolute; right: -2px; bottom: -2px; width: 10px; height: 10px; border-radius: 999px; border: 2px solid #fff; }
+.on-av-dot.online { background: #10b981; box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.25); }
+.on-av-dot.away { background: #fbbf24; }
+.on-av-dot.signed_off { background: #cbd5e1; }
+
+/* On phones the pill sits mid-header, so the menu pins to the screen edges. */
+@media (max-width: 640px) {
+  .on-word { display: none; }
+  .on-menu { position: fixed; left: 12px; right: 12px; top: 64px; width: auto; }
+}
