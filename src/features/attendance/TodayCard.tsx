@@ -149,6 +149,17 @@ export function TodayCard({ employeeId, isSelf, isAdmin, employeeName }: TodayCa
           )}
         </span>
       </div>
+      {view.recheckInAt && (
+        <div className="kv" style={{ padding: '5.5px 0', fontSize: 12.5 }}>
+          <b>Re-check-in</b>
+          <span>
+            {view.recheckInAt}
+            <span className="hint" style={{ color: 'var(--muted)', marginLeft: 6 }}>
+              (resumed)
+            </span>
+          </span>
+        </div>
+      )}
       <div className="kv" style={{ padding: '5.5px 0', fontSize: 12.5 }}>
         <b>Check-out</b>
         <span>{view.logoutAt ?? '—'}</span>
