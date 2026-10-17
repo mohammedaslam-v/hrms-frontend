@@ -35,7 +35,9 @@ export function EditApprovedLeaveModal({
   const [toDate, setToDate] = useState<string>(
     leave.toDate ? leave.toDate.slice(0, 10) : '',
   )
-  const [isHalfDay, setIsHalfDay] = useState<boolean>(Boolean(leave.isHalfDay))
+  const [isHalfDay, setIsHalfDay] = useState<boolean>(
+    Boolean(leave.isHalfDay || leave.days === 0.5),
+  )
   const [halfDaySession, setHalfDaySession] = useState<HalfDaySession>(
     leave.halfDaySession || 'first',
   )
@@ -67,11 +69,13 @@ export function EditApprovedLeaveModal({
 
   const calculatedDays = isHalfDay ? 0.5 : preview?.days ?? leave.days
   const isExtending = calculatedDays > leave.days
+  const isZeroDays = Boolean(fromDate && toDate && !isHalfDay && calculatedDays <= 0)
   const daysReduced = Math.round(Math.max(0, leave.days - calculatedDays) * 10) / 10
 
   const canSubmit =
     !submitting &&
     !isExtending &&
+    !isZeroDays &&
     Boolean(fromDate && toDate) &&
     calculatedDays > 0 &&
     adminNote.trim().length >= 3
@@ -101,6 +105,18 @@ export function EditApprovedLeaveModal({
     }
   }
 
+  const submitDisabledReason = !canSubmit
+    ? isZeroDays
+      ? 'Selected date range contains 0 working days'
+      : isExtending
+        ? 'Leave duration cannot exceed original approved days'
+        : adminNote.trim().length < 3
+          ? 'Please enter an admin reason (minimum 3 characters)'
+          : !fromDate || !toDate
+            ? 'From and To dates are required'
+            : undefined
+    : undefined
+
   return (
     <Modal
       title={`Edit Approved Leave — ${leave.ref}`}
@@ -114,6 +130,7 @@ export function EditApprovedLeaveModal({
           type="submit"
           disabled={!canSubmit}
           style={{ minWidth: 140 }}
+          title={submitDisabledReason}
         >
           {submitting ? 'Saving…' : 'Save Changes'}
         </button>
@@ -250,30 +267,43 @@ export function EditApprovedLeaveModal({
       </div>
 
       {/* Live Impact Feedback */}
-      {(isExtending || daysReduced > 0) && (
+      {isExtending ? (
         <div style={{ marginTop: 14 }}>
-          {isExtending ? (
-            <div className="notice bad" role="alert">
-              <strong>⚠️ Cannot extend leave duration</strong>
-              <div style={{ marginTop: 4, fontSize: 12.5 }}>
-                The selected date range results in <b>{calculatedDays} working day(s)</b>, which
-                exceeds the original approved duration of <b>{leave.days} day(s)</b>.
-                <br />
-                If the employee requires additional leave days, they should submit a new leave request.
-              </div>
+          <div className="notice bad" role="alert">
+            <strong>⚠️ Cannot extend leave duration</strong>
+            <div style={{ marginTop: 4, fontSize: 12.5 }}>
+              The selected date range results in <b>{calculatedDays} working day(s)</b>, which
+              exceeds the original approved duration of <b>{leave.days} day(s)</b>.
+              <br />
+              If the employee requires additional leave days, they should submit a new leave request.
             </div>
-          ) : (
-            <div className="notice" style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', color: '#1E40AF' }}>
-              <strong>✅ Duration shortened by {daysReduced} day(s)</strong>
-              <div style={{ marginTop: 4, fontSize: 12.5 }}>
-                New duration: <b>{calculatedDays} day(s)</b> (originally {leave.days} days).
-                <br />
-                <b>{daysReduced} day(s)</b> will be automatically credited back to the employee's available leave balance.
-              </div>
-            </div>
-          )}
+          </div>
         </div>
-      )}
+      ) : isZeroDays ? (
+        <div style={{ marginTop: 14 }}>
+          <div className="notice bad" role="alert">
+            <strong>⚠️ 0 working days in selected range</strong>
+            <div style={{ marginTop: 4, fontSize: 12.5, lineHeight: 1.5 }}>
+              The selected dates contain <b>0 working days</b> (the range falls entirely on a weekly off or holiday). An approved leave cannot have a duration of 0 days.
+              <br />
+              • If this is a half-day leave, change <b>Half day</b> to <b>Yes — half day (0.5 day)</b>.
+              <br />
+              • Otherwise, select dates on working days, or cancel the request if it is no longer required.
+            </div>
+          </div>
+        </div>
+      ) : daysReduced > 0 ? (
+        <div style={{ marginTop: 14 }}>
+          <div className="notice" style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', color: '#1E40AF' }}>
+            <strong>✅ Duration shortened by {daysReduced} day(s)</strong>
+            <div style={{ marginTop: 4, fontSize: 12.5 }}>
+              New duration: <b>{calculatedDays} day(s)</b> (originally {leave.days} days).
+              <br />
+              <b>{daysReduced} day(s)</b> will be automatically credited back to the employee's available leave balance.
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {/* Admin Modification Note */}
       <div className="f" style={{ marginTop: 14 }}>
@@ -282,16 +312,23 @@ export function EditApprovedLeaveModal({
         </label>
         <textarea
           id="editAdminNote"
-          placeholder="State the reason for modifying this approved leave..."
+          placeholder="State the reason for modifying this approved leave (minimum 3 characters)..."
           value={adminNote}
           onChange={(e) => setAdminNote(e.target.value)}
           disabled={submitting}
           required
           rows={3}
         />
-        <span style={{ fontSize: 11.5, color: '#64748B', marginTop: 4 }}>
-          This note is logged in the permanent audit trail and appended to the leave record.
-        </span>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
+          <span style={{ fontSize: 11.5, color: '#64748B' }}>
+            This note is logged in the permanent audit trail and appended to the leave record.
+          </span>
+          {adminNote.length > 0 && adminNote.trim().length < 3 && (
+            <span style={{ fontSize: 11.5, color: '#DC2626', fontWeight: 500 }}>
+              Minimum 3 characters required ({adminNote.trim().length}/3)
+            </span>
+          )}
+        </div>
       </div>
     </Modal>
   )
