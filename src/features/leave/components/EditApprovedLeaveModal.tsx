@@ -68,13 +68,12 @@ export function EditApprovedLeaveModal({
   }, [fromDate, toDate, leaveType, isHalfDay, leave.employeeId])
 
   const calculatedDays = isHalfDay ? 0.5 : preview?.days ?? leave.days
-  const isExtending = calculatedDays > leave.days
-  const isZeroDays = Boolean(fromDate && toDate && !isHalfDay && calculatedDays <= 0)
+  const daysExtended = Math.round(Math.max(0, calculatedDays - leave.days) * 10) / 10
   const daysReduced = Math.round(Math.max(0, leave.days - calculatedDays) * 10) / 10
+  const isZeroDays = Boolean(fromDate && toDate && !isHalfDay && calculatedDays <= 0)
 
   const canSubmit =
     !submitting &&
-    !isExtending &&
     !isZeroDays &&
     Boolean(fromDate && toDate) &&
     calculatedDays > 0 &&
@@ -108,13 +107,11 @@ export function EditApprovedLeaveModal({
   const submitDisabledReason = !canSubmit
     ? isZeroDays
       ? 'Selected date range contains 0 working days'
-      : isExtending
-        ? 'Leave duration cannot exceed original approved days'
-        : adminNote.trim().length < 3
-          ? 'Please enter an admin reason (minimum 3 characters)'
-          : !fromDate || !toDate
-            ? 'From and To dates are required'
-            : undefined
+      : adminNote.trim().length < 3
+        ? 'Please enter an admin reason (minimum 3 characters)'
+        : !fromDate || !toDate
+          ? 'From and To dates are required'
+          : undefined
     : undefined
 
   return (
@@ -267,19 +264,7 @@ export function EditApprovedLeaveModal({
       </div>
 
       {/* Live Impact Feedback */}
-      {isExtending ? (
-        <div style={{ marginTop: 14 }}>
-          <div className="notice bad" role="alert">
-            <strong>⚠️ Cannot extend leave duration</strong>
-            <div style={{ marginTop: 4, fontSize: 12.5 }}>
-              The selected date range results in <b>{calculatedDays} working day(s)</b>, which
-              exceeds the original approved duration of <b>{leave.days} day(s)</b>.
-              <br />
-              If the employee requires additional leave days, they should submit a new leave request.
-            </div>
-          </div>
-        </div>
-      ) : isZeroDays ? (
+      {isZeroDays ? (
         <div style={{ marginTop: 14 }}>
           <div className="notice bad" role="alert">
             <strong>⚠️ 0 working days in selected range</strong>
@@ -289,6 +274,17 @@ export function EditApprovedLeaveModal({
               • If this is a half-day leave, change <b>Half day</b> to <b>Yes — half day (0.5 day)</b>.
               <br />
               • Otherwise, select dates on working days, or cancel the request if it is no longer required.
+            </div>
+          </div>
+        </div>
+      ) : daysExtended > 0 ? (
+        <div style={{ marginTop: 14 }}>
+          <div className="notice" style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', color: '#1E40AF' }}>
+            <strong>ℹ️ Duration extended by {daysExtended} day(s)</strong>
+            <div style={{ marginTop: 4, fontSize: 12.5 }}>
+              New duration: <b>{calculatedDays} day(s)</b> (originally {leave.days} days).
+              <br />
+              The employee's leave balance will be updated accordingly. Any past attendance marked during this period will be automatically removed/soft-deleted.
             </div>
           </div>
         </div>
