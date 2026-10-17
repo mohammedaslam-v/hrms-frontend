@@ -23,6 +23,10 @@ export const attendanceApi = {
   getWeekFor: (employeeId: number) => request<WeekBar[]>(`/attendance/${employeeId}/week`),
   checkIn: () => request<TodayView>('/attendance/me/check-in', { method: 'POST' }),
   checkOut: () => request<TodayView>('/attendance/me/check-out', { method: 'POST' }),
+  checkInFor: (employeeId: number) =>
+    request<TodayView>(`/attendance/${employeeId}/check-in`, { method: 'POST' }),
+  checkOutFor: (employeeId: number) =>
+    request<TodayView>(`/attendance/${employeeId}/check-out`, { method: 'POST' }),
 
   /** Manager / Admin attendance dashboard & reports */
   getTodayBoard: () => request<TodayBoardDto>('/attendance/today-board'),

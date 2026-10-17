@@ -310,7 +310,12 @@ export function MyPage() {
       {view.isSelf && <OnLeaveTodayBanner />}
 
       <div className="grid g3">
-        <TodayCard employeeId={view.employeeId} isSelf={view.isSelf} employeeName={view.fullName} />
+        <TodayCard
+          employeeId={view.employeeId}
+          isSelf={view.isSelf}
+          isAdmin={view.access === 'admin'}
+          employeeName={view.fullName}
+        />
 
         {/* The id is the scroll target when details are what is outstanding;
             the spotlight class is the same one the documents card uses. */}

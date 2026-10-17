@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { attendanceApi } from './attendance.api'
 import { STATUS_CLASS, type TodayView } from './attendance.types'
 import { asHours } from '../../shared/lib/format'
+import { Modal } from '../../shared/ui/Modal'
 
 const minutesOf = (time: string): number => {
   const [h, m] = time.split(':').map(Number)
@@ -11,27 +12,25 @@ const minutesOf = (time: string): number => {
 /**
  * Today — the check-in card.
  *
- * Every employee gets it, whatever their role: this card is always the person's
- * own declaration. Observed portal activity feeds the WEEK chart instead, and
- * never this one, so nothing here is ever inferred on somebody's behalf.
- *
- * The clock ticks in the browser, but it never reads the browser's wall clock.
- * The elapsed span comes from the server (`serverTime` minus `loginAt`), and
- * local time is only ever used to measure how long the page has been open since
- * that reading. A viewer with a wrong clock therefore sees the right number.
+ * Every employee gets it on their own page, and admins can also view/punch
+ * when visiting an employee's dashboard from the team directory.
  */
 interface TodayCardProps {
   employeeId: number
   isSelf: boolean
+  isAdmin?: boolean
   /** First name, for the wording when this is somebody else's day. */
   employeeName: string
 }
 
-export function TodayCard({ employeeId, isSelf, employeeName }: TodayCardProps) {
+export function TodayCard({ employeeId, isSelf, isAdmin, employeeName }: TodayCardProps) {
   const [view, setView] = useState<TodayView | null>(null)
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [showCheckOutConfirm, setShowCheckOutConfirm] = useState(false)
+
+  const canPunch = isSelf || Boolean(isAdmin)
 
   // Elapsed minutes at the moment the server answered, and the local timestamp
   // of that moment. The ref is written and read only in effects and handlers —
@@ -68,17 +67,8 @@ export function TodayCard({ employeeId, isSelf, employeeName }: TodayCardProps) 
     void load()
   }, [load])
 
-  // The clock only runs while a day is open, and restarting it on every tick
-  // would be pointless churn — so the effect keys off whether it should run,
-  // not off the value it produces.
-  // The clock only ticks on your own page. Watching a colleague's minutes count
-  // up in real time is surveillance, not information — a manager sees the same
-  // figures, settled.
-  const isRunning = isSelf && elapsed !== null
+  const isRunning = canPunch && elapsed !== null
 
-  // One minute is the smallest unit the card shows, so that is the interval.
-  // The figure is recomputed from the anchor rather than incremented, so a
-  // throttled background tab catches up instead of quietly falling behind.
   useEffect(() => {
     if (!isRunning) return
     const id = setInterval(() => {
@@ -92,7 +82,13 @@ export function TodayCard({ employeeId, isSelf, employeeName }: TodayCardProps) 
     setBusy(true)
     setError(null)
     try {
-      apply(what === 'in' ? await attendanceApi.checkIn() : await attendanceApi.checkOut())
+      let next: TodayView
+      if (what === 'in') {
+        next = isSelf ? await attendanceApi.checkIn() : await attendanceApi.checkInFor(employeeId)
+      } else {
+        next = isSelf ? await attendanceApi.checkOut() : await attendanceApi.checkOutFor(employeeId)
+      }
+      apply(next)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'That did not go through.')
       // The server refused, so re-read rather than leaving the card guessing.
@@ -124,6 +120,8 @@ export function TodayCard({ employeeId, isSelf, employeeName }: TodayCardProps) 
 
   // Purely derived from state — no clock read and no ref read during render.
   const displayHours = isRunning && elapsed !== null ? elapsed / 60 : view.activeHours
+  const isCheckedIn = Boolean(view.loginAt && !view.logoutAt)
+  const isCheckedOut = Boolean(view.loginAt && view.logoutAt)
 
   return (
     <div className="card top-card">
@@ -168,36 +166,101 @@ export function TodayCard({ employeeId, isSelf, employeeName }: TodayCardProps) 
         </div>
       )}
 
-      {/* Only the person themselves can punch. A manager sees the record; they
-          cannot check somebody in, and there is no endpoint that would let them. */}
-      {!isSelf ? (
+      {!canPunch ? (
         <div className="hint" style={{ marginTop: 'auto', paddingTop: 8 }}>
           {employeeName.split(' ')[0]} records this on their own page.
         </div>
       ) : (
-      <div style={{ marginTop: 'auto', paddingTop: 8 }}>
-        {view.canCheckIn && (
-          <button className="btn success" onClick={() => void act('in')} disabled={busy}>
-            {busy ? 'Recording…' : 'Check in'}
-          </button>
-        )}
-        {view.canCheckOut && (
-          <button
-            className="btn danger"
-            onClick={() => void act('out')}
-            disabled={busy}
-            style={{
-              boxShadow: '0 2px 8px rgba(220, 62, 67, 0.25)',
-              fontWeight: 600,
-            }}
-          >
-            {busy ? 'Recording…' : 'Check out'}
-          </button>
-        )}
-        {!view.canCheckIn && !view.canCheckOut && (
-          <div className="hint">Your day is recorded. Nothing more to do.</div>
-        )}
-      </div>
+        <div style={{ marginTop: 'auto', paddingTop: 10 }}>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              type="button"
+              className="btn success"
+              onClick={() => void act('in')}
+              disabled={busy || isCheckedIn || isCheckedOut}
+              style={{
+                flex: 1,
+                minHeight: 38,
+                fontWeight: 600,
+                opacity: isCheckedIn || isCheckedOut ? 0.45 : 1,
+                cursor: isCheckedIn || isCheckedOut ? 'not-allowed' : 'pointer',
+              }}
+              title={
+                isCheckedIn
+                  ? 'Already checked in'
+                  : isCheckedOut
+                    ? 'Day completed — checked out at ' + view.logoutAt
+                    : 'Check in for today'
+              }
+            >
+              {busy && !isCheckedIn && !isCheckedOut ? 'Recording…' : 'Check in'}
+            </button>
+
+            <button
+              type="button"
+              className="btn danger"
+              onClick={() => setShowCheckOutConfirm(true)}
+              disabled={busy || !isCheckedIn}
+              style={{
+                flex: 1,
+                minHeight: 38,
+                fontWeight: 600,
+                boxShadow: isCheckedIn ? '0 2px 8px rgba(220, 62, 67, 0.25)' : 'none',
+                opacity: !isCheckedIn ? 0.45 : 1,
+                cursor: !isCheckedIn ? 'not-allowed' : 'pointer',
+              }}
+              title={
+                !isCheckedIn && !isCheckedOut
+                  ? 'Please check in first'
+                  : isCheckedOut
+                    ? 'Already checked out'
+                    : 'Check out for today'
+              }
+            >
+              {busy && isCheckedIn ? 'Recording…' : 'Check out'}
+            </button>
+          </div>
+
+          {isCheckedOut && (
+            <div className="hint" style={{ marginTop: 6, fontSize: 12, textAlign: 'center' }}>
+              Checked out for today at {view.logoutAt}.
+            </div>
+          )}
+          {!isSelf && isAdmin && (
+            <div className="hint" style={{ marginTop: 4, fontSize: 11, textAlign: 'center', color: 'var(--muted)' }}>
+              Admin action on behalf of {employeeName.split(' ')[0]}
+            </div>
+          )}
+        </div>
+      )}
+
+      {showCheckOutConfirm && (
+        <Modal
+          title="Confirm Check-out"
+          onClose={() => setShowCheckOutConfirm(false)}
+          busy={busy}
+          maxWidth={420}
+          confirm={
+            <button
+              className="btn danger"
+              type="button"
+              onClick={async () => {
+                setShowCheckOutConfirm(false)
+                await act('out')
+              }}
+              disabled={busy}
+              style={{ fontWeight: 600 }}
+            >
+              {busy ? 'Checking out…' : 'Yes, Check out'}
+            </button>
+          }
+        >
+          <div style={{ fontSize: 14, color: 'var(--text)', lineHeight: 1.5, padding: '8px 0 16px' }}>
+            {isSelf
+              ? 'Are you sure you want to check out for today?'
+              : `Are you sure you want to check out ${employeeName.split(' ')[0]} for today?`}
+          </div>
+        </Modal>
       )}
     </div>
   )
