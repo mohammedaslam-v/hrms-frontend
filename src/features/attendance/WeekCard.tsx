@@ -4,6 +4,7 @@ import { attendanceApi } from './attendance.api'
 import { STATUS_CLASS, type WeekBar } from './attendance.types'
 import { fmtShort } from '../../shared/lib/date'
 import { asHours } from '../../shared/lib/format'
+import { AdminPanelLines, useAdminActivity, type AdminPanelActivity } from '../presence'
 
 /** Days that were never meant to be worked draw as a paler trough. */
 const isOffDay = (bar: WeekBar): boolean =>
@@ -24,7 +25,7 @@ interface Anchor {
  * be clipped by it. Escaping to the body means the box cannot be cut off by an
  * ancestor it knows nothing about.
  */
-function DayDetail({ anchor }: { anchor: Anchor }) {
+function DayDetail({ anchor, admin }: { anchor: Anchor; admin: AdminPanelActivity | null }) {
   const { bar } = anchor
   return createPortal(
     <div className="wbpop" role="tooltip" style={{ left: anchor.x, top: anchor.y }}>
@@ -62,6 +63,10 @@ function DayDetail({ anchor }: { anchor: Anchor }) {
       ) : (
         <div className="wbpop-note">Nothing recorded for this day.</div>
       )}
+
+      {/* Time on the new admin panel, measured separately from the punches.
+          Absent when the viewer is not allowed it, or it failed to load. */}
+      {admin && <AdminPanelLines activity={admin} date={bar.date} isToday={bar.isToday} />}
     </div>,
     document.body,
   )
@@ -88,6 +93,11 @@ export function WeekCard({ employeeId, isSelf }: { employeeId: number; isSelf: b
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [anchor, setAnchor] = useState<Anchor | null>(null)
+  const admin = useAdminActivity(
+    bars?.[0]?.date ?? null,
+    bars?.[bars.length - 1]?.date ?? null,
+    isSelf ? undefined : employeeId,
+  )
 
   const load = useCallback(async () => {
     try {
@@ -169,7 +179,7 @@ export function WeekCard({ employeeId, isSelf }: { employeeId: number; isSelf: b
             ? `${asHours(worked)} so far this week. Hover a day for the detail.`
             : 'No hours recorded yet this week.'}
         </div>
-        {anchor && <DayDetail anchor={anchor} />}
+        {anchor && <DayDetail anchor={anchor} admin={admin} />}
       </>
     )
   }

@@ -2654,3 +2654,16 @@ tr.row:focus-visible { outline: 2px solid var(--blue); outline-offset: -2px; }
   .on-word { display: none; }
   .on-menu { position: fixed; left: 12px; right: 12px; top: 64px; width: auto; }
 }
+
+/* Admin-panel part of the week chart's hover box (features/presence). */
+.wbpop-admin {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line2);
+}
+.wbpop-admin .wbpop-source { margin-top: 0; }
+.wbpop-admin-total { font-size: 15px; font-weight: 600; }
+.wbpop-now { font-size: 12px; color: var(--muted2); }
+.wbpop-now.is-online { color: #047857; font-weight: 600; }

@@ -1,5 +1,5 @@
 import { request } from '../../shared/api/client'
-import type { PresenceSummary } from './presence.types'
+import type { AdminPanelActivity, PresenceSummary } from './presence.types'
 
 export const presenceApi = {
   /**
@@ -7,4 +7,11 @@ export const presenceApi = {
    * your team, or everyone, from your tiers.
    */
   online: () => request<PresenceSummary>('/presence/online'),
+
+  /** Time on the admin panel per day. Omit employeeId for your own. */
+  days: (from: string, to: string, employeeId?: number) => {
+    const q = new URLSearchParams({ from, to })
+    if (employeeId) q.set('employeeId', String(employeeId))
+    return request<AdminPanelActivity>(`/presence/days?${q.toString()}`)
+  },
 }
