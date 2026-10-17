@@ -177,23 +177,23 @@ export function TodayCard({ employeeId, isSelf, isAdmin, employeeName }: TodayCa
               type="button"
               className="btn success"
               onClick={() => void act('in')}
-              disabled={busy || isCheckedIn || isCheckedOut}
+              disabled={busy || isCheckedIn}
               style={{
                 flex: 1,
                 minHeight: 38,
                 fontWeight: 600,
-                opacity: isCheckedIn || isCheckedOut ? 0.45 : 1,
-                cursor: isCheckedIn || isCheckedOut ? 'not-allowed' : 'pointer',
+                opacity: isCheckedIn ? 0.45 : 1,
+                cursor: isCheckedIn ? 'not-allowed' : 'pointer',
               }}
               title={
                 isCheckedIn
                   ? 'Already checked in'
                   : isCheckedOut
-                    ? 'Day completed — checked out at ' + view.logoutAt
+                    ? 'Check in again'
                     : 'Check in for today'
               }
             >
-              {busy && !isCheckedIn && !isCheckedOut ? 'Recording…' : 'Check in'}
+              {busy && !isCheckedIn ? 'Recording…' : isCheckedOut ? 'Check in' : 'Check in'}
             </button>
 
             <button
@@ -210,18 +210,18 @@ export function TodayCard({ employeeId, isSelf, isAdmin, employeeName }: TodayCa
                 cursor: !isCheckedIn ? 'not-allowed' : 'pointer',
               }}
               title={
-                !isCheckedIn && !isCheckedOut
-                  ? 'Please check in first'
-                  : isCheckedOut
-                    ? 'Already checked out'
-                    : 'Check out for today'
+                !isCheckedIn
+                  ? isCheckedOut
+                    ? 'Please check in again to check out'
+                    : 'Please check in first'
+                  : 'Check out for today'
               }
             >
               {busy && isCheckedIn ? 'Recording…' : 'Check out'}
             </button>
           </div>
 
-          {isCheckedOut && (
+          {isCheckedOut && !isCheckedIn && (
             <div className="hint" style={{ marginTop: 6, fontSize: 12, textAlign: 'center' }}>
               Checked out for today at {view.logoutAt}.
             </div>
