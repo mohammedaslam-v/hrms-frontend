@@ -3,6 +3,7 @@ import { attendanceApi } from './attendance.api'
 import { STATUS_CLASS, type TodayView } from './attendance.types'
 import { asHours } from '../../shared/lib/format'
 import { Modal } from '../../shared/ui/Modal'
+import { AddActivityButton } from '../work-activity'
 
 const minutesOf = (time: string): number => {
   const [h, m] = time.split(':').map(Number)
@@ -125,7 +126,10 @@ export function TodayCard({ employeeId, isSelf, isAdmin, employeeName }: TodayCa
 
   return (
     <div className="card top-card">
-      <h3 style={{ margin: 0, marginBottom: 8 }}>Today</h3>
+      <div className="today-head">
+        <h3 style={{ margin: 0 }}>Today</h3>
+        {isSelf && <AddActivityButton today={view.date} />}
+      </div>
 
       <div className="clock" style={{ fontSize: 32, marginBottom: 2 }}>{asHours(displayHours)}</div>
       <div className="eyebrow" style={{ marginBottom: 10 }}>

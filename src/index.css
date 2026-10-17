@@ -2667,3 +2667,33 @@ tr.row:focus-visible { outline: 2px solid var(--blue); outline-offset: -2px; }
 .wbpop-admin-total { font-size: 15px; font-weight: 600; }
 .wbpop-now { font-size: 12px; color: var(--muted2); }
 .wbpop-now.is-online { color: #047857; font-weight: 600; }
+
+/* Today card header with the + Add activity button (features/work-activity). */
+.today-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+
+/* Week chart: compact hover summary + full-day window (attendance/DayDetail). */
+.wbpop { width: 290px; max-width: calc(100vw - 24px); }
+.wbpop-rows { display: flex; flex-direction: column; gap: 6px; padding-top: 8px; border-top: 1px solid var(--line2); }
+.wbpop-row { display: grid; grid-template-columns: 82px 58px minmax(0, 1fr); align-items: baseline; gap: 6px; font-size: 12px; }
+.wbpop-row span { color: var(--muted2); }
+.wbpop-row b { font-weight: 600; font-variant-numeric: tabular-nums; color: var(--ink); }
+.wbpop-row em { font-style: normal; color: var(--muted2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wbpop-row em.is-live { color: #047857; font-weight: 600; }
+.wbpop-more { font-size: 11px; color: var(--blue); }
+.wb { cursor: pointer; }
+
+.dd-summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 12px 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; margin-bottom: 16px; }
+.dd-total { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; }
+.dd-part { font-size: 16px; font-weight: 600; font-variant-numeric: tabular-nums; padding-top: 4px; }
+.dd-label { font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
+.dd-sec { padding: 12px 0; border-top: 1px solid var(--line2); }
+.dd-sec h4 { margin: 0 0 8px; font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.dd-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.dd-time { font-size: 13.5px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--ink); }
+.dd-act-head { display: flex; align-items: center; gap: 8px; }
+.dd-note { margin: 4px 0 0; font-size: 13px; color: var(--ink2); line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
+.dd-empty { margin: 0; font-size: 12.5px; color: var(--muted2); }
+.dd-sec .wbpop-admin { padding-top: 0; border-top: 0; }
+@media (max-width: 640px) { .dd-summary { padding: 10px; } .dd-total { font-size: 19px; } }
+.dd-del { margin-left: auto; border: 0; background: none; color: var(--red); font-size: 12px; font-weight: 600; cursor: pointer; padding: 2px 4px; }
+.dd-del:disabled { color: var(--muted); cursor: default; }

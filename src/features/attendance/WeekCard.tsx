@@ -1,75 +1,21 @@
 import { useCallback, useEffect, useState } from 'react'
-import { createPortal } from 'react-dom'
 import { attendanceApi } from './attendance.api'
-import { STATUS_CLASS, type WeekBar } from './attendance.types'
+import { type WeekBar } from './attendance.types'
+import { DayDetailModal, DayPopover } from './DayDetail'
 import { fmtShort } from '../../shared/lib/date'
 import { asHours } from '../../shared/lib/format'
-import { AdminPanelLines, useAdminActivity, type AdminPanelActivity } from '../presence'
+import { useAdminActivity } from '../presence'
+import { useWorkActivities } from '../work-activity'
 
 /** Days that were never meant to be worked draw as a paler trough. */
 const isOffDay = (bar: WeekBar): boolean =>
   bar.status === 'Weekly off' || bar.status === 'Holiday' || bar.status === 'Leave'
 
-/** Where the box should sit: centred over the bar it belongs to. */
+/** Where the hover box should sit: centred over the bar it belongs to. */
 interface Anchor {
   bar: WeekBar
   x: number
   y: number
-}
-
-/**
- * The detail behind one bar.
- *
- * Rendered into `document.body` and positioned with `fixed`, because the chart
- * scrolls sideways on a narrow screen and anything inside that container would
- * be clipped by it. Escaping to the body means the box cannot be cut off by an
- * ancestor it knows nothing about.
- */
-function DayDetail({ anchor, admin }: { anchor: Anchor; admin: AdminPanelActivity | null }) {
-  const { bar } = anchor
-  return createPortal(
-    <div className="wbpop" role="tooltip" style={{ left: anchor.x, top: anchor.y }}>
-      <div className="wbpop-head">
-        <b>
-          {bar.dayName} {fmtShort(bar.date)}
-        </b>
-        <span className={`chip ${STATUS_CLASS[bar.status]}`}>{bar.status}</span>
-      </div>
-
-      {bar.segments.length > 0 ? (
-        <>
-          <div className="wbpop-total">{asHours(bar.hours)} active</div>
-          {/* Which record this came from. A day is not always measured the same
-              way as the day before it — a role added to the activity list
-              midweek leaves declared days behind it and observed days ahead. */}
-          <div className="wbpop-source">
-            {bar.source === 'activity' ? 'From admin-portal activity' : 'From check-in and check-out'}
-          </div>
-          <div className="wbpop-runs">
-            {bar.segments.map((run) => (
-              <span key={run.from}>
-                {run.from} – {run.to ?? 'still in'}
-              </span>
-            ))}
-          </div>
-          {/* The gaps are the reason this box exists, so name them rather than
-              leaving the reader to subtract the ranges from the total. */}
-          {bar.segments.length > 1 && (
-            <div className="wbpop-note">
-              {bar.segments.length - 1} break{bar.segments.length > 2 ? 's' : ''} in between
-            </div>
-          )}
-        </>
-      ) : (
-        <div className="wbpop-note">Nothing recorded for this day.</div>
-      )}
-
-      {/* Time on the new admin panel, measured separately from the punches.
-          Absent when the viewer is not allowed it, or it failed to load. */}
-      {admin && <AdminPanelLines activity={admin} date={bar.date} isToday={bar.isToday} />}
-    </div>,
-    document.body,
-  )
 }
 
 /**
@@ -83,8 +29,9 @@ function DayDetail({ anchor, admin }: { anchor: Anchor; admin: AdminPanelActivit
  * whose longest day was four hours would draw a full-height bar and read like a
  * normal week.
  *
- * Hovering or tabbing to a bar opens the detail behind it — when the person was
- * working and when they were not. Who may open somebody else's week is decided
+ * Hovering or tabbing to a bar shows a short summary; clicking it (or Enter)
+ * opens the whole day in a window — every stretch, every recorded activity and
+ * the admin panel. Who may open somebody else's week is decided
  * by the API against the reporting tree, so the same box is available to the
  * employee, to their manager and to an admin, and to nobody else.
  */
@@ -93,7 +40,13 @@ export function WeekCard({ employeeId, isSelf }: { employeeId: number; isSelf: b
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [anchor, setAnchor] = useState<Anchor | null>(null)
+  const [selected, setSelected] = useState<WeekBar | null>(null)
   const admin = useAdminActivity(
+    bars?.[0]?.date ?? null,
+    bars?.[bars.length - 1]?.date ?? null,
+    isSelf ? undefined : employeeId,
+  )
+  const { range: recorded } = useWorkActivities(
     bars?.[0]?.date ?? null,
     bars?.[bars.length - 1]?.date ?? null,
     isSelf ? undefined : employeeId,
@@ -138,6 +91,13 @@ export function WeekCard({ employeeId, isSelf }: { employeeId: number; isSelf: b
     setAnchor({ bar, x: box.left + box.width / 2, y: box.top - 10 })
   }
 
+  const activitiesOn = (date: string) => recorded?.activities.filter((a) => a.date === date) ?? []
+
+  const openDetail = (bar: WeekBar) => {
+    setAnchor(null)
+    setSelected(bar)
+  }
+
   const body = () => {
     if (loading) return <div className="empty">Loading…</div>
     if (error || !bars) {
@@ -166,6 +126,13 @@ export function WeekCard({ employeeId, isSelf }: { employeeId: number; isSelf: b
               onMouseLeave={() => setAnchor(null)}
               onFocus={(e) => open(bar, e.currentTarget)}
               onBlur={() => setAnchor(null)}
+              onClick={() => openDetail(bar)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  openDetail(bar)
+                }
+              }}
             >
               <div className="col">
                 <i style={{ height: `${bar.percent}%` }} />
@@ -176,10 +143,27 @@ export function WeekCard({ employeeId, isSelf }: { employeeId: number; isSelf: b
         </div>
         <div className="hint mt8">
           {worked > 0
-            ? `${asHours(worked)} so far this week. Hover a day for the detail.`
+            ? `${asHours(worked)} so far this week. Hover a day for a summary, click for the full detail.`
             : 'No hours recorded yet this week.'}
         </div>
-        {anchor && <DayDetail anchor={anchor} admin={admin} />}
+        {anchor && !selected && (
+          <DayPopover
+            x={anchor.x}
+            y={anchor.y}
+            bar={anchor.bar}
+            admin={admin}
+            activities={activitiesOn(anchor.bar.date)}
+          />
+        )}
+        {selected && (
+          <DayDetailModal
+            bar={selected}
+            admin={admin}
+            activities={activitiesOn(selected.date)}
+            canDelete={Boolean(recorded?.canEdit && recorded.editableDates.includes(selected.date))}
+            onClose={() => setSelected(null)}
+          />
+        )}
       </>
     )
   }

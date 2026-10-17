@@ -1,4 +1,5 @@
 export { OnlineNow } from './OnlineNow'
 export { AdminPanelLines } from './AdminPanelLines'
 export { useAdminActivity } from './useAdminActivity'
+export { adminDaySummary } from './admin-day-summary'
 export type { AdminPanelActivity } from './presence.types'

@@ -11,7 +11,7 @@ export const ONLINE_REFRESH_MS = 60 * 1000
  * while the tab is visible; a failed read keeps the last list and tries again
  * on the next tick.
  *
- * A 403 means this account is not allowed the list (it is a pilot for now):
+ * A 403 means this account is not allowed the list:
  * `forbidden` turns on and polling stops, rather than asking again every minute.
  */
 export function useOnlineSummary(everyMs = ONLINE_REFRESH_MS) {

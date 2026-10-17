@@ -2,8 +2,8 @@ import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { PageHero } from '../../../shared/ui/PageHero';
 import { useAuth } from '../../../app/auth-context';
 import { reportsApi } from '../api/reports.api';
-import { employeesApi } from '../../employees/employees.api';
-import type { Employee } from '../../employees/employee.types';
+import { teamApi, type DirectoryMember } from '../../team';
+import { SearchableDropdown, type SearchableDropdownOption } from '../../../shared/ui/SearchableDropdown';
 import type {
   ReportFilterDto,
   ReportResult,
@@ -102,6 +102,12 @@ export const ReportsCenterPage: React.FC = () => {
     return true;
   }, [isManager, isAdmin, catalog]);
 
+  // The activity log is admins only; the server refuses anyone else too.
+  const canViewActivityLog = useMemo(
+    () => isAdmin && (catalog.length === 0 || catalog.some((item) => item.type === 'activity_log')),
+    [isAdmin, catalog],
+  );
+
   const [selectedType, setSelectedType] = useState<ReportType>('attendance');
   const [period, setPeriod] = useState<'daily' | 'weekly' | 'monthly' | 'range' | 'fytd'>('monthly');
 
@@ -110,7 +116,10 @@ export const ReportsCenterPage: React.FC = () => {
     if (!canViewPayroll && PAYROLL_REPORT_TYPES.has(selectedType)) {
       setSelectedType('attendance');
     }
-  }, [canViewPayroll, selectedType]);
+    if (!canViewActivityLog && selectedType === 'activity_log') {
+      setSelectedType('attendance');
+    }
+  }, [canViewPayroll, canViewActivityLog, selectedType]);
 
   // Dates
   const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
@@ -129,50 +138,63 @@ export const ReportsCenterPage: React.FC = () => {
   const [department, setDepartment] = useState<string>('');
   const [employeeId, setEmployeeId] = useState<string>('');
 
-  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [employees, setEmployees] = useState<DirectoryMember[]>([]);
   const [loadingData, setLoadingData] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [reportResult, setReportResult] = useState<ReportResult | null>(null);
   const [rowSearch, setRowSearch] = useState('');
 
-  // Load employee list for dropdown
+  // The people this viewer may report on, from the same roster as the Team
+  // page: the whole company for an admin, their reporting tree for a manager.
+  // (It used to read GET /employees, an old table that is not hrms_employees,
+  // which left this list empty and the departments a made-up fallback.)
   useEffect(() => {
-    async function loadEmployees() {
-      try {
-        const emps = await employeesApi.list();
-        setEmployees(emps || []);
-      } catch (err) {
-        // Non-blocking fallback
-      }
-    }
-    loadEmployees();
+    teamApi
+      .getDirectory()
+      .then((view) => setEmployees(view.members ?? []))
+      .catch(() => setEmployees([]));
   }, []);
 
-  // Filter ONLY active employees for the selection dropdown
-  const activeEmployees = useMemo(() => {
-    return employees.filter((emp) => emp.status !== 'inactive');
-  }, [employees]);
+  // Active people only (the directory's default), narrowed to the chosen
+  // department so the two dropdowns agree.
+  const activeEmployees = useMemo(
+    () => (department ? employees.filter((e) => e.department === department) : employees),
+    [employees, department],
+  );
 
-  // Department options derived from active employees list or standard list
+  // A person picked before the department changed may no longer be in it.
+  useEffect(() => {
+    if (employeeId && !activeEmployees.some((e) => String(e.id) === employeeId)) {
+      // oxlint-disable-next-line react/set-state-in-effect
+      setEmployeeId('');
+    }
+  }, [activeEmployees, employeeId]);
+
+  // Names only, as on Team goals: the role and department underneath tell two
+  // people with the same name apart without showing the employee code.
+  const employeeOptions = useMemo<SearchableDropdownOption[]>(
+    () => [
+      { value: '', label: 'Everyone in scope' },
+      ...[...activeEmployees]
+        .sort((a, b) => a.fullName.localeCompare(b.fullName))
+        .map((e) => ({
+          value: String(e.id),
+          label: e.fullName,
+          subLabel: [e.designation, e.department].filter(Boolean).join(' · ') || null,
+        })),
+    ],
+    [activeEmployees],
+  );
+
+  // Real departments only, from the roster.
   const departments = useMemo(() => {
     const set = new Set<string>();
-    activeEmployees.forEach((e) => {
+    employees.forEach((e) => {
       if (e.department) set.add(e.department);
     });
-    if (set.size === 0) {
-      return [
-        'Engineering',
-        'Curriculum',
-        'Operations',
-        'Marketing',
-        'Sales',
-        'Human Resources',
-        'Finance',
-      ];
-    }
     return Array.from(set).sort();
-  }, [activeEmployees]);
+  }, [employees]);
 
   // Compute period label
   const periodLabel = useMemo(() => {
@@ -380,6 +402,9 @@ export const ReportsCenterPage: React.FC = () => {
                   <option value="late">Late logins</option>
                   <option value="nologin">No login activity</option>
                   <option value="active">Daily active hours</option>
+                  {canViewActivityLog && (
+                    <option value="activity_log">Activity log — check-in, activities, admin panel</option>
+                  )}
                 </optgroup>
                 {canViewPayroll && (
                   <optgroup label="Payroll">
@@ -539,18 +564,14 @@ export const ReportsCenterPage: React.FC = () => {
 
             <div className="f">
               <label>Employee</label>
-              <select
+              <SearchableDropdown
                 id="rpEmp"
                 value={employeeId}
-                onChange={(e) => setEmployeeId(e.target.value)}
-              >
-                <option value="">Everyone in scope</option>
-                {activeEmployees.map((emp) => (
-                  <option key={emp.id} value={emp.id}>
-                    {emp.employeeCode} · {emp.firstName} {emp.lastName}
-                  </option>
-                ))}
-              </select>
+                onChange={setEmployeeId}
+                options={employeeOptions}
+                placeholder="Everyone in scope"
+                searchPlaceholder="Search by name"
+              />
             </div>
           </div>
 
