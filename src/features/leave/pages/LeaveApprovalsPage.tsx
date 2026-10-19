@@ -20,10 +20,12 @@ const STATUS_CLASS: Record<LeaveStatus, string> = {
 }
 
 type Tab = 'pending' | 'balances' | 'log'
+type StatusFilter = 'all' | 'requested' | 'approved' | 'rejected'
 
 export function LeaveApprovalsPage() {
   const [view, setView] = useState<ApprovalsView | null>(null)
   const [tab, setTab] = useState<Tab>('pending')
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
@@ -93,7 +95,16 @@ export function LeaveApprovalsPage() {
   }, [view?.balances, q])
 
   const filteredLog = useMemo(() => {
-    const list = view?.log ?? []
+    let list = view?.log ?? []
+    if (statusFilter !== 'all') {
+      list = list.filter((r) => {
+        const s = (r.status ?? '').toLowerCase()
+        if (statusFilter === 'requested') return s === 'pending' || s === 'requested'
+        if (statusFilter === 'approved') return s === 'approved'
+        if (statusFilter === 'rejected') return s === 'rejected'
+        return true
+      })
+    }
     if (!q) return list
     return list.filter(
       (r) =>
@@ -101,7 +112,7 @@ export function LeaveApprovalsPage() {
         r.ref.toLowerCase().includes(q) ||
         (r.reason && r.reason.toLowerCase().includes(q)),
     )
-  }, [view?.log, q])
+  }, [view?.log, statusFilter, q])
 
   // Called before the early returns below — hooks cannot sit behind a branch.
   const pendingPage = usePage(filteredPending)
@@ -164,70 +175,115 @@ export function LeaveApprovalsPage() {
           </button>
         </div>
 
-        {/* Search Field on extreme right */}
-        <div style={{ position: 'relative', width: 260, maxWidth: '100%', flexShrink: 0 }}>
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="var(--muted2, #64748b)"
-            strokeWidth="2.2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            style={{
-              position: 'absolute',
-              left: 11,
-              top: '50%',
-              transform: 'translateY(-50%)',
-              pointerEvents: 'none',
-            }}
-          >
-            <circle cx="11" cy="11" r="8" />
-            <line x1="21" y1="21" x2="16.65" y2="16.65" />
-          </svg>
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by name..."
-            aria-label="Search by name"
-            style={{
-              width: '100%',
-              padding: '7px 28px 7px 32px',
-              borderRadius: 99,
-              border: '1px solid var(--line, #e2e8f0)',
-              backgroundColor: '#fff',
-              fontSize: 13,
-              fontFamily: "'Inter', sans-serif",
-              outline: 'none',
-              boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
-              color: 'var(--ink, #0f172a)',
-            }}
-          />
-          {search && (
-            <button
-              type="button"
-              onClick={() => setSearch('')}
-              aria-label="Clear search"
-              title="Clear search"
+        {/* Search & Filter Controls */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          {tab === 'log' && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <label
+                htmlFor="statusFilter"
+                style={{
+                  fontSize: 13,
+                  fontWeight: 500,
+                  color: 'var(--muted2, #64748b)',
+                  margin: 0,
+                  textTransform: 'none',
+                  letterSpacing: 'normal',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                Status:
+              </label>
+              <select
+                id="statusFilter"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
+                style={{
+                  height: 34,
+                  padding: '0 28px 0 12px',
+                  borderRadius: 99,
+                  border: '1px solid var(--line, #e2e8f0)',
+                  backgroundColor: '#fff',
+                  fontSize: 13,
+                  fontFamily: "'Inter', sans-serif",
+                  outline: 'none',
+                  color: 'var(--ink, #0f172a)',
+                  cursor: 'pointer',
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+                }}
+              >
+                <option value="all">All</option>
+                <option value="requested">Requested</option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Rejected</option>
+              </select>
+            </div>
+          )}
+
+          {/* Search Field on extreme right */}
+          <div style={{ position: 'relative', width: 260, maxWidth: '100%', flexShrink: 0 }}>
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="var(--muted2, #64748b)"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
               style={{
                 position: 'absolute',
-                right: 8,
+                left: 11,
                 top: '50%',
                 transform: 'translateY(-50%)',
-                border: 'none',
-                background: 'transparent',
-                color: 'var(--muted, #94a3b8)',
-                cursor: 'pointer',
-                fontSize: 16,
-                lineHeight: 1,
-                padding: '2px 4px',
+                pointerEvents: 'none',
               }}
             >
-              ✕
-            </button>
-          )}
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search by name..."
+              aria-label="Search by name"
+              style={{
+                width: '100%',
+                padding: '7px 28px 7px 32px',
+                borderRadius: 99,
+                border: '1px solid var(--line, #e2e8f0)',
+                backgroundColor: '#fff',
+                fontSize: 13,
+                fontFamily: "'Inter', sans-serif",
+                outline: 'none',
+                boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+                color: 'var(--ink, #0f172a)',
+              }}
+            />
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch('')}
+                aria-label="Clear search"
+                title="Clear search"
+                style={{
+                  position: 'absolute',
+                  right: 8,
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  border: 'none',
+                  background: 'transparent',
+                  color: 'var(--muted, #94a3b8)',
+                  cursor: 'pointer',
+                  fontSize: 16,
+                  lineHeight: 1,
+                  padding: '2px 4px',
+                }}
+              >
+                ✕
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -538,7 +594,33 @@ export function LeaveApprovalsPage() {
 
       {tab === 'log' && (
         <div className="card">
-          <h3>All requests</h3>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: 16,
+              flexWrap: 'wrap',
+              gap: 12,
+            }}
+          >
+            <h3 style={{ margin: 0 }}>
+              All requests
+              {filteredLog.length !== (view?.log ?? []).length && (
+                <span
+                  className="sub"
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 400,
+                    color: 'var(--muted2, #64748b)',
+                    marginLeft: 8,
+                  }}
+                >
+                  · {filteredLog.length} of {(view?.log ?? []).length} shown
+                </span>
+              )}
+            </h3>
+          </div>
           <div className="scroll">
             <table>
               <thead>
@@ -559,7 +641,12 @@ export function LeaveApprovalsPage() {
                 {filteredLog.length === 0 ? (
                   <tr>
                     <td colSpan={view.isAdmin ? 10 : 9}>
-                      <div className="empty">{q ? `No requests match "${search}".` : 'No requests this year.'}</div>
+                      <div className="empty">
+                        <b>{q || statusFilter !== 'all' ? 'No matching requests' : 'No requests this year.'}</b>
+                        {q || statusFilter !== 'all'
+                          ? `No requests match the selected filters. Try clearing the search or changing the status filter.`
+                          : 'Decided requests move to the All requests tab.'}
+                      </div>
                     </td>
                   </tr>
                 ) : (
