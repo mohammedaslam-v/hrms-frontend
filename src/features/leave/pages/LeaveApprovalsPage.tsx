@@ -26,6 +26,7 @@ export function LeaveApprovalsPage() {
   const [view, setView] = useState<ApprovalsView | null>(null)
   const [tab, setTab] = useState<Tab>('pending')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
+  const [dateFilter, setDateFilter] = useState<string>('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
@@ -105,6 +106,15 @@ export function LeaveApprovalsPage() {
         return true
       })
     }
+    if (dateFilter) {
+      list = list.filter((r) => {
+        const from = (r.fromDate ?? '').slice(0, 10)
+        const to = (r.toDate ?? r.fromDate ?? '').slice(0, 10)
+        const minDate = from <= to ? from : to
+        const maxDate = from <= to ? to : from
+        return minDate <= dateFilter && maxDate >= dateFilter
+      })
+    }
     if (!q) return list
     return list.filter(
       (r) =>
@@ -112,7 +122,7 @@ export function LeaveApprovalsPage() {
         r.ref.toLowerCase().includes(q) ||
         (r.reason && r.reason.toLowerCase().includes(q)),
     )
-  }, [view?.log, statusFilter, q])
+  }, [view?.log, statusFilter, dateFilter, q])
 
   // Called before the early returns below — hooks cannot sit behind a branch.
   const pendingPage = usePage(filteredPending)
@@ -178,45 +188,110 @@ export function LeaveApprovalsPage() {
         {/* Search & Filter Controls */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
           {tab === 'log' && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <label
-                htmlFor="statusFilter"
-                style={{
-                  fontSize: 13,
-                  fontWeight: 500,
-                  color: 'var(--muted2, #64748b)',
-                  margin: 0,
-                  textTransform: 'none',
-                  letterSpacing: 'normal',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                Status:
-              </label>
-              <select
-                id="statusFilter"
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
-                style={{
-                  height: 34,
-                  padding: '0 28px 0 12px',
-                  borderRadius: 99,
-                  border: '1px solid var(--line, #e2e8f0)',
-                  backgroundColor: '#fff',
-                  fontSize: 13,
-                  fontFamily: "'Inter', sans-serif",
-                  outline: 'none',
-                  color: 'var(--ink, #0f172a)',
-                  cursor: 'pointer',
-                  boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
-                }}
-              >
-                <option value="all">All</option>
-                <option value="requested">Requested</option>
-                <option value="approved">Approved</option>
-                <option value="rejected">Rejected</option>
-              </select>
-            </div>
+            <>
+              {/* Status Filter */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <label
+                  htmlFor="statusFilter"
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 500,
+                    color: 'var(--muted2, #64748b)',
+                    margin: 0,
+                    textTransform: 'none',
+                    letterSpacing: 'normal',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  Status:
+                </label>
+                <select
+                  id="statusFilter"
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
+                  style={{
+                    height: 34,
+                    padding: '0 28px 0 12px',
+                    borderRadius: 99,
+                    border: '1px solid var(--line, #e2e8f0)',
+                    backgroundColor: '#fff',
+                    fontSize: 13,
+                    fontFamily: "'Inter', sans-serif",
+                    outline: 'none',
+                    color: 'var(--ink, #0f172a)',
+                    cursor: 'pointer',
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+                  }}
+                >
+                  <option value="all">All</option>
+                  <option value="requested">Requested</option>
+                  <option value="approved">Approved</option>
+                  <option value="rejected">Rejected</option>
+                </select>
+              </div>
+
+              {/* Date Filter */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <label
+                  htmlFor="dateFilter"
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 500,
+                    color: 'var(--muted2, #64748b)',
+                    margin: 0,
+                    textTransform: 'none',
+                    letterSpacing: 'normal',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  Date:
+                </label>
+                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                  <input
+                    id="dateFilter"
+                    type="date"
+                    value={dateFilter}
+                    onChange={(e) => setDateFilter(e.target.value)}
+                    style={{
+                      height: 34,
+                      padding: dateFilter ? '0 26px 0 12px' : '0 12px',
+                      borderRadius: 99,
+                      border: '1px solid var(--line, #e2e8f0)',
+                      backgroundColor: '#fff',
+                      fontSize: 13,
+                      fontFamily: "'Inter', sans-serif",
+                      outline: 'none',
+                      color: 'var(--ink, #0f172a)',
+                      boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+                      cursor: 'pointer',
+                    }}
+                  />
+                  {dateFilter && (
+                    <button
+                      type="button"
+                      onClick={() => setDateFilter('')}
+                      aria-label="Clear date filter"
+                      title="Clear date"
+                      style={{
+                        position: 'absolute',
+                        right: 6,
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        border: 'none',
+                        background: 'transparent',
+                        color: 'var(--muted, #94a3b8)',
+                        cursor: 'pointer',
+                        fontSize: 14,
+                        lineHeight: 1,
+                        padding: '2px 4px',
+                      }}
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+              </div>
+            </>
           )}
 
           {/* Search Field on extreme right */}
@@ -642,9 +717,9 @@ export function LeaveApprovalsPage() {
                   <tr>
                     <td colSpan={view.isAdmin ? 10 : 9}>
                       <div className="empty">
-                        <b>{q || statusFilter !== 'all' ? 'No matching requests' : 'No requests this year.'}</b>
-                        {q || statusFilter !== 'all'
-                          ? `No requests match the selected filters. Try clearing the search or changing the status filter.`
+                        <b>{q || statusFilter !== 'all' || dateFilter ? 'No matching requests' : 'No requests this year.'}</b>
+                        {q || statusFilter !== 'all' || dateFilter
+                          ? `No requests match the selected filters. Try clearing the search or changing the date/status filter.`
                           : 'Decided requests move to the All requests tab.'}
                       </div>
                     </td>
