@@ -12,6 +12,8 @@ import {
 } from '../leave.types'
 import { fmtShort } from '../../../shared/lib/date'
 
+import { CustomSelect, type CustomSelectOption } from '../../../shared/ui/CustomSelect'
+
 const STATUS_CLASS: Record<LeaveStatus, string> = {
   Approved: 'c-in',
   Pending: 'c-pend',
@@ -21,6 +23,13 @@ const STATUS_CLASS: Record<LeaveStatus, string> = {
 
 type Tab = 'pending' | 'balances' | 'log'
 type StatusFilter = 'all' | 'requested' | 'approved' | 'rejected'
+
+const STATUS_OPTIONS: CustomSelectOption<StatusFilter>[] = [
+  { value: 'all', label: 'All Statuses', dotColor: '#94a3b8' },
+  { value: 'requested', label: 'Requested', dotColor: '#f59e0b' },
+  { value: 'approved', label: 'Approved', dotColor: '#10b981' },
+  { value: 'rejected', label: 'Rejected', dotColor: '#ef4444' },
+]
 
 export function LeaveApprovalsPage() {
   const [view, setView] = useState<ApprovalsView | null>(null)
@@ -205,29 +214,16 @@ export function LeaveApprovalsPage() {
                 >
                   Status:
                 </label>
-                <select
+                <CustomSelect
                   id="statusFilter"
+                  ariaLabel="Filter by status"
                   value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
-                  style={{
-                    height: 34,
-                    padding: '0 28px 0 12px',
-                    borderRadius: 99,
-                    border: '1px solid var(--line, #e2e8f0)',
-                    backgroundColor: '#fff',
-                    fontSize: 13,
-                    fontFamily: "'Inter', sans-serif",
-                    outline: 'none',
-                    color: 'var(--ink, #0f172a)',
-                    cursor: 'pointer',
-                    boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
-                  }}
-                >
-                  <option value="all">All</option>
-                  <option value="requested">Requested</option>
-                  <option value="approved">Approved</option>
-                  <option value="rejected">Rejected</option>
-                </select>
+                  onChange={(val) => setStatusFilter(val)}
+                  options={STATUS_OPTIONS}
+                  variant="pill"
+                  size="md"
+                  minWidth={135}
+                />
               </div>
 
               {/* Date Filter */}
@@ -247,6 +243,27 @@ export function LeaveApprovalsPage() {
                   Date:
                 </label>
                 <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                  <svg
+                    width="13"
+                    height="13"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="var(--muted, #94a3b8)"
+                    strokeWidth="2.2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    style={{
+                      position: 'absolute',
+                      left: 11,
+                      pointerEvents: 'none',
+                      zIndex: 1,
+                    }}
+                  >
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                    <line x1="16" y1="2" x2="16" y2="6" />
+                    <line x1="8" y1="2" x2="8" y2="6" />
+                    <line x1="3" y1="10" x2="21" y2="10" />
+                  </svg>
                   <input
                     id="dateFilter"
                     type="date"
@@ -254,16 +271,25 @@ export function LeaveApprovalsPage() {
                     onChange={(e) => setDateFilter(e.target.value)}
                     style={{
                       height: 34,
-                      padding: dateFilter ? '0 26px 0 12px' : '0 12px',
+                      padding: dateFilter ? '0 28px 0 30px' : '0 12px 0 30px',
                       borderRadius: 99,
                       border: '1px solid var(--line, #e2e8f0)',
                       backgroundColor: '#fff',
                       fontSize: 13,
                       fontFamily: "'Inter', sans-serif",
                       outline: 'none',
-                      color: 'var(--ink, #0f172a)',
-                      boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+                      color: dateFilter ? 'var(--ink, #0f172a)' : 'var(--muted, #94a3b8)',
+                      boxShadow: '0 1px 2px rgba(0, 0, 0, 0.03)',
                       cursor: 'pointer',
+                      transition: 'border-color 0.15s, box-shadow 0.15s',
+                    }}
+                    onFocus={(e) => {
+                      e.currentTarget.style.borderColor = 'var(--blue, #2563eb)'
+                      e.currentTarget.style.boxShadow = '0 0 0 2px rgba(37, 99, 235, 0.15)'
+                    }}
+                    onBlur={(e) => {
+                      e.currentTarget.style.borderColor = 'var(--line, #e2e8f0)'
+                      e.currentTarget.style.boxShadow = '0 1px 2px rgba(0, 0, 0, 0.03)'
                     }}
                   />
                   {dateFilter && (
@@ -274,16 +300,29 @@ export function LeaveApprovalsPage() {
                       title="Clear date"
                       style={{
                         position: 'absolute',
-                        right: 6,
+                        right: 8,
                         top: '50%',
                         transform: 'translateY(-50%)',
                         border: 'none',
                         background: 'transparent',
                         color: 'var(--muted, #94a3b8)',
                         cursor: 'pointer',
-                        fontSize: 14,
+                        fontSize: 11,
                         lineHeight: 1,
-                        padding: '2px 4px',
+                        padding: '3px 4px',
+                        borderRadius: '50%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        transition: 'background-color 0.15s, color 0.15s',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.color = 'var(--ink, #0f172a)'
+                        e.currentTarget.style.backgroundColor = 'var(--line2, #f1f5f9)'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.color = 'var(--muted, #94a3b8)'
+                        e.currentTarget.style.backgroundColor = 'transparent'
                       }}
                     >
                       ✕

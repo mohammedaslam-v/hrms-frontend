@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { attendanceApi } from './attendance.api'
 import { STATUS_LABEL, type AttendanceStatus, type CalendarView, type WeekBar } from './attendance.types'
 import { DayDetailModal, DayPopover } from './DayDetail'
 import { EditDayModal } from './EditDayModal'
 import { MONTHS, fmtShort } from '../../shared/lib/date'
 import { asHours } from '../../shared/lib/format'
+import { CustomSelect } from '../../shared/ui/CustomSelect'
 import { useAdminActivity } from '../presence'
 import { useWorkActivities } from '../work-activity'
 import './calendar.css'
@@ -67,7 +68,7 @@ const FIRST_YEAR = 2024
 export function MonthCalendarCard({ employeeId, isSelf }: { employeeId: number; isSelf: boolean }) {
   // The browser picks the opening month only. Every judgement about which day
   // is today comes from the server's `today`.
-  const opening = new Date()
+  const opening = useMemo(() => new Date(), [])
   const [year, setYear] = useState(opening.getFullYear())
   const [month, setMonth] = useState(opening.getMonth())
   const [view, setView] = useState<CalendarView | null>(null)
@@ -126,7 +127,20 @@ export function MonthCalendarCard({ employeeId, isSelf }: { employeeId: number; 
     setMonth(next.getMonth())
   }
 
-  const years = Array.from({ length: opening.getFullYear() + 2 - FIRST_YEAR }, (_, i) => FIRST_YEAR + i)
+  const years = useMemo(
+    () => Array.from({ length: opening.getFullYear() + 2 - FIRST_YEAR }, (_, i) => FIRST_YEAR + i),
+    [opening]
+  )
+
+  const monthOptions = useMemo(
+    () => MONTHS.map((m, i) => ({ value: i, label: m })),
+    []
+  )
+
+  const yearOptions = useMemo(
+    () => years.map((y) => ({ value: y, label: String(y) })),
+    [years]
+  )
 
   const open = (bar: WeekBar, element: HTMLElement) => {
     const box = element.getBoundingClientRect()
@@ -267,20 +281,22 @@ export function MonthCalendarCard({ employeeId, isSelf }: { employeeId: number; 
           >
             ‹
           </button>
-          <select aria-label="Month" value={month} onChange={(e) => setMonth(Number(e.target.value))}>
-            {MONTHS.map((m, i) => (
-              <option key={m} value={i}>
-                {m}
-              </option>
-            ))}
-          </select>
-          <select aria-label="Year" value={year} onChange={(e) => setYear(Number(e.target.value))}>
-            {years.map((y) => (
-              <option key={y} value={y}>
-                {y}
-              </option>
-            ))}
-          </select>
+          <CustomSelect
+            ariaLabel="Month"
+            value={month}
+            onChange={(m) => setMonth(m)}
+            options={monthOptions}
+            size="sm"
+            minWidth={84}
+          />
+          <CustomSelect
+            ariaLabel="Year"
+            value={year}
+            onChange={(y) => setYear(y)}
+            options={yearOptions}
+            size="sm"
+            minWidth={84}
+          />
           <button type="button" className="cal-arrow" aria-label="Next month" onClick={() => step(1)}>
             ›
           </button>
