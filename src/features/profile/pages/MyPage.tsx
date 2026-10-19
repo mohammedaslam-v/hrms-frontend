@@ -9,7 +9,7 @@ import { CompensationCard } from '../components/CompensationCard'
 import { DocumentsCard } from '../components/DocumentsCard'
 import { DocumentGatePopup } from '../components/DocumentGatePopup'
 import { DOCUMENT_OPTIONS } from '../components/UploadDocumentModal'
-import { TodayCard, WeekCard } from '../../attendance'
+import { MonthCalendarCard, TodayCard } from '../../attendance'
 import { AdminLifecycleControls } from '../components/AdminLifecycleControls'
 import { OnLeaveTodayBanner } from '../components/OnLeaveTodayBanner'
 import { EditPersonalDetailsModal } from '../components/EditPersonalDetailsModal'
@@ -497,7 +497,7 @@ export function MyPage() {
       </div>
 
       <div className="grid g23 mt">
-        <WeekCard employeeId={view.employeeId} isSelf={view.isSelf} />
+        <MonthCalendarCard employeeId={view.employeeId} isSelf={view.isSelf} />
         <GoalsCard goals={view.goals} isSelf={view.isSelf} />
       </div>
 

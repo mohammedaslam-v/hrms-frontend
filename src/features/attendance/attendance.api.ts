@@ -1,5 +1,7 @@
 import type {
   AttendanceRangeDto,
+  CalendarView,
+  EditDayInput,
   PunctualitySummaryDto,
   TodayBoardDto,
   TodayView,
@@ -21,6 +23,19 @@ export const attendanceApi = {
    */
   getTodayFor: (employeeId: number) => request<TodayView>(`/attendance/${employeeId}/today`),
   getWeekFor: (employeeId: number) => request<WeekBar[]>(`/attendance/${employeeId}/week`),
+
+  /** A month for the calendar card. No id means your own. */
+  getCalendar: (from: string, to: string, employeeId?: number) =>
+    request<CalendarView>(
+      `/attendance/${employeeId ?? 'me'}/calendar?from=${from}&to=${to}`,
+    ),
+
+  /** Admin only: correct one day of somebody else's. */
+  editDay: (employeeId: number, date: string, input: EditDayInput) =>
+    request<{ message: string }>(`/attendance/${employeeId}/days/${date}`, {
+      method: 'PUT',
+      body: JSON.stringify(input),
+    }),
   checkIn: () => request<TodayView>('/attendance/me/check-in', { method: 'POST' }),
   checkOut: () => request<TodayView>('/attendance/me/check-out', { method: 'POST' }),
   checkInFor: (employeeId: number) =>

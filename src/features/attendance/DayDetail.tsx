@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
-import { STATUS_CLASS, type WeekBar } from './attendance.types'
+import { STATUS_CLASS, STATUS_LABEL, type WeekBar } from './attendance.types'
 import { fmtShort } from '../../shared/lib/date'
 import { asHours } from '../../shared/lib/format'
 import { Modal } from '../../shared/ui/Modal'
@@ -68,7 +68,7 @@ export function DayPopover({ x, y, ...day }: DayData & { x: number; y: number })
         <b>
           {bar.dayName} {fmtShort(bar.date)}
         </b>
-        <span className={`chip ${STATUS_CLASS[bar.status]}`}>{bar.status}</span>
+        <span className={`chip ${STATUS_CLASS[bar.status]}`}>{STATUS_LABEL[bar.status] ?? bar.status}</span>
       </div>
 
       <div className="wbpop-total">{asHours(f.total)} active</div>
@@ -112,11 +112,14 @@ export function DayPopover({ x, y, ...day }: DayData & { x: number; y: number })
 export function DayDetailModal({
   onClose,
   canDelete,
+  onEdit,
   ...day
 }: DayData & {
   onClose: () => void
   /** The person's own day, still within the two-day window. */
   canDelete: boolean
+  /** Present only for an admin on someone else's past or current day. */
+  onEdit?: () => void
 }) {
   const { bar, admin, activities } = day
   const f = figures(day)
@@ -143,7 +146,7 @@ export function DayDetailModal({
         <>
           {bar.dayName} {fmtShort(bar.date)}{' '}
           <span className={`chip ${STATUS_CLASS[bar.status]}`} style={{ marginLeft: 6, verticalAlign: 'middle' }}>
-            {bar.status}
+            {STATUS_LABEL[bar.status] ?? bar.status}
           </span>
         </>
       }
@@ -151,6 +154,15 @@ export function DayDetailModal({
       error={error}
       maxWidth={520}
     >
+      {onEdit && (
+        <div className="dd-edit-bar">
+          <span>Wrong status or times?</span>
+          <button type="button" className="btn" onClick={onEdit}>
+            Edit day
+          </button>
+        </div>
+      )}
+
       <div className="dd-summary">
         <div>
           <div className="dd-total">{asHours(f.total)}</div>

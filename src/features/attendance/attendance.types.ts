@@ -48,6 +48,17 @@ export const STATUS_CLASS: Record<AttendanceStatus, string> = {
   'Not in yet': 'c-out',
 }
 
+export const STATUS_LABEL: Record<AttendanceStatus, string> = {
+  'On time': 'On time',
+  Late: 'Late',
+  Absent: 'Not Marked',
+  'Half day': 'Half day',
+  Leave: 'Leave',
+  'Weekly off': 'Weekly off',
+  Holiday: 'Holiday',
+  'Not in yet': 'Not in yet',
+}
+
 /** A stretch of a day. `to` is null only while a punch is still running. */
 export interface TimeRange {
   from: string
@@ -71,6 +82,35 @@ export interface WeekBar {
   segments: TimeRange[]
   /** Whether this day's hours were declared or observed. */
   source: DaySource
+}
+
+/** A month (or any window) for the calendar card. */
+export interface CalendarView {
+  from: string
+  to: string
+  /** The database's date — today's ring is drawn from this, never the browser. */
+  today: string
+  /** An admin looking at somebody else. The server checks again on save. */
+  canEdit: boolean
+  days: WeekBar[]
+}
+
+/** What an admin can set a day to. Leave kinds are written as approved leave. */
+export const DAY_EDIT_STATUSES = [
+  'Present',
+  'Earned leave',
+  'Half earned leave',
+  'Unpaid full day',
+  'Unpaid half day',
+] as const
+export type DayEditStatus = (typeof DAY_EDIT_STATUSES)[number]
+
+export interface EditDayInput {
+  status: DayEditStatus
+  loginAt: string | null
+  logoutAt: string | null
+  halfDaySession: 'first' | 'second' | null
+  note: string
 }
 
 export interface TodayBoardKpis {
