@@ -45,3 +45,42 @@ export interface AdminPanelActivity {
   days: AdminPanelDay[]
   now: AdminPanelNow | null
 }
+
+// ── The shift-wise board (header dropdown) ───────────────────────────────────
+
+export interface BoardPresence {
+  status: PresenceStatus
+  secondsAgo: number
+  sessionMinutes: number
+  page: { path: string | null; name: string | null }
+  lastSeenDate: string
+  lastSeenTime: string
+}
+
+export interface BoardPerson {
+  employeeId: number | null
+  adminId: number | null
+  name: string
+  subtitle: string | null
+  /** Admin-panel role (as the new admin shows it), else the HRMS department. */
+  team: string | null
+  leave: { type: string; isHalfDay: boolean } | null
+  presence: BoardPresence | null
+  isMe: boolean
+}
+
+export interface BoardGroup {
+  key: string
+  label: string
+  /** Null for the admins-only "No HRMS record" group. */
+  shiftStart: string | null
+  people: BoardPerson[]
+  online: number
+}
+
+export interface PresenceBoard {
+  today: string
+  groups: BoardGroup[]
+  counts: { online: number; people: number }
+  generatedAt: string
+}

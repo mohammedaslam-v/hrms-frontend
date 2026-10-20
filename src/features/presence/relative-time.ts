@@ -21,3 +21,14 @@ export function durationLabel(minutes: number): string {
   const rest = m % 60
   return rest ? `${h} hr ${String(rest).padStart(2, '0')} min` : `${h} hr`
 }
+
+/**
+ * When someone was last on the panel, however long ago: "25 min ago" today,
+ * "yesterday 18:40", then "4 days ago". `today` is the server's India date.
+ */
+export function lastSeenLabel(seconds: number, date: string, time: string, today: string): string {
+  if (date === today) return agoLabel(seconds)
+  const days = Math.round((Date.parse(today) - Date.parse(date)) / 86_400_000)
+  if (days === 1) return `yesterday ${time}`
+  return `${days} days ago`
+}

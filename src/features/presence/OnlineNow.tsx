@@ -1,39 +1,71 @@
-import { useEffect, useRef, useState } from 'react'
-import { clock } from '../../navigation/icons'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { InitialsAvatar } from './InitialsAvatar'
-import { agoLabel, durationLabel } from './relative-time'
-import type { PresencePerson } from './presence.types'
-import { ONLINE_REFRESH_MS, useOnlineSummary } from './useOnlineSummary'
+import { durationLabel, lastSeenLabel } from './relative-time'
+import type { BoardGroup, BoardPerson } from './presence.types'
+import { usePresenceBoard, usePresenceCount } from './usePresenceBoard'
 
-// The header "N online" pill — a port of the new admin's OnlineNow.tsx, reading
-// the same table. Who is using the admin panel right now, and who was seen in
-// the last hour, narrowed by the server to you / your team / everyone. Read
-// every minute; every 20 s while the menu is open.
+/*
+ * The header "N online" pill and its dropdown: everyone the viewer may see
+ * (admin: everyone, manager: their team, employee: themselves), grouped by
+ * shift, with leave today and where they are on the new admin panel.
+ *
+ * Online is the admin panel right now, whatever the shift: someone on the
+ * 16:00–23:00 shift working at 11:00 shows Online in their own group.
+ *
+ * Two tabs keep it short: Online (the default) and All (shifts closed,
+ * never-seen people folded into one line per shift). Search always looks through everyone.
+ */
 
-const OPEN_REFRESH_MS = 20 * 1000
+const STATUS_LABEL = { online: 'Online', away: 'Away', signed_off: 'Logged out' } as const
 
-function PersonRow({ p, me }: { p: PresencePerson; me: boolean }) {
-  const online = p.status === 'online'
-  const where = p.page.name ? `on ${p.page.name}` : null
-  const line = online
-    ? [where, p.session_minutes >= 1 ? `${durationLabel(p.session_minutes)} in` : 'just arrived']
-        .filter(Boolean)
-        .join(' · ')
-    : p.status === 'signed_off'
-      ? `logged out · ${agoLabel(p.seconds_ago)}`
-      : [where, agoLabel(p.seconds_ago)].filter(Boolean).join(' · ')
+type Tab = 'online' | 'all'
+
+const TABS: { key: Tab; label: string }[] = [
+  { key: 'online', label: 'Online' },
+  { key: 'all', label: 'All' },
+]
+
+const EMPTY: Record<Tab, string> = {
+  online: 'No one is on the admin panel right now.',
+  all: 'No one to show.',
+}
+
+const isOnline = (p: BoardPerson): boolean => p.presence?.status === 'online'
+
+function chipOf(p: BoardPerson): { text: string; tone: string } {
+  if (p.leave) return { text: p.leave.isHalfDay ? 'Half-day leave' : 'Leave', tone: 'leave' }
+  if (!p.presence) return { text: 'Not seen', tone: 'none' }
+  return { text: STATUS_LABEL[p.presence.status], tone: p.presence.status }
+}
+
+function lineOf(p: BoardPerson, today: string): string {
+  const s = p.presence
+  if (!s) return 'Not seen on the admin panel'
+  const where = s.page.name ? `on ${s.page.name}` : null
+  if (s.status === 'online') {
+    const length = s.sessionMinutes >= 1 ? `${durationLabel(s.sessionMinutes)} in` : 'just arrived'
+    return ['Active now', where, length].filter(Boolean).join(' · ')
+  }
+  const when = lastSeenLabel(s.secondsAgo, s.lastSeenDate, s.lastSeenTime, today)
+  if (s.status === 'signed_off') return `Logged out · ${when}`
+  return [`Last seen ${when}`, where].filter(Boolean).join(' · ')
+}
+
+function Row({ p, today }: { p: BoardPerson; today: string }) {
+  const chip = chipOf(p)
   return (
     <div className="on-row">
-      <InitialsAvatar name={p.name || '?'} dot={p.status} />
+      <InitialsAvatar name={p.name || '?'} dot={p.presence?.status} />
       <div className="on-row-text">
         <div className="on-row-name">
           <span className="on-name">
             {p.name}
-            {me ? <span className="on-you">(you)</span> : null}
+            {p.isMe ? <span className="on-you">(you)</span> : null}
           </span>
-          {p.role ? <span className="on-role">{p.role}</span> : null}
+          {p.team ? <span className="on-role">{p.team}</span> : null}
+          <span className={`on-chip ${chip.tone}`}>{chip.text}</span>
         </div>
-        <p className={`on-line${online ? ' is-online' : ''}`}>{line}</p>
+        <p className={`on-line${p.presence?.status === 'online' ? ' is-online' : ''}`}>{lineOf(p, today)}</p>
       </div>
     </div>
   )
@@ -41,10 +73,15 @@ function PersonRow({ p, me }: { p: PresencePerson; me: boolean }) {
 
 export function OnlineNow() {
   const [open, setOpen] = useState(false)
+  const [query, setQuery] = useState('')
+  const [tab, setTab] = useState<Tab>('online')
+  // Everyone tab only: shifts opened by hand (they start closed there), and
+  // shifts whose "not seen" people have been unfolded.
+  const [openShifts, setOpenShifts] = useState<Record<string, boolean>>({})
+  const [showNotSeen, setShowNotSeen] = useState<Record<string, boolean>>({})
   const ref = useRef<HTMLDivElement>(null)
-  const { summary, failed, forbidden, reload } = useOnlineSummary(
-    open ? OPEN_REFRESH_MS : ONLINE_REFRESH_MS,
-  )
+  const { online: count, forbidden, error: countError } = usePresenceCount()
+  const { board, failed } = usePresenceBoard(open)
 
   useEffect(() => {
     if (!open) return
@@ -62,27 +99,55 @@ export function OnlineNow() {
     }
   }, [open])
 
-  const online = summary?.counts.online ?? 0
-  const lastHour = summary?.counts.last_hour ?? 0
-  const tip = summary
-    ? `${online} admin${online === 1 ? '' : 's'} online now · ${lastHour} seen in the last hour`
-    : 'Who is using the admin panel right now'
+  const q = query.trim().toLowerCase()
 
-  const isMe = (p: PresencePerson) => summary?.viewer_admin_ids?.includes(p.admin_id) ?? false
+  // Who each tab lists. Search ignores the tab and looks through everyone,
+  // so finding one person is always one step.
+  const groups = useMemo<BoardGroup[]>(() => {
+    if (!board) return []
+    const keep = (p: BoardPerson): boolean => {
+      if (q) return p.name.toLowerCase().includes(q)
+      if (tab === 'online') return isOnline(p)
+      return true
+    }
+    return board.groups
+      .map((g) => {
+        const people = g.people.filter(keep)
+        return { ...g, people, online: people.filter(isOnline).length }
+      })
+      .filter((g) => g.people.length > 0)
+  }, [board, q, tab])
 
-  // Not shown until the first answer, so an account that is refused never sees
-  // the pill flash up and vanish.
-  if (forbidden || summary === null) return null
+  const tabCounts = useMemo(() => {
+    const people = board?.groups.flatMap((g) => g.people) ?? []
+    return {
+      online: people.filter(isOnline).length,
+      all: people.length,
+    }
+  }, [board])
+
+  // Online is short, so every shift is open. All starts
+  // closed — 600 rows under one shift buries the rest. A search opens matches.
+  const isExpanded = (g: BoardGroup) => (q || tab !== 'all' ? true : Boolean(openShifts[g.key]))
+
+  // In All, people never seen on the panel fold into one line per shift.
+  const folds = !q && tab === 'all'
+
+  // Not shown until the first answer, so a refused account never sees it flash.
+  // A failure is shown, not hidden: a missing pill reads as a missing feature.
+  if (forbidden || (count === null && !countError)) return null
+
+  // While the board is open its own count is the fresher one.
+  const online = open && board ? board.counts.online : count
+  const tip =
+    online === null ? `Who is online could not load: ${countError}` : `${online} online on the admin panel now`
 
   return (
     <div className="on-wrap" ref={ref}>
       <button
         type="button"
         className={`on-pill${open ? ' open' : ''}`}
-        onClick={() => {
-          if (!open) void reload()
-          setOpen((o) => !o)
-        }}
+        onClick={() => setOpen((o) => !o)}
         title={tip}
         aria-label={tip}
         aria-haspopup="menu"
@@ -92,44 +157,97 @@ export function OnlineNow() {
           <span className="on-pulse-ring" />
           <span className="on-pulse-dot" />
         </span>
-        <span className="on-count">{summary ? online : '·'}</span>
+        <span className="on-count">{online ?? '–'}</span>
         <span className="on-word">online</span>
       </button>
 
       {open ? (
-        <div className="on-menu" role="menu">
+        <div className="on-menu on-board" role="menu">
           <div className="on-menu-head">
             <span className="on-menu-title">
-              <span className="on-pulse-dot" /> On the admin panel now
+              <span className="on-pulse-dot" /> Who's on the admin panel
             </span>
-            <span className="on-badge">{online} online</span>
+            <span className="on-badge">{online ?? '–'} online</span>
+          </div>
+          <div className="on-tabs" role="tablist">
+            {TABS.map((t) => (
+              <button
+                key={t.key}
+                type="button"
+                role="tab"
+                aria-selected={tab === t.key}
+                className={`on-tab${tab === t.key ? ' active' : ''}`}
+                onClick={() => setTab(t.key)}
+              >
+                {t.label}
+                {board ? <span className="on-tab-n">{tabCounts[t.key]}</span> : null}
+              </button>
+            ))}
+          </div>
+          <div className="on-search">
+            <input
+              type="search"
+              placeholder="Search name"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              aria-label="Search people"
+            />
           </div>
 
           <div className="on-menu-body">
-            {summary === null ? (
+            {board === null ? (
               <div className="on-empty">{failed ? 'Could not load right now.' : 'Loading…'}</div>
+            ) : groups.length === 0 ? (
+              <div className="on-empty">{q ? 'No one matches that name.' : EMPTY[tab]}</div>
             ) : (
-              <>
-                {summary.online.length === 0 ? (
-                  <div className="on-empty">No one is on the admin panel right now.</div>
-                ) : (
-                  summary.online.map((p) => <PersonRow key={p.admin_id} p={p} me={isMe(p)} />)
-                )}
-                {summary.recent.length > 0 ? (
-                  <>
-                    <div className="on-section">
-                      {clock} Seen in the last hour
-                    </div>
-                    {summary.recent.map((p) => (
-                      <PersonRow key={p.admin_id} p={p} me={isMe(p)} />
-                    ))}
-                  </>
-                ) : null}
-              </>
+              groups.map((g) => {
+                const expanded = isExpanded(g)
+                const shown = folds && !showNotSeen[g.key] ? g.people.filter((p) => p.presence || p.leave) : g.people
+                const hidden = g.people.length - shown.length
+                return (
+                  <section key={g.key} className="on-group">
+                    <button
+                      type="button"
+                      className="on-group-head"
+                      onClick={() => tab === 'all' && !q && setOpenShifts((o) => ({ ...o, [g.key]: !expanded }))}
+                      aria-expanded={expanded}
+                      disabled={tab !== 'all' || Boolean(q)}
+                    >
+                      <span className="on-caret">{expanded ? '▾' : '▸'}</span>
+                      <span className="on-group-label">{g.label}</span>
+                      <span className="on-group-meta">
+                        {g.online > 0 && <b className="on-group-online">{g.online} online</b>}
+                        {(tab !== 'online' || q) && (
+                          <span>
+                            {g.online > 0 ? ' · ' : ''}
+                            {g.people.length}
+                          </span>
+                        )}
+                      </span>
+                    </button>
+                    {expanded && (
+                      <>
+                        {shown.map((p) => (
+                          <Row key={`${p.employeeId ?? 'a'}-${p.adminId ?? 'x'}`} p={p} today={board.today} />
+                        ))}
+                        {hidden > 0 && (
+                          <button
+                            type="button"
+                            className="on-fold"
+                            onClick={() => setShowNotSeen((v) => ({ ...v, [g.key]: true }))}
+                          >
+                            + {hidden} not seen on the admin panel <span>Show</span>
+                          </button>
+                        )}
+                      </>
+                    )}
+                  </section>
+                )
+              })
             )}
           </div>
 
-          <div className="on-menu-foot">Online = active in the last 3 minutes</div>
+          <div className="on-menu-foot">Online = active on the admin panel in the last 3 minutes</div>
         </div>
       ) : null}
     </div>
