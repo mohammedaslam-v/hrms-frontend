@@ -337,6 +337,7 @@ export function MyLeavePage() {
         <LeaveApplyModal
           employeeId={employeeId}
           employeeName={view.employee?.fullName}
+          existingRequests={requests}
           onApplied={(next) => {
             setView(next)
             setApplying(false)

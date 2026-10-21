@@ -52,7 +52,7 @@ export function EditApprovedLeaveModal({
     let cancelled = false
     const timer = setTimeout(() => {
       leaveApi
-        .preview(fromDate, toDate, leaveType, isHalfDay, leave.employeeId)
+        .preview(fromDate, toDate, leaveType, isHalfDay, leave.employeeId, leave.id)
         .then((p) => {
           if (!cancelled) setPreview(p)
         })
@@ -65,7 +65,7 @@ export function EditApprovedLeaveModal({
       cancelled = true
       clearTimeout(timer)
     }
-  }, [fromDate, toDate, leaveType, isHalfDay, leave.employeeId])
+  }, [fromDate, toDate, leaveType, isHalfDay, leave.employeeId, leave.id])
 
   const calculatedDays = isHalfDay ? 0.5 : preview?.days ?? leave.days
   const daysExtended = Math.round(Math.max(0, calculatedDays - leave.days) * 10) / 10
@@ -77,7 +77,8 @@ export function EditApprovedLeaveModal({
     !isZeroDays &&
     Boolean(fromDate && toDate) &&
     calculatedDays > 0 &&
-    adminNote.trim().length >= 3
+    adminNote.trim().length >= 3 &&
+    preview?.canSubmit !== false
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
@@ -264,7 +265,17 @@ export function EditApprovedLeaveModal({
       </div>
 
       {/* Live Impact Feedback */}
-      {isZeroDays ? (
+      {preview?.existingLeave ? (
+        <div style={{ marginTop: 14 }}>
+          <div className="notice bad" role="alert">
+            <strong>⚠️ Overlapping Leave Request</strong>
+            <div style={{ marginTop: 4, fontSize: 12.5 }}>
+              Selected dates overlap with existing {preview.existingLeave.status.toLowerCase()} request{' '}
+              <b>{preview.existingLeave.ref}</b> ({preview.existingLeave.fromDate} to {preview.existingLeave.toDate}). Cannot overlap with another leave.
+            </div>
+          </div>
+        </div>
+      ) : isZeroDays ? (
         <div style={{ marginTop: 14 }}>
           <div className="notice bad" role="alert">
             <strong>⚠️ 0 working days in selected range</strong>

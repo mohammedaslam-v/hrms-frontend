@@ -28,10 +28,12 @@ export const leaveApi = {
     type: LeaveType,
     halfDay: boolean,
     employeeId?: number,
+    excludeRequestId?: number,
   ) => {
+    const extra = excludeRequestId ? `&excludeRequestId=${excludeRequestId}` : ''
     const path = employeeId
-      ? `/leave/${employeeId}/preview?from=${from}&to=${to}&type=${type}&halfDay=${halfDay}`
-      : `/leave/me/preview?from=${from}&to=${to}&type=${type}&halfDay=${halfDay}`
+      ? `/leave/${employeeId}/preview?from=${from}&to=${to}&type=${type}&halfDay=${halfDay}${extra}`
+      : `/leave/me/preview?from=${from}&to=${to}&type=${type}&halfDay=${halfDay}${extra}`
     return request<LeavePreview>(path)
   },
 

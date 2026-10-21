@@ -2,13 +2,26 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { leaveApi } from '../leave.api'
 import { Modal } from '../../../shared/ui/Modal'
 import { messageOf } from '../../../shared/api/errors'
-import type { HalfDaySession, LeavePreview, LeaveType, MyLeaveView } from '../leave.types'
+import type { HalfDaySession, LeavePreview, LeaveRequest, LeaveType, MyLeaveView } from '../leave.types'
 
 interface LeaveApplyModalProps {
   employeeId?: number
   employeeName?: string
+  existingRequests?: LeaveRequest[]
   onApplied: (view: MyLeaveView) => void
   onClose: () => void
+}
+
+const fmtShort = (d: string): string => {
+  const [y, m, day] = d.split('-')
+  return `${day}/${m}/${y}`
+}
+
+const STATUS_CLASS: Record<string, string> = {
+  Pending: 'amber',
+  Approved: 'green',
+  Rejected: 'red',
+  Cancelled: '',
 }
 
 const tomorrow = (): string => {
@@ -28,6 +41,7 @@ const TYPES: { value: LeaveType; label: string }[] = [
 export function LeaveApplyModal({
   employeeId,
   employeeName,
+  existingRequests,
   onApplied,
   onClose,
 }: LeaveApplyModalProps) {
@@ -40,6 +54,12 @@ export function LeaveApplyModal({
   const [preview, setPreview] = useState<LeavePreview | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+
+  const upcomingBookedLeaves = (existingRequests ?? []).filter(
+    (r) =>
+      (r.status === 'Approved' || r.status === 'Pending') &&
+      r.toDate >= new Date().toISOString().slice(0, 10),
+  )
 
   // The preview is authoritative — the same service that validates the request
   // computes it, so the form can never promise something the server will refuse.
@@ -85,9 +105,6 @@ export function LeaveApplyModal({
     }
   }
 
-  const noticeTone =
-    preview && !preview.canSubmit ? '' : preview && preview.unpaidDays > 0 ? '' : 'blue'
-
   return (
     <Modal
       title={employeeName ? `Apply for leave on behalf of ${employeeName}` : 'Apply for leave'}
@@ -99,7 +116,7 @@ export function LeaveApplyModal({
         <button
           className="btn primary"
           type="submit"
-          disabled={submitting || !preview?.canSubmit || !reason.trim()}
+          disabled={submitting || !preview?.canSubmit || Boolean(preview?.existingLeave) || !reason.trim()}
         >
           {submitting
             ? 'Sending…'
@@ -109,6 +126,48 @@ export function LeaveApplyModal({
         </button>
       }
     >
+      {upcomingBookedLeaves.length > 0 && (
+        <div
+          style={{
+            marginBottom: 14,
+            padding: '10px 12px',
+            borderRadius: 8,
+            background: 'var(--surface-sunken, #f8fafc)',
+            border: '1px solid var(--border, #e2e8f0)',
+            fontSize: 12.5,
+          }}
+        >
+          <div style={{ fontWeight: 600, color: 'var(--text, #1e293b)', marginBottom: 4 }}>
+            📅 Already booked / upcoming leave{upcomingBookedLeaves.length > 1 ? 's' : ''}:
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {upcomingBookedLeaves.map((r) => (
+              <div
+                key={r.id}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: 8,
+                  fontSize: 12,
+                }}
+              >
+                <span>
+                  • <b>{fmtShort(r.fromDate)}</b>
+                  {r.fromDate !== r.toDate && <> to <b>{fmtShort(r.toDate)}</b></>} ({r.days}{' '}
+                  day{r.days === 1 ? '' : 's'} · {r.leaveType})
+                </span>
+                <span
+                  className={`chip ${STATUS_CLASS[r.status] ?? ''}`}
+                  style={{ fontSize: 10, padding: '1px 6px' }}
+                >
+                  {r.status}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="grid g2">
         <div className="f">
@@ -194,15 +253,58 @@ export function LeaveApplyModal({
       </div>
 
       {preview && (
-        <div className={`notice ${noticeTone}`} style={{ marginTop: 14 }}>
-          <b>
-            {preview.days} day{preview.days === 1 ? '' : 's'}
-          </b>
-          {preview.skippedDays > 0 && (
-            <> · {preview.skippedDays} weekly off/holiday skipped</>
+        <div
+          className={`notice ${preview.existingLeave || !preview.canSubmit ? 'bad' : preview.unpaidDays > 0 ? '' : 'blue'}`}
+          style={{ marginTop: 14 }}
+        >
+          {preview.existingLeave ? (
+            <div>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  fontWeight: 700,
+                  fontSize: 13,
+                  color: '#991b1b',
+                  marginBottom: 4,
+                }}
+              >
+                <span style={{ fontSize: 16 }}>⚠️</span>
+                <span>Already on leave for selected dates</span>
+              </div>
+              <div style={{ lineHeight: 1.5, fontSize: 12.5, color: '#7f1d1d' }}>
+                {employeeName ? <b>{employeeName}</b> : 'This employee'} already has an{' '}
+                <span
+                  className={`chip ${STATUS_CLASS[preview.existingLeave.status] ?? 'green'}`}
+                  style={{ verticalAlign: 'middle', margin: '0 4px', fontSize: 11 }}
+                >
+                  {preview.existingLeave.status}
+                </span>{' '}
+                leave request (<b>{preview.existingLeave.ref}</b>) covering{' '}
+                <b>{fmtShort(preview.existingLeave.fromDate)}</b>
+                {preview.existingLeave.fromDate !== preview.existingLeave.toDate && (
+                  <> to <b>{fmtShort(preview.existingLeave.toDate)}</b></>
+                )}{' '}
+                ({preview.existingLeave.days} day{preview.existingLeave.days === 1 ? '' : 's'} ·{' '}
+                {preview.existingLeave.leaveType} leave).
+              </div>
+              <div style={{ marginTop: 6, fontSize: 12, opacity: 0.9, color: '#991b1b' }}>
+                Cannot apply for duplicate or overlapping leave dates. Please select different dates.
+              </div>
+            </div>
+          ) : (
+            <>
+              <b>
+                {preview.days} day{preview.days === 1 ? '' : 's'}
+              </b>
+              {preview.skippedDays > 0 && (
+                <> · {preview.skippedDays} weekly off/holiday skipped</>
+              )}
+              <br />
+              {preview.message}
+            </>
           )}
-          <br />
-          {preview.message}
         </div>
       )}
 
