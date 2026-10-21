@@ -13,8 +13,8 @@ import { Modal } from '../../shared/ui/Modal'
  * choosing "Earned leave" is spending the employee's balance.
  */
 
-const HALF: DayEditStatus[] = ['Half earned leave', 'Unpaid half day']
-const FULL_LEAVE: DayEditStatus[] = ['Earned leave', 'Unpaid full day']
+const HALF: DayEditStatus[] = ['Half earned leave', 'LOP half day']
+const FULL_LEAVE: DayEditStatus[] = ['Earned leave', 'LOP full day']
 
 /** The status the day already has, as the closest choice on this form. */
 function initialStatus(bar: WeekBar): DayEditStatus {
@@ -27,8 +27,8 @@ const HINT: Record<DayEditStatus, string> = {
   Present: 'Saved as a manual check-in. Any single-day leave on this date is cancelled.',
   'Earned leave': 'Recorded as approved earned leave — 1 day from the balance. Anything the balance cannot cover becomes loss of pay.',
   'Half earned leave': 'Recorded as approved earned leave — 0.5 day from the balance. Times are the half that was worked.',
-  'Unpaid full day': 'Recorded as approved unpaid leave — 1 day of loss of pay.',
-  'Unpaid half day': 'Recorded as approved unpaid leave — 0.5 day of loss of pay. Times are the half that was worked.',
+  'LOP full day': 'Recorded as approved unpaid leave — 1 day of loss of pay.',
+  'LOP half day': 'Recorded as approved unpaid leave — 0.5 day of loss of pay. Times are the half that was worked.',
 }
 
 export function EditDayModal({
