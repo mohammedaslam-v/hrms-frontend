@@ -35,6 +35,26 @@ export interface TodayView {
   shiftEnd: string
   canCheckIn: boolean
   canCheckOut: boolean
+  /**
+   * Set for WFO: punching is only allowed inside this circle. Null means punch
+   * from anywhere. The server judges the location again on every punch.
+   */
+  geofence: Geofence | null
+}
+
+export interface Geofence {
+  lat: number
+  lng: number
+  radiusM: number
+  /** A fix vaguer than this is "not precise enough", never "outside". */
+  maxAccuracyM: number
+}
+
+/** Sent with a punch — what the browser's Geolocation API reported. */
+export interface DeviceFix {
+  lat: number
+  lng: number
+  accuracy: number
 }
 
 export const STATUS_CLASS: Record<AttendanceStatus, string> = {

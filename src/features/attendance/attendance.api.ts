@@ -1,6 +1,7 @@
 import type {
   AttendanceRangeDto,
   CalendarView,
+  DeviceFix,
   EditDayInput,
   PunctualitySummaryDto,
   TodayBoardDto,
@@ -36,8 +37,17 @@ export const attendanceApi = {
       method: 'PUT',
       body: JSON.stringify(input),
     }),
-  checkIn: () => request<TodayView>('/attendance/me/check-in', { method: 'POST' }),
-  checkOut: () => request<TodayView>('/attendance/me/check-out', { method: 'POST' }),
+  /** `location` is required for WFO and ignored for everyone else. */
+  checkIn: (location: DeviceFix | null = null) =>
+    request<TodayView>('/attendance/me/check-in', {
+      method: 'POST',
+      body: JSON.stringify({ location }),
+    }),
+  checkOut: (location: DeviceFix | null = null) =>
+    request<TodayView>('/attendance/me/check-out', {
+      method: 'POST',
+      body: JSON.stringify({ location }),
+    }),
   checkInFor: (employeeId: number) =>
     request<TodayView>(`/attendance/${employeeId}/check-in`, { method: 'POST' }),
   checkOutFor: (employeeId: number) =>

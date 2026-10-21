@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { attendanceApi } from './attendance.api'
 import { STATUS_CLASS, type TodayView } from './attendance.types'
+import { useGeofence } from './useGeofence'
 import { asHours } from '../../shared/lib/format'
 import { Modal } from '../../shared/ui/Modal'
 import { AddActivityButton } from '../work-activity'
@@ -32,6 +33,11 @@ export function TodayCard({ employeeId, isSelf, isAdmin, employeeName }: TodayCa
   const [showCheckOutConfirm, setShowCheckOutConfirm] = useState(false)
 
   const canPunch = isSelf || Boolean(isAdmin)
+
+  // WFO only, and only your own card: an admin punching for someone is not
+  // fenced (the server sends no geofence for that view either).
+  const geo = useGeofence(isSelf ? (view?.geofence ?? null) : null)
+  const geoMessageId = useId()
 
   // Elapsed minutes at the moment the server answered, and the local timestamp
   // of that moment. The ref is written and read only in effects and handlers —
@@ -85,9 +91,13 @@ export function TodayCard({ employeeId, isSelf, isAdmin, employeeName }: TodayCa
     try {
       let next: TodayView
       if (what === 'in') {
-        next = isSelf ? await attendanceApi.checkIn() : await attendanceApi.checkInFor(employeeId)
+        next = isSelf
+          ? await attendanceApi.checkIn(geo.fix)
+          : await attendanceApi.checkInFor(employeeId)
       } else {
-        next = isSelf ? await attendanceApi.checkOut() : await attendanceApi.checkOutFor(employeeId)
+        next = isSelf
+          ? await attendanceApi.checkOut(geo.fix)
+          : await attendanceApi.checkOutFor(employeeId)
       }
       apply(next)
     } catch (err) {
@@ -123,6 +133,9 @@ export function TodayCard({ employeeId, isSelf, isAdmin, employeeName }: TodayCa
   const displayHours = isRunning && elapsed !== null ? elapsed / 60 : view.activeHours
   const isCheckedIn = Boolean(view.loginAt && !view.logoutAt)
   const isCheckedOut = Boolean(view.loginAt && view.logoutAt)
+  const geoBlocked = !geo.allowed
+  const checkInDisabled = busy || isCheckedIn || geoBlocked
+  const checkOutDisabled = busy || !isCheckedIn || geoBlocked
 
   return (
     <div className="card top-card">
@@ -187,54 +200,90 @@ export function TodayCard({ employeeId, isSelf, isAdmin, employeeName }: TodayCa
         </div>
       ) : (
         <div style={{ marginTop: 'auto', paddingTop: 10 }}>
+          {/*
+            Each button sits in a span carrying the tooltip: a disabled button
+            fires no mouse events in most browsers, so its own title never shows.
+          */}
           <div style={{ display: 'flex', gap: 8 }}>
-            <button
-              type="button"
-              className="btn success"
-              onClick={() => void act('in')}
-              disabled={busy || isCheckedIn}
-              style={{
-                flex: 1,
-                minHeight: 38,
-                fontWeight: 600,
-                opacity: isCheckedIn ? 0.45 : 1,
-                cursor: isCheckedIn ? 'not-allowed' : 'pointer',
-              }}
+            <span
+              style={{ flex: 1, display: 'flex' }}
               title={
                 isCheckedIn
                   ? 'Already checked in'
-                  : isCheckedOut
-                    ? 'Check in again'
-                    : 'Check in for today'
+                  : geoBlocked && geo.message
+                    ? geo.message
+                    : isCheckedOut
+                      ? 'Check in again'
+                      : 'Check in for today'
               }
             >
-              {busy && !isCheckedIn ? 'Recording…' : isCheckedOut ? 'Check in' : 'Check in'}
-            </button>
+              <button
+                type="button"
+                className="btn success"
+                onClick={() => void act('in')}
+                disabled={checkInDisabled}
+                aria-describedby={geo.message ? geoMessageId : undefined}
+                style={{
+                  flex: 1,
+                  minHeight: 38,
+                  fontWeight: 600,
+                  opacity: isCheckedIn || geoBlocked ? 0.45 : 1,
+                  cursor: checkInDisabled ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {busy && !isCheckedIn ? 'Recording…' : 'Check in'}
+              </button>
+            </span>
 
-            <button
-              type="button"
-              className="btn danger"
-              onClick={() => setShowCheckOutConfirm(true)}
-              disabled={busy || !isCheckedIn}
-              style={{
-                flex: 1,
-                minHeight: 38,
-                fontWeight: 600,
-                boxShadow: isCheckedIn ? '0 2px 8px rgba(220, 62, 67, 0.25)' : 'none',
-                opacity: !isCheckedIn ? 0.45 : 1,
-                cursor: !isCheckedIn ? 'not-allowed' : 'pointer',
-              }}
+            <span
+              style={{ flex: 1, display: 'flex' }}
               title={
                 !isCheckedIn
                   ? isCheckedOut
                     ? 'Please check in again to check out'
                     : 'Please check in first'
-                  : 'Check out for today'
+                  : geoBlocked && geo.message
+                    ? geo.message
+                    : 'Check out for today'
               }
             >
-              {busy && isCheckedIn ? 'Recording…' : 'Check out'}
-            </button>
+              <button
+                type="button"
+                className="btn danger"
+                onClick={() => setShowCheckOutConfirm(true)}
+                disabled={checkOutDisabled}
+                aria-describedby={geo.message ? geoMessageId : undefined}
+                style={{
+                  flex: 1,
+                  minHeight: 38,
+                  fontWeight: 600,
+                  boxShadow: !checkOutDisabled ? '0 2px 8px rgba(220, 62, 67, 0.25)' : 'none',
+                  opacity: !isCheckedIn || geoBlocked ? 0.45 : 1,
+                  cursor: checkOutDisabled ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {busy && isCheckedIn ? 'Recording…' : 'Check out'}
+              </button>
+            </span>
           </div>
+
+          {/* Visible, not hover-only: phones have no hover. */}
+          {geo.message && (
+            <div
+              id={geoMessageId}
+              className={`notice mt8${geo.state.kind === 'denied' || geo.state.kind === 'outside' ? ' bad' : ''}`}
+              role="status"
+              aria-live="polite"
+              style={{ fontSize: 12.5 }}
+            >
+              {geo.message}
+            </div>
+          )}
+          {geo.state.kind === 'inside' && (
+            <div className="hint" style={{ marginTop: 6, fontSize: 12, textAlign: 'center' }}>
+              📍 At the office ({Math.round(geo.state.distanceM)} m away)
+            </div>
+          )}
 
           {isCheckedOut && !isCheckedIn && (
             <div className="hint" style={{ marginTop: 6, fontSize: 12, textAlign: 'center' }}>
