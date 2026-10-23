@@ -2,10 +2,7 @@ import { request } from '../../shared/api/client'
 import type { AdminPanelActivity, PresenceBoard, PresenceSummary } from './presence.types'
 
 export const presenceApi = {
-  /**
-   * Who is on the new admin panel. No id to pass: the server narrows it to you,
-   * your team, or everyone, from your tiers.
-   */
+  /** Who is on the new admin panel — the whole company, for every viewer. */
   online: () => request<PresenceSummary>('/presence/online'),
 
   /** The closed pill's number — one COUNT on the server. */

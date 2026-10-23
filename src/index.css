@@ -2715,6 +2715,9 @@ tr.row:focus-visible { outline: 2px solid var(--blue); outline-offset: -2px; }
 .on-chip.signed_off { background: #f1f5f9; color: #64748b; }
 .on-chip.none { background: #f8fafc; color: #94a3b8; }
 .on-chip.leave { background: #eeeafe; color: #6d53f0; }
+.on-chip.off { background: #efe9e0; color: #78716c; }
+/* A second chip (why they are off) sits beside the first, not pushed apart. */
+.on-chip.second { margin-left: 4px; }
 @media (max-width: 640px) { .on-menu.on-board { width: auto; } }
 .on-tabs { display: flex; gap: 4px; padding: 8px 12px 0; }
 .on-tab { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 30px; border: 1px solid #e2e8f0; border-radius: 8px; background: #fff; font: 700 12px 'Inter', sans-serif; color: #64748b; cursor: pointer; }

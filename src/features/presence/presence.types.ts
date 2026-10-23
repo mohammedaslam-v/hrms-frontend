@@ -65,6 +65,12 @@ export interface BoardPerson {
   /** Admin-panel role (as the new admin shows it), else the HRMS department. */
   team: string | null
   leave: { type: string; isHalfDay: boolean } | null
+  /** 'Weekly off' or 'Holiday' for the shift day running now, else null. */
+  dayOff: string | null
+  /** Inside their shift now, and not on a weekly off, holiday or leave. */
+  onDuty: boolean
+  /** Minutes since the running shift began, while inside it. */
+  shiftMinutesIn: number | null
   presence: BoardPresence | null
   isMe: boolean
 }
