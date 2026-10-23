@@ -36,18 +36,32 @@ export interface TodayView {
   canCheckIn: boolean
   canCheckOut: boolean
   /**
-   * Set for WFO: punching is only allowed inside this circle. Null means punch
-   * from anywhere. The server judges the location again on every punch.
+   * Set for WFO (office or home) and WFH (home): punching is only allowed inside
+   * one of these circles. Null means punch from anywhere. The server judges the
+   * location again on every punch.
    */
-  geofence: Geofence | null
+  geofence: GeofencePolicy | null
 }
 
-export interface Geofence {
+export type ZoneKind = 'office' | 'home'
+
+/** One allowed place: a circle on the map. */
+export interface GeofenceZone {
+  kind: ZoneKind
   lat: number
   lng: number
+  /** The radius people are told about — every message says this number. */
   radiusM: number
+  /** Hidden extra metres for GPS drift: decides, never displayed. */
+  graceM?: number
+}
+
+export interface GeofencePolicy {
+  zones: GeofenceZone[]
   /** A fix vaguer than this is "not precise enough", never "outside". */
   maxAccuracyM: number
+  /** WFH with no saved home location: blocked until they save one. */
+  homeMissing?: boolean
 }
 
 /** Sent with a punch — what the browser's Geolocation API reported. */

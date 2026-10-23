@@ -2,6 +2,7 @@ import type {
   CompensationView,
   DismissEmployeePayload,
   DocumentKey,
+  HomeLocationStatus,
   ProfileDocument,
   ProfileView,
   ToggleSalaryPayload,
@@ -15,6 +16,9 @@ import { fetchBlob, getAccessToken, request } from '../../shared/api/client'
 export const profileApi = {
   /** Your own page. The server scopes this to the session. */
   getMine: () => request<ProfileView>('/profile/me'),
+
+  /** Whether you still need to save a home location — one cheap row. */
+  getHomeLocationStatus: () => request<HomeLocationStatus>('/profile/me/home-location'),
 
   /** Someone else's — allowed only for your reporting line, or as an admin. */
   getOne: (employeeId: number) => request<ProfileView>(`/profile/${employeeId}`),

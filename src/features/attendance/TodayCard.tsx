@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { attendanceApi } from './attendance.api'
 import { STATUS_CLASS, type TodayView } from './attendance.types'
 import { useGeofence } from './useGeofence'
@@ -277,11 +278,24 @@ export function TodayCard({ employeeId, isSelf, isAdmin, employeeName }: TodayCa
               style={{ fontSize: 12.5 }}
             >
               {geo.message}
+              {geo.state.kind === 'no-home' && (
+                <>
+                  {' '}
+                  {/* Opens Edit personal details straight away (MyPage reads ?edit). */}
+                  <Link to="/me?edit=personal" style={{ fontWeight: 600 }}>
+                    Set it now →
+                  </Link>
+                </>
+              )}
             </div>
           )}
           {geo.state.kind === 'inside' && (
             <div className="hint" style={{ marginTop: 6, fontSize: 12, textAlign: 'center' }}>
-              📍 At the office ({Math.round(geo.state.distanceM)} m away)
+              📍 At {geo.state.zone === 'home' ? 'your home location' : 'the office'}
+              {/* The distance only while within the stated radius, so the hidden
+                  margin never shows as "180 m away". */}
+              {geo.state.distanceM <= geo.state.radiusM &&
+                ` (${Math.round(geo.state.distanceM)} m away)`}
             </div>
           )}
 

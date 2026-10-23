@@ -79,6 +79,12 @@ export interface ProfileView {
   linkedinProfile: string | null
   panNumber?: string | null
   aadharNumber?: string | null
+  /** For the attendance geofence. Null when not saved, or withheld from a manager. */
+  homeLocation?: HomeLocation | null
+  /** WFO / WFH — this person's geofence uses a home location. */
+  homeLocationRequired?: boolean
+  /** The employee has used their one save; only HR can change it now. */
+  homeLocationLocked?: boolean
   confirmationDate?: string | null
   uan?: string | null
   pfNumber?: string | null
@@ -166,6 +172,23 @@ export interface UpdatePersonalDetailsPayload {
   bankName?: string | null
   ifscCode?: string | null
   accountNo?: string | null
+  /** Both or neither. Empty strings clear it (HR only). */
+  homeLat?: number | string | null
+  homeLng?: number | string | null
+}
+
+/** The one saved location besides the office — WFH's only one, WFO's second. */
+export interface HomeLocation {
+  lat: number
+  lng: number
+  setAt: string | null
+  setById: number | null
+  setByName: string | null
+}
+
+export interface HomeLocationStatus {
+  required: boolean
+  saved: boolean
 }
 
 export const WORK_MODE_CLASS: Record<WorkMode, string> = {
