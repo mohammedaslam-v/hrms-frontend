@@ -31,6 +31,7 @@ export function TodayCard({ employeeId, isSelf, isAdmin, employeeName }: TodayCa
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [showCheckInConfirm, setShowCheckInConfirm] = useState(false)
   const [showCheckOutConfirm, setShowCheckOutConfirm] = useState(false)
 
   const canPunch = isSelf || Boolean(isAdmin)
@@ -221,7 +222,7 @@ export function TodayCard({ employeeId, isSelf, isAdmin, employeeName }: TodayCa
               <button
                 type="button"
                 className="btn success"
-                onClick={() => void act('in')}
+                onClick={() => setShowCheckInConfirm(true)}
                 disabled={checkInDisabled}
                 aria-describedby={geo.message ? geoMessageId : undefined}
                 style={{
@@ -310,6 +311,39 @@ export function TodayCard({ employeeId, isSelf, isAdmin, employeeName }: TodayCa
             </div>
           )}
         </div>
+      )}
+
+      {showCheckInConfirm && (
+        <Modal
+          title="Confirm Check-in"
+          onClose={() => setShowCheckInConfirm(false)}
+          busy={busy}
+          maxWidth={420}
+          confirm={
+            <button
+              className="btn success"
+              type="button"
+              onClick={async () => {
+                setShowCheckInConfirm(false)
+                await act('in')
+              }}
+              disabled={busy}
+              style={{ fontWeight: 600 }}
+            >
+              {busy ? 'Checking in…' : 'Yes, Check in'}
+            </button>
+          }
+        >
+          <div style={{ fontSize: 14, color: 'var(--text)', lineHeight: 1.5, padding: '8px 0 16px' }}>
+            {isSelf
+              ? isCheckedOut
+                ? 'Are you sure you want to check in again for today?'
+                : 'Are you sure you want to check in for today?'
+              : isCheckedOut
+                ? `Are you sure you want to check in ${employeeName.split(' ')[0]} again for today?`
+                : `Are you sure you want to check in ${employeeName.split(' ')[0]} for today?`}
+          </div>
+        </Modal>
       )}
 
       {showCheckOutConfirm && (
