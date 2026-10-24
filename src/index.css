@@ -2638,6 +2638,11 @@ tr.row:focus-visible { outline: 2px solid var(--blue); outline-offset: -2px; }
 }
 .on-line { margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 500 11px 'Inter', sans-serif; color: #94a3b8; }
 .on-line.is-online { color: #047857; }
+/* Status line on the left, today's admin-panel total pinned to the right. */
+.on-line-row { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.on-line-row .on-line { flex: 1; min-width: 0; }
+.on-today { flex: none; font: 500 10.5px 'Inter', sans-serif; color: #94a3b8; white-space: nowrap; }
+.on-today b { font-weight: 700; color: #475569; font-variant-numeric: tabular-nums; }
 
 .on-av {
   position: relative; display: inline-flex; flex: none; align-items: center; justify-content: center;
@@ -2716,6 +2721,7 @@ tr.row:focus-visible { outline: 2px solid var(--blue); outline-offset: -2px; }
 .on-chip.none { background: #f8fafc; color: #94a3b8; }
 .on-chip.leave { background: #eeeafe; color: #6d53f0; }
 .on-chip.off { background: #efe9e0; color: #78716c; }
+.on-chip.inactive { background: #fef2f2; color: #b91c1c; }
 /* A second chip (why they are off) sits beside the first, not pushed apart. */
 .on-chip.second { margin-left: 4px; }
 @media (max-width: 640px) { .on-menu.on-board { width: auto; } }

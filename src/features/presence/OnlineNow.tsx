@@ -11,10 +11,10 @@ import { usePresenceBoard, usePresenceCount } from './usePresenceBoard'
  *
  * Two tabs, both grouped by shift:
  *
- *   · Active (the default) — who is supposed to be working at this moment
- *     (inside their shift, not on weekly off or leave), each Active or Away
- *     with how long; plus anyone active right now whatever their shift, with
- *     a chip saying why they are outside the expected list.
+ *   · Active (the default) — two kinds of people, and only two words:
+ *     anyone active right now, whatever their shift, reads "Active"; anyone
+ *     supposed to be working at this moment (inside their shift, not on weekly
+ *     off or leave) who is not active reads "Not active". Each with how long.
  *   · All — everyone (shifts closed, never-seen people folded into one line
  *     per shift). Days off read as "Weekly off", not "Away".
  *
@@ -55,8 +55,8 @@ function offChip(p: BoardPerson): Chip | null {
 function chipsOf(p: BoardPerson, tab: Tab): Chip[] {
   const off = offChip(p)
   if (tab === 'active') {
-    const status = isOnline(p) ? { text: 'Active', tone: 'online' } : { text: 'Away', tone: 'away' }
-    return off ? [status, off] : [status]
+    // Deliberately just one word here — no "Weekly off" or "Leave" beside it.
+    return [isOnline(p) ? { text: 'Active', tone: 'online' } : { text: 'Not active', tone: 'inactive' }]
   }
   // All: someone working on a day off still shows Online beside why; anyone
   // else off today reads as their day off, never as "Away".
@@ -67,9 +67,9 @@ function chipsOf(p: BoardPerson, tab: Tab): Chip[] {
 }
 
 /**
- * The Active tab's line: how long they have been active, or how long away.
- * Away is counted from their last activity, but never from before the shift
- * began — last seen yesterday is "away since the shift started", not 20 hours.
+ * The Active tab's line: how long they have been active, or how long not.
+ * Not active is counted from their last activity, but never from before the
+ * shift began — last seen yesterday is "since the shift started", not 20 hours.
  */
 function activeLineOf(p: BoardPerson, today: string): string {
   const s = p.presence
@@ -82,10 +82,10 @@ function activeLineOf(p: BoardPerson, today: string): string {
   const sinceSeen = seenToday ? Math.floor(s.secondsAgo / 60) : null
   const shift = p.shiftMinutesIn
   if (sinceSeen !== null && (shift === null || sinceSeen <= shift)) {
-    return `Away for ${durationLabel(sinceSeen)} · last active ${s!.lastSeenTime}`
+    return `Not active for ${durationLabel(sinceSeen)} · last active ${s!.lastSeenTime}`
   }
-  if (shift !== null) return `Away for ${durationLabel(shift)} · not active since the shift started`
-  return 'Away'
+  if (shift !== null) return `Not active for ${durationLabel(shift)} · since the shift started`
+  return 'Not active'
 }
 
 function lineOf(p: BoardPerson, today: string): string {
@@ -100,6 +100,9 @@ function lineOf(p: BoardPerson, today: string): string {
   if (s.status === 'signed_off') return `Logged out · ${when}`
   return [`Last seen ${when}`, where].filter(Boolean).join(' · ')
 }
+
+/** Today's total on the admin panel: "0 min", "45 min", "3 hr 12 min". */
+const todayLabel = (seconds: number): string => (seconds < 60 ? '0 min' : durationLabel(seconds / 60))
 
 function Row({ p, today, tab }: { p: BoardPerson; today: string; tab: Tab }) {
   const chips = chipsOf(p, tab)
@@ -119,9 +122,14 @@ function Row({ p, today, tab }: { p: BoardPerson; today: string; tab: Tab }) {
             </span>
           ))}
         </div>
-        <p className={`on-line${p.presence?.status === 'online' ? ' is-online' : ''}`}>
-          {tab === 'active' ? activeLineOf(p, today) : lineOf(p, today)}
-        </p>
+        <div className="on-line-row">
+          <p className={`on-line${p.presence?.status === 'online' ? ' is-online' : ''}`}>
+            {tab === 'active' ? activeLineOf(p, today) : lineOf(p, today)}
+          </p>
+          <span className="on-today" title="Total time active on the admin panel today">
+            Today <b>{todayLabel(p.activeTodaySeconds)}</b>
+          </span>
+        </div>
       </div>
     </div>
   )
