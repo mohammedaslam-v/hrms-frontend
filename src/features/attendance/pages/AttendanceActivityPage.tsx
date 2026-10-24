@@ -14,8 +14,8 @@ import { useAuth } from '../../../app/auth-context'
 
 export function AttendanceActivityPage() {
   const { employee } = useAuth()
-  const isAdmin = employee.tiers.includes('admin')
-  const isManager = isAdmin || employee.tiers.includes('manager')
+  const isAdmin = employee.defaultTier === 'admin' || Boolean(employee.tiers?.includes('admin'))
+  const isManager = isAdmin || employee.defaultTier === 'manager' || Boolean(employee.tiers?.includes('manager'))
 
   const [activeTab, setActiveTab] = useState<AttendanceTab>('today')
   const [activeFilter, setActiveFilter] = useState<string>('')
