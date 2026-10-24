@@ -43,12 +43,23 @@ const TONE: Record<AttendanceStatus, string> = {
   'Not in yet': '',
 }
 
-const LEGEND: { tone: string; label: string; counts: AttendanceStatus[] }[] = [
-  { tone: 'present', label: 'Present', counts: ['On time', 'Late'] },
-  { tone: 'leave', label: 'Leave', counts: ['Leave'] },
-  { tone: 'half', label: 'Half day', counts: ['Half day'] },
-  { tone: 'absent', label: 'Not Marked', counts: ['Absent'] },
-  { tone: 'off', label: 'Weekly off', counts: ['Weekly off', 'Holiday'] },
+const STATUS_ABBR: Record<AttendanceStatus, string> = {
+  'On time': 'P',
+  Late: 'P',
+  Leave: 'L',
+  'Half day': 'HD',
+  Absent: 'A',
+  'Weekly off': 'WO',
+  Holiday: 'H',
+  'Not in yet': '',
+}
+
+const LEGEND: { tone: string; label: string; abbr: string; counts: AttendanceStatus[] }[] = [
+  { tone: 'present', label: 'Present', abbr: 'P', counts: ['On time', 'Late'] },
+  { tone: 'leave', label: 'Leave', abbr: 'L', counts: ['Leave'] },
+  { tone: 'half', label: 'Half day', abbr: 'HD', counts: ['Half day'] },
+  { tone: 'absent', label: 'Not Marked', abbr: 'A', counts: ['Absent'] },
+  { tone: 'off', label: 'Weekly off', abbr: 'WO', counts: ['Weekly off', 'Holiday'] },
 ]
 
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
@@ -181,38 +192,46 @@ export function MonthCalendarCard({ employeeId, isSelf }: { employeeId: number; 
           {Array.from({ length: leadingBlanks(year, month) }, (_, i) => (
             <div className="cal-blank" key={`b${i}`} aria-hidden />
           ))}
-          {view.days.map((bar) => (
-            <div
-              key={bar.date}
-              className={`cal-day ${TONE[bar.status]}${bar.date === view.today ? ' today' : ''}`}
-              // Reachable by keyboard as well as by mouse: the detail is the
-              // only place the stretches appear, so it cannot be hover-only.
-              tabIndex={0}
-              role="button"
-              aria-label={`${bar.dayName} ${fmtShort(bar.date)}, ${STATUS_LABEL[bar.status] ?? bar.status}, ${asHours(bar.hours)}`}
-              onMouseEnter={(e) => open(bar, e.currentTarget)}
-              onMouseLeave={() => setAnchor(null)}
-              onFocus={(e) => open(bar, e.currentTarget)}
-              onBlur={() => setAnchor(null)}
-              onClick={() => openDetail(bar)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault()
-                  openDetail(bar)
-                }
-              }}
-            >
-              <span className="cal-num">{Number(bar.date.slice(8))}</span>
-              {bar.hours > 0 && <span className="cal-hrs">{asHours(bar.hours)}</span>}
-            </div>
-          ))}
+          {view.days.map((bar) => {
+            const abbr = STATUS_ABBR[bar.status] ?? ''
+            return (
+              <div
+                key={bar.date}
+                className={`cal-day ${TONE[bar.status]}${bar.date === view.today ? ' today' : ''}`}
+                // Reachable by keyboard as well as by mouse: the detail is the
+                // only place the stretches appear, so it cannot be hover-only.
+                tabIndex={0}
+                role="button"
+                aria-label={`${bar.dayName} ${fmtShort(bar.date)}, ${STATUS_LABEL[bar.status] ?? bar.status}, ${asHours(bar.hours)}`}
+                onMouseEnter={(e) => open(bar, e.currentTarget)}
+                onMouseLeave={() => setAnchor(null)}
+                onFocus={(e) => open(bar, e.currentTarget)}
+                onBlur={() => setAnchor(null)}
+                onClick={() => openDetail(bar)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    openDetail(bar)
+                  }
+                }}
+              >
+                <span className="cal-num">{Number(bar.date.slice(8))}</span>
+                {(bar.hours > 0 || Boolean(abbr)) && (
+                  <div className="cal-day-foot">
+                    {bar.hours > 0 && <span className="cal-hrs">{asHours(bar.hours)}</span>}
+                    {abbr && <span className="cal-abbr">{abbr}</span>}
+                  </div>
+                )}
+              </div>
+            )
+          })}
         </div>
 
         <div className="cal-legend">
           {LEGEND.map((l) => (
             <span key={l.tone}>
               <i className={`cal-sw ${l.tone}`} />
-              {l.label} <b>{count(l.counts)}</b>
+              {l.label} ({l.abbr}) <b>{count(l.counts)}</b>
             </span>
           ))}
           <span className="cal-total">{worked > 0 ? `${asHours(worked)} this month` : 'No hours recorded'}</span>

@@ -63,19 +63,40 @@
 .cal-day:hover { border-color: var(--line); filter: brightness(0.98); }
 .cal-day:focus-visible { outline: 2px solid var(--violet); outline-offset: 2px; }
 
+.cal-day-foot {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  width: 100%;
+  gap: 4px;
+}
+
 .cal-num { font-size: 13px; font-weight: 600; color: var(--ink2); }
-.cal-hrs { font-size: 11px; color: var(--muted2); align-self: flex-end; }
+.cal-hrs { font-size: 11px; color: var(--muted2); line-height: 1; }
+
+.cal-abbr {
+  font-size: 11.5px;
+  font-weight: 700;
+  line-height: 1;
+  margin-left: auto;
+  letter-spacing: 0.2px;
+}
 
 .cal-day.present { background: var(--green-soft); }
 .cal-day.present .cal-num { color: var(--green); }
+.cal-day.present .cal-abbr { color: var(--green); }
 .cal-day.leave { background: var(--red-soft); }
 .cal-day.leave .cal-num { color: var(--red); }
+.cal-day.leave .cal-abbr { color: var(--red); }
 .cal-day.half { background: var(--amber-soft); }
 .cal-day.half .cal-num { color: var(--amber); }
+.cal-day.half .cal-abbr { color: var(--amber); }
 .cal-day.absent { background: #fdf0f3; }
 .cal-day.absent .cal-num { color: #c2416b; }
+.cal-day.absent .cal-abbr { color: #c2416b; }
 .cal-day.off { background: #efe9e0; }
 .cal-day.off .cal-num { color: var(--muted); }
+.cal-day.off .cal-abbr { color: #8c827a; }
 
 /* Late is still present: a dot, not a different fill. */
 .cal-day.late::after {
@@ -127,5 +148,6 @@
   .cal-grid { gap: 4px; }
   .cal-day { min-height: 42px; padding: 4px 5px; }
   .cal-hrs { display: none; }
+  .cal-abbr { font-size: 10px; }
   .cal-total { margin-left: 0; }
 }
