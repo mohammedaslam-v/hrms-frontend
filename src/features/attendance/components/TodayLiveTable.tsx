@@ -69,7 +69,10 @@ export function TodayLiveTable({ rows }: { rows: TodayBoardRow[] }) {
                       </span>
                       <div>
                         <div style={{ fontWeight: 600, color: 'var(--ink)' }}>{row.name}</div>
-                        <div style={{ fontSize: 11, color: 'var(--muted2)' }}>{row.code}</div>
+                        <div style={{ fontSize: 11, color: 'var(--muted2)' }}>
+                          {row.code}
+                          {row.managerName ? ` · Mgr: ${row.managerName}` : ''}
+                        </div>
                       </div>
                     </div>
                   </td>
