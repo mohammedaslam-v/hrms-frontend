@@ -26,7 +26,7 @@ const STATUS_LABEL = { online: 'Online', away: 'Away', signed_off: 'Logged out' 
 type Tab = 'active' | 'all'
 
 const TABS: { key: Tab; label: string }[] = [
-  { key: 'active', label: 'Active' },
+  { key: 'active', label: 'On shift' },
   { key: 'all', label: 'All' },
 ]
 
@@ -90,7 +90,7 @@ function activeLineOf(p: BoardPerson, today: string): string {
 
 function lineOf(p: BoardPerson, today: string): string {
   const s = p.presence
-  if (!s) return 'Not seen on the admin panel'
+  if (!s) return 'Not seen on any panel'
   const where = placeLabel(s.page)
   if (s.status === 'online') {
     const length = s.sessionMinutes >= 1 ? `${durationLabel(s.sessionMinutes)} in` : 'just arrived'
@@ -204,7 +204,7 @@ export function OnlineNow() {
   // While the board is open its own count is the fresher one.
   const online = open && board ? board.counts.online : count
   const tip =
-    online === null ? `Who is online could not load: ${countError}` : `${online} online on the admin panel now`
+    online === null ? `Who is online could not load: ${countError}` : `${online} active across panels now`
 
   return (
     <div className="on-wrap" ref={ref}>
@@ -229,7 +229,7 @@ export function OnlineNow() {
         <div className="on-menu on-board" role="menu">
           <div className="on-menu-head">
             <span className="on-menu-title">
-              <span className="on-pulse-dot" /> Who's on the admin panel
+              <span className="on-pulse-dot" /> Who's active across panels
             </span>
             <span className="on-badge">{online ?? '–'} online</span>
           </div>
@@ -308,7 +308,7 @@ export function OnlineNow() {
                             className="on-fold"
                             onClick={() => setShowNotSeen((v) => ({ ...v, [g.key]: true }))}
                           >
-                            + {hidden} not seen on the admin panel <span>Show</span>
+                            + {hidden} not seen on any panel <span>Show</span>
                           </button>
                         )}
                       </>
@@ -321,8 +321,8 @@ export function OnlineNow() {
 
           <div className="on-menu-foot">
             {tab === 'active'
-              ? 'People in their shift now (not on weekly off or leave), plus anyone active. Active = on the admin panel in the last 3 minutes.'
-              : 'Online = active on the admin panel in the last 3 minutes'}
+              ? 'People in their shift now (not on weekly off or leave), plus anyone active. Active = interaction on any Bambinos panel in the last 3 minutes.'
+              : 'Online = active across panels in the last 3 minutes'}
           </div>
         </div>
       ) : null}
