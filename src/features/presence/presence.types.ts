@@ -1,6 +1,24 @@
 /** The new admin panel's who-is-online shape, field for field. */
 export type PresenceStatus = 'online' | 'away' | 'signed_off'
 
+/**
+ * Where someone is: which Bambinos panel, and which page on it. `panel` is
+ * 'admin' for the admin panel; others report through the shared tracker.
+ * Optional so an older backend's rows still render.
+ */
+export interface PageRef {
+  path: string | null
+  name: string | null
+  panel?: string
+  panelName?: string
+}
+
+/** "on Tickets" on the admin panel; "on Renewal panel · Renewal Analysis" elsewhere. */
+export function placeLabel(page: PageRef): string | null {
+  if (!page.panel || page.panel === 'admin') return page.name ? `on ${page.name}` : null
+  return `on ${page.panelName ?? page.panel}${page.name ? ` · ${page.name}` : ''}`
+}
+
 export interface PresencePerson {
   admin_id: number
   name: string
@@ -8,7 +26,7 @@ export interface PresencePerson {
   status: PresenceStatus
   seconds_ago: number
   session_minutes: number
-  page: { path: string | null; name: string | null }
+  page: PageRef
 }
 
 export interface PresenceSummary {
@@ -34,7 +52,7 @@ export interface AdminPanelNow {
   status: PresenceStatus
   secondsAgo: number
   sessionMinutes: number
-  page: { path: string | null; name: string | null }
+  page: PageRef
   lastSeenDate: string
   lastSeenTime: string
 }
@@ -52,7 +70,7 @@ export interface BoardPresence {
   status: PresenceStatus
   secondsAgo: number
   sessionMinutes: number
-  page: { path: string | null; name: string | null }
+  page: PageRef
   lastSeenDate: string
   lastSeenTime: string
 }

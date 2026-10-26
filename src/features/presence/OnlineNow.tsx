@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { InitialsAvatar } from './InitialsAvatar'
 import { durationLabel, lastSeenLabel } from './relative-time'
-import type { BoardGroup, BoardPerson } from './presence.types'
+import { placeLabel, type BoardGroup, type BoardPerson } from './presence.types'
 import { usePresenceBoard, usePresenceCount } from './usePresenceBoard'
 
 /*
@@ -74,7 +74,7 @@ function chipsOf(p: BoardPerson, tab: Tab): Chip[] {
 function activeLineOf(p: BoardPerson, today: string): string {
   const s = p.presence
   if (s?.status === 'online') {
-    const where = s.page.name ? `on ${s.page.name}` : null
+    const where = placeLabel(s.page)
     const length = s.sessionMinutes >= 1 ? `for ${durationLabel(s.sessionMinutes)}` : 'just arrived'
     return ['Active', length, where].filter(Boolean).join(' · ')
   }
@@ -91,7 +91,7 @@ function activeLineOf(p: BoardPerson, today: string): string {
 function lineOf(p: BoardPerson, today: string): string {
   const s = p.presence
   if (!s) return 'Not seen on the admin panel'
-  const where = s.page.name ? `on ${s.page.name}` : null
+  const where = placeLabel(s.page)
   if (s.status === 'online') {
     const length = s.sessionMinutes >= 1 ? `${durationLabel(s.sessionMinutes)} in` : 'just arrived'
     return ['Active now', where, length].filter(Boolean).join(' · ')
@@ -126,7 +126,7 @@ function Row({ p, today, tab }: { p: BoardPerson; today: string; tab: Tab }) {
           <p className={`on-line${p.presence?.status === 'online' ? ' is-online' : ''}`}>
             {tab === 'active' ? activeLineOf(p, today) : lineOf(p, today)}
           </p>
-          <span className="on-today" title="Total time active on the admin panel today">
+          <span className="on-today" title="Total time active today, across all Bambinos panels">
             Today <b>{todayLabel(p.activeTodaySeconds)}</b>
           </span>
         </div>

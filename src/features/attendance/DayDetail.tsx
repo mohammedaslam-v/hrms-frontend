@@ -92,7 +92,7 @@ export function DayPopover({ x, y, ...day }: DayData & { x: number; y: number })
           )}
           {adminLine && (
             <div className="wbpop-row">
-              <span>Admin panel</span>
+              <span>Admin & panels</span>
               <b>{adminLine.value}</b>
               <em className={adminLine.live ? 'is-live' : undefined}>{adminLine.detail}</em>
             </div>

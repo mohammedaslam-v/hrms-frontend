@@ -15,7 +15,10 @@ export function adminDaySummary(
   const day = activity.days.find((d) => d.date === date)
   const live = isToday && activity.now?.status === 'online'
   const value = day ? asHours(day.activeSeconds / 3600) : '—'
-  if (live) return { value, detail: 'On the panel now', live }
+  if (live) {
+    const target = activity.now?.page.panelName ?? (activity.now?.page.panel === 'admin' ? 'the panel' : 'panels')
+    return { value, detail: `On ${target} now`, live }
+  }
   if (day) return { value, detail: `${day.firstSeen} – ${day.lastSeen}`, live }
   return { value, detail: 'Not recorded', live }
 }
