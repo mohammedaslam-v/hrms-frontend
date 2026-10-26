@@ -8,6 +8,7 @@ import { IssueLoanModal } from '../components/IssueLoanModal'
 import { LoanDetailsModal } from '../components/LoanDetailsModal'
 import { LoanSummaryCards } from '../components/LoanSummaryCards'
 import { payrollApi } from '../../payroll/api/payroll.api'
+import { DisburseOtpModal } from '../../reimbursement/components/DisburseOtpModal'
 import type {
   AdminLoanItem,
   AdminLoansView,
@@ -26,6 +27,11 @@ export function AdminLoansPage() {
   const [closingLoan, setClosingLoan] = useState<AdminLoanItem | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [toast, setToast] = useState<ToastMessage | null>(null)
+  const [payoutOtpState, setPayoutOtpState] = useState<{
+    loan: AdminLoanItem
+    challengeId: string
+    maskedEmail: string
+  } | null>(null)
 
   const loadLoans = useCallback(async () => {
     try {
@@ -53,20 +59,9 @@ export function AdminLoansPage() {
   const handleIssueLoan = async (payload: CreateLoanPayload) => {
     try {
       setSubmitting(true)
-      const res = await loansApi.createLoan(payload)
-      let payoutPushed = false
-      if (res?.id) {
-        try {
-          await payrollApi.pushLoanDisbursement(res.id)
-          payoutPushed = true
-        } catch (pErr: unknown) {
-          console.warn('Auto disbursement push note:', pErr)
-        }
-      }
+      await loansApi.createLoan(payload)
       setToast({
-        text: payoutPushed
-          ? 'Loan issued & disbursement request sent to RazorpayX dashboard!'
-          : 'Loan issued as pending disbursement. You can click 💳 Disburse anytime.',
+        text: 'Loan issued as pending disbursement. You can click 💳 Disburse anytime to transfer funds.',
         tone: 'good',
       })
       setIsIssueModalOpen(false)
@@ -103,20 +98,36 @@ export function AdminLoansPage() {
   const handleDisburseLoan = async (loan: AdminLoanItem) => {
     try {
       setSubmitting(true)
-      await payrollApi.pushLoanDisbursement(loan.id)
-      setToast({
-        text: `Loan disbursement pushed to Razorpay for ${loan.employeeName}.`,
-        tone: 'good',
+      const otpRes = await payrollApi.requestPayoutOtp()
+      setPayoutOtpState({
+        loan,
+        challengeId: otpRes.challengeId,
+        maskedEmail: otpRes.sentTo,
       })
-      await loadLoans()
     } catch (err: unknown) {
       setToast({
-        text: err instanceof Error ? err.message : 'Failed to disburse loan via Razorpay.',
+        text: err instanceof Error ? err.message : 'Failed to request disbursement authorization code.',
         tone: 'bad',
       })
     } finally {
       setSubmitting(false)
     }
+  }
+
+  const handleConfirmDisburseOtp = async (challengeId: string, otp: string) => {
+    if (!payoutOtpState) return
+    await payrollApi.pushLoanDisbursement(payoutOtpState.loan.id, challengeId, otp)
+    setToast({
+      text: `Loan disbursement pushed to RazorpayX for ${payoutOtpState.loan.employeeName}.`,
+      tone: 'good',
+    })
+    setPayoutOtpState(null)
+    await loadLoans()
+  }
+
+  const handleResendPayoutOtp = async (): Promise<string> => {
+    const res = await payrollApi.requestPayoutOtp()
+    return res.challengeId
   }
 
   return (
@@ -213,6 +224,22 @@ export function AdminLoansPage() {
           submitting={submitting}
           onClose={() => setClosingLoan(null)}
           onConfirm={handleConfirmClose}
+        />
+      )}
+
+      {payoutOtpState && (
+        <DisburseOtpModal
+          title="Authorize Loan Disbursement"
+          beneficiaryName={payoutOtpState.loan.employeeName}
+          beneficiaryCode={payoutOtpState.loan.employeeCode}
+          department={payoutOtpState.loan.department}
+          amount={payoutOtpState.loan.principal}
+          purposeText={`Loan: ${payoutOtpState.loan.purpose}`}
+          initialChallengeId={payoutOtpState.challengeId}
+          maskedEmail={payoutOtpState.maskedEmail}
+          onResendOtp={handleResendPayoutOtp}
+          onConfirm={handleConfirmDisburseOtp}
+          onClose={() => setPayoutOtpState(null)}
         />
       )}
 
