@@ -1,3 +1,5 @@
+import type { LeaveType } from '../leave'
+
 export type AttendanceStatus =
   | 'On time'
   | 'Late'
@@ -116,6 +118,46 @@ export interface WeekBar {
   segments: TimeRange[]
   /** Whether this day's hours were declared or observed. */
   source: DaySource
+  /** On a Leave or Half day: which kind. Unpaid is shown as LOP. Null otherwise. */
+  leaveType: LeaveType | null
+}
+
+/** How a day is shown on the calendar: its code, its colour, and its name. */
+export interface DayCode {
+  code: string
+  /** A class in calendar.css. */
+  tone: string
+  label: string
+}
+
+/**
+ * The calendar's codes: P, EL, LOP, HD, WO.
+ *
+ * There is no code for absence. A past working day with nothing on it is
+ * deducted from pay as loss of pay, so it is shown as LOP — the same thing the
+ * payslip says about it.
+ */
+export function dayCodeOf(bar: Pick<WeekBar, 'status' | 'leaveType'>): DayCode {
+  switch (bar.status) {
+    case 'On time':
+      return { code: 'P', tone: 'present', label: 'On time' }
+    case 'Late':
+      return { code: 'P', tone: 'present late', label: 'Late' }
+    case 'Leave':
+      return bar.leaveType === 'Unpaid'
+        ? { code: 'LOP', tone: 'lop', label: 'Loss of pay' }
+        : { code: 'EL', tone: 'leave', label: 'Leave' }
+    case 'Half day':
+      return { code: 'HD', tone: 'half', label: 'Half day' }
+    case 'Absent':
+      return { code: 'LOP', tone: 'lop', label: 'Not marked · LOP' }
+    case 'Weekly off':
+      return { code: 'WO', tone: 'off', label: 'Weekly off' }
+    case 'Holiday':
+      return { code: 'H', tone: 'off', label: 'Holiday' }
+    default:
+      return { code: '', tone: '', label: STATUS_LABEL[bar.status] ?? bar.status }
+  }
 }
 
 /** A month (or any window) for the calendar card. */
@@ -136,6 +178,7 @@ export const DAY_EDIT_STATUSES = [
   'Half earned leave',
   'LOP full day',
   'LOP half day',
+  'Weekly off',
 ] as const
 export type DayEditStatus = (typeof DAY_EDIT_STATUSES)[number]
 

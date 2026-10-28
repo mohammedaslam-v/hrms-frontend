@@ -12,13 +12,17 @@ export function printSlipDocument(slip: SalarySlip, company: CompanySalaryConfig
 
   const earnRows = isContractor
     ? `
-      <div class="kv"><b>Professional Retainer Fee</b><span>${formatInr(slip.earnings.gross)}</span></div>
+      <div class="kv"><b>Professional Retainer Fee</b><span>${formatInr(slip.earnings.gross - slip.earnings.arrears)}</span></div>
     `
     : `
       <div class="kv"><b>Basic salary</b><span>${formatInr(slip.earnings.basic)}</span></div>
       <div class="kv"><b>House rent allowance</b><span>${formatInr(slip.earnings.hra)}</span></div>
       <div class="kv"><b>Special allowance</b><span>${formatInr(slip.earnings.special)}</span></div>
     `
+  const arrearsRow =
+    slip.earnings.arrears === 0
+      ? ''
+      : `<div class="kv"><b>${slip.earnings.arrears > 0 ? 'Arrears' : 'Recovery'} (earlier months)</b><span>${slip.earnings.arrears < 0 ? '−' : ''}${formatInr(Math.abs(slip.earnings.arrears))}</span></div>`
 
   const dedRows = isContractor
     ? `
@@ -260,6 +264,7 @@ export function printSlipDocument(slip: SalarySlip, company: CompanySalaryConfig
         <div>
           <h4>${isContractor ? 'Professional Fees' : 'Earnings'}</h4>
           ${earnRows}
+          ${arrearsRow}
           <div class="kv total"><b>${isContractor ? 'Gross Invoiced' : 'Gross earnings'}</b><span>${formatInr(slip.earnings.gross)}</span></div>
         </div>
         <div>

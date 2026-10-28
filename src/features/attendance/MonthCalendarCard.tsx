@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { attendanceApi } from './attendance.api'
-import { STATUS_LABEL, type AttendanceStatus, type CalendarView, type WeekBar } from './attendance.types'
+import { dayCodeOf, type CalendarView, type WeekBar } from './attendance.types'
 import { DayDetailModal, DayPopover } from './DayDetail'
 import { EditDayModal } from './EditDayModal'
 import { MONTHS, fmtShort } from '../../shared/lib/date'
@@ -29,37 +29,16 @@ const leadingBlanks = (year: number, month: number): number =>
   (new Date(Date.UTC(year, month, 1)).getUTCDay() + 6) % 7
 
 /**
- * Colour by what the day was. Late is still present — it gets a dot, not a
- * different fill, so a month of attendance does not read as a month of leave.
+ * One legend entry per colour, counted by the same codes the cells show. Late
+ * is still present — it gets a dot, not a different fill, so a month of
+ * attendance does not read as a month of leave.
  */
-const TONE: Record<AttendanceStatus, string> = {
-  'On time': 'present',
-  Late: 'present late',
-  Leave: 'leave',
-  'Half day': 'half',
-  Absent: 'absent',
-  'Weekly off': 'off',
-  Holiday: 'off',
-  'Not in yet': '',
-}
-
-const STATUS_ABBR: Record<AttendanceStatus, string> = {
-  'On time': 'P',
-  Late: 'P',
-  Leave: 'L',
-  'Half day': 'HD',
-  Absent: 'A',
-  'Weekly off': 'WO',
-  Holiday: 'H',
-  'Not in yet': '',
-}
-
-const LEGEND: { tone: string; label: string; abbr: string; counts: AttendanceStatus[] }[] = [
-  { tone: 'present', label: 'Present', abbr: 'P', counts: ['On time', 'Late'] },
-  { tone: 'leave', label: 'Leave', abbr: 'L', counts: ['Leave'] },
-  { tone: 'half', label: 'Half day', abbr: 'HD', counts: ['Half day'] },
-  { tone: 'absent', label: 'Not Marked', abbr: 'A', counts: ['Absent'] },
-  { tone: 'off', label: 'Weekly off', abbr: 'WO', counts: ['Weekly off', 'Holiday'] },
+const LEGEND: { tone: string; label: string; abbr: string }[] = [
+  { tone: 'present', label: 'Present', abbr: 'P' },
+  { tone: 'leave', label: 'Leave', abbr: 'EL' },
+  { tone: 'lop', label: 'Loss of pay', abbr: 'LOP' },
+  { tone: 'half', label: 'Half day', abbr: 'HD' },
+  { tone: 'off', label: 'Weekly off', abbr: 'WO' },
 ]
 
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
@@ -178,8 +157,8 @@ export function MonthCalendarCard({ employeeId, isSelf }: { employeeId: number; 
     }
 
     const worked = view.days.reduce((total, bar) => total + bar.hours, 0)
-    const count = (statuses: AttendanceStatus[]) =>
-      view.days.filter((d) => statuses.includes(d.status)).length
+    // By the first word of the tone, so a late day still counts as present.
+    const count = (tone: string) => view.days.filter((d) => dayCodeOf(d).tone.split(' ')[0] === tone).length
 
     return (
       <>
@@ -193,16 +172,16 @@ export function MonthCalendarCard({ employeeId, isSelf }: { employeeId: number; 
             <div className="cal-blank" key={`b${i}`} aria-hidden />
           ))}
           {view.days.map((bar) => {
-            const abbr = STATUS_ABBR[bar.status] ?? ''
+            const { code: abbr, tone, label } = dayCodeOf(bar)
             return (
               <div
                 key={bar.date}
-                className={`cal-day ${TONE[bar.status]}${bar.date === view.today ? ' today' : ''}`}
+                className={`cal-day ${tone}${bar.date === view.today ? ' today' : ''}`}
                 // Reachable by keyboard as well as by mouse: the detail is the
                 // only place the stretches appear, so it cannot be hover-only.
                 tabIndex={0}
                 role="button"
-                aria-label={`${bar.dayName} ${fmtShort(bar.date)}, ${STATUS_LABEL[bar.status] ?? bar.status}, ${asHours(bar.hours)}`}
+                aria-label={`${bar.dayName} ${fmtShort(bar.date)}, ${label}, ${asHours(bar.hours)}`}
                 onMouseEnter={(e) => open(bar, e.currentTarget)}
                 onMouseLeave={() => setAnchor(null)}
                 onFocus={(e) => open(bar, e.currentTarget)}
@@ -231,7 +210,7 @@ export function MonthCalendarCard({ employeeId, isSelf }: { employeeId: number; 
           {LEGEND.map((l) => (
             <span key={l.tone}>
               <i className={`cal-sw ${l.tone}`} />
-              {l.label} ({l.abbr}) <b>{count(l.counts)}</b>
+              {l.label} ({l.abbr}) <b>{count(l.tone)}</b>
             </span>
           ))}
           <span className="cal-total">{worked > 0 ? `${asHours(worked)} this month` : 'No hours recorded'}</span>

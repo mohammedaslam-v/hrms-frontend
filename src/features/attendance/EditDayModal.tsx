@@ -14,12 +14,15 @@ import { Modal } from '../../shared/ui/Modal'
  */
 
 const HALF: DayEditStatus[] = ['Half earned leave', 'LOP half day']
-const FULL_LEAVE: DayEditStatus[] = ['Earned leave', 'LOP full day']
+/** Choices with no working times: the whole day was not worked. */
+const NO_TIMES: DayEditStatus[] = ['Earned leave', 'LOP full day', 'Weekly off']
 
 /** The status the day already has, as the closest choice on this form. */
 function initialStatus(bar: WeekBar): DayEditStatus {
-  if (bar.status === 'Leave') return 'Earned leave'
-  if (bar.status === 'Half day') return 'Half earned leave'
+  const unpaid = bar.leaveType === 'Unpaid'
+  if (bar.status === 'Leave') return unpaid ? 'LOP full day' : 'Earned leave'
+  if (bar.status === 'Half day') return unpaid ? 'LOP half day' : 'Half earned leave'
+  if (bar.status === 'Weekly off') return 'Weekly off'
   return 'Present'
 }
 
@@ -29,6 +32,7 @@ const HINT: Record<DayEditStatus, string> = {
   'Half earned leave': 'Recorded as approved earned leave — 0.5 day from the balance. Times are the half that was worked.',
   'LOP full day': 'Recorded as approved unpaid leave — 1 day of loss of pay.',
   'LOP half day': 'Recorded as approved unpaid leave — 0.5 day of loss of pay. Times are the half that was worked.',
+  'Weekly off': 'A paid day off for this date only — no loss of pay. Any single-day leave on it is cancelled and the check-in is cleared.',
 }
 
 export function EditDayModal({
@@ -58,13 +62,13 @@ export function EditDayModal({
   const [error, setError] = useState<string | null>(null)
 
   const isHalf = HALF.includes(status)
-  const isFullLeave = FULL_LEAVE.includes(status)
+  const noTimes = NO_TIMES.includes(status)
 
   const problem = (): string | null => {
     if (note.trim().length < 3) return 'Add a short reason for this change.'
     if (status === 'Present' && !loginAt) return 'A present day needs a check-in time.'
-    if (!isFullLeave && loginAt && !logoutAt && !isToday) return 'Add a check-out time.'
-    if (!isFullLeave && !loginAt && logoutAt) return 'A check-out needs a check-in before it.'
+    if (!noTimes && loginAt && !logoutAt && !isToday) return 'Add a check-out time.'
+    if (!noTimes && !loginAt && logoutAt) return 'A check-out needs a check-in before it.'
     return null
   }
 
@@ -80,8 +84,8 @@ export function EditDayModal({
     try {
       const result = await attendanceApi.editDay(employeeId, bar.date, {
         status,
-        loginAt: isFullLeave ? null : loginAt || null,
-        logoutAt: isFullLeave ? null : logoutAt || null,
+        loginAt: noTimes ? null : loginAt || null,
+        logoutAt: noTimes ? null : logoutAt || null,
         halfDaySession: isHalf ? session : null,
         note: note.trim(),
       })
@@ -139,7 +143,7 @@ export function EditDayModal({
         </div>
       )}
 
-      {!isFullLeave && (
+      {!noTimes && (
         <div className="grid g2" style={{ marginTop: 12 }}>
           <div className="f">
             <label htmlFor="editDayIn">

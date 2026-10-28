@@ -91,9 +91,10 @@
 .cal-day.half { background: var(--amber-soft); }
 .cal-day.half .cal-num { color: var(--amber); }
 .cal-day.half .cal-abbr { color: var(--amber); }
-.cal-day.absent { background: #fdf0f3; }
-.cal-day.absent .cal-num { color: #c2416b; }
-.cal-day.absent .cal-abbr { color: #c2416b; }
+/* Loss of pay — unpaid leave and Not Marked days. Deeper than earned leave. */
+.cal-day.lop { background: #f6dde2; }
+.cal-day.lop .cal-num { color: #8e1d3b; }
+.cal-day.lop .cal-abbr { color: #8e1d3b; }
 .cal-day.off { background: #efe9e0; }
 .cal-day.off .cal-num { color: var(--muted); }
 .cal-day.off .cal-abbr { color: #8c827a; }
@@ -127,7 +128,7 @@
 .cal-sw.present { background: var(--green); }
 .cal-sw.leave { background: var(--red); }
 .cal-sw.half { background: var(--amber); }
-.cal-sw.absent { background: #e58aa6; }
+.cal-sw.lop { background: #8e1d3b; }
 .cal-sw.off { background: #d9d1c4; }
 .cal-total { margin-left: auto; }
 

@@ -661,7 +661,14 @@ export const PayrollRegisterPage: React.FC = () => {
                       {formatInr(emp.gross)}
                       <div style={{ fontSize: '11px', color: 'var(--muted, #64748b)', fontWeight: 400 }}>
                         Basic: {formatInr(emp.basic)}
+                        {emp.lopDays > 0 && ` · ${emp.lopDays} LOP`}
                       </div>
+                      {emp.arrears !== 0 && (
+                        <div style={{ fontSize: '11px', fontWeight: 500, color: emp.arrears > 0 ? '#15803d' : '#b91c1c' }}>
+                          {emp.arrears > 0 ? 'Arrears +' : 'Recovery −'}
+                          {formatInr(Math.abs(emp.arrears))}
+                        </div>
+                      )}
                     </td>
 
                     {/* Deductions */}

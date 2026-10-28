@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
-import { STATUS_CLASS, STATUS_LABEL, type WeekBar } from './attendance.types'
+import { STATUS_CLASS, dayCodeOf, type WeekBar } from './attendance.types'
 import { fmtShort } from '../../shared/lib/date'
 import { asHours } from '../../shared/lib/format'
 import { Modal } from '../../shared/ui/Modal'
@@ -68,7 +68,7 @@ export function DayPopover({ x, y, ...day }: DayData & { x: number; y: number })
         <b>
           {bar.dayName} {fmtShort(bar.date)}
         </b>
-        <span className={`chip ${STATUS_CLASS[bar.status]}`}>{STATUS_LABEL[bar.status] ?? bar.status}</span>
+        <span className={`chip ${STATUS_CLASS[bar.status]}`}>{dayCodeOf(bar).label}</span>
       </div>
 
       <div className="wbpop-total">{asHours(f.total)} active</div>
@@ -146,7 +146,7 @@ export function DayDetailModal({
         <>
           {bar.dayName} {fmtShort(bar.date)}{' '}
           <span className={`chip ${STATUS_CLASS[bar.status]}`} style={{ marginLeft: 6, verticalAlign: 'middle' }}>
-            {STATUS_LABEL[bar.status] ?? bar.status}
+            {dayCodeOf(bar).label}
           </span>
         </>
       }

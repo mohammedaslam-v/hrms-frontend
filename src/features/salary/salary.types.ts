@@ -16,6 +16,8 @@ export interface SalarySlipEarnings {
   basic: number
   hra: number
   special: number
+  /** + arrears / − recovery for months already paid. Included in gross. */
+  arrears: number
   gross: number
 }
 
@@ -47,6 +49,8 @@ export interface SalarySlip {
   payableDays: number
   lopDays: number
   lopAmount: number
+  /** One day of pay this month. */
+  lopRate: number
   isContractor: boolean
   employee: EmployeeSalaryMeta
   earnings: SalarySlipEarnings
