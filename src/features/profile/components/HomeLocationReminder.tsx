@@ -7,8 +7,8 @@ const VISIBLE_MS = 5_000
 
 /**
  * "Save your home location" — shown for 5 seconds on every visit to the HRMS
- * until the employee has saved one. Only WFO and WFH are asked: their check-in
- * geofence uses it (WFH: their only place; WFO: their second, after the office).
+ * until the employee has saved it. Only WFO and WFH are asked: their check-in
+ * geofence uses it. (A second location is HR's to set, so it never asks.)
  *
  * Asks the server once per visit rather than reading the whole profile, and
  * stays silent if that call fails — a reminder is never worth an error.

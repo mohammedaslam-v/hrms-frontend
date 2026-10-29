@@ -5,6 +5,7 @@ import { Pagination, usePage } from '../../shared/ui/Pagination'
 import { WORK_MODE_CLASS } from '../profile'
 import { teamApi } from './team.api'
 import type { DirectoryMember, DirectoryView } from './team.types'
+import { LocationsModal } from './LocationsModal'
 import { fmtDateShortYear } from '../../shared/lib/date'
 import { initials } from '../../shared/lib/format'
 import { DEPT_COLOR } from '../../shared/lib/departments'
@@ -21,13 +22,49 @@ const lakh = (n: number): string => {
   return `₹${n.toLocaleString('en-IN')}`
 }
 
+/**
+ * Admin-only: the Edit button that opens the Locations popup. Clicks here must
+ * not open the person's page, so they stop at the cell.
+ */
+function LocationsCell({
+  member,
+  onEdit,
+}: {
+  member: DirectoryMember
+  onEdit: (member: DirectoryMember) => void
+}) {
+  return (
+    <td onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+      <button
+        type="button"
+        className="btn sm"
+        onClick={() => onEdit(member)}
+        aria-label={`Edit check-in locations for ${member.fullName}`}
+        style={{
+          background: 'var(--blue-soft)',
+          color: 'var(--blue)',
+          border: '1px solid #c7d8fb',
+          fontWeight: 600,
+          whiteSpace: 'nowrap',
+        }}
+      >
+        📍 Edit
+      </button>
+    </td>
+  )
+}
+
 function Row({
   member,
   canSeePay,
+  canManageLocations,
+  onEditLocations,
   onOpen,
 }: {
   member: DirectoryMember
   canSeePay: boolean
+  canManageLocations: boolean
+  onEditLocations: (member: DirectoryMember) => void
   onOpen: (id: number) => void
 }) {
   const colour = (member.department && DEPT_COLOR[member.department]) || 'var(--muted2)'
@@ -92,6 +129,9 @@ function Row({
           {member.ctc == null ? <span style={{ color: 'var(--muted2)' }}>—</span> : lakh(member.ctc)}
         </td>
       )}
+      {canManageLocations && (
+        <LocationsCell member={member} onEdit={onEditLocations} />
+      )}
     </tr>
   )
 }
@@ -115,6 +155,9 @@ export function TeamDirectoryPage() {
   const [dept, setDept] = useState('')
   const [mode, setMode] = useState('')
   const [status, setStatus] = useState<StatusFilter>('active')
+  // Admin: whose locations the popup is editing, if any.
+  const [editingLocations, setEditingLocations] = useState<DirectoryMember | null>(null)
+
 
   const load = useCallback(async () => {
     try {
@@ -188,7 +231,8 @@ export function TeamDirectoryPage() {
   }
 
   const { members, canSeePay, scope } = view
-  const columns = canSeePay ? 10 : 9
+  const canManageLocations = Boolean(view.canManageLocations)
+  const columns = 9 + (canSeePay ? 1 : 0) + (canManageLocations ? 1 : 0)
 
   return (
     <div className="page">
@@ -269,6 +313,7 @@ export function TeamDirectoryPage() {
                 <th className="hide-lg">Weekly off</th>
                 <th className="hide-md">Joined</th>
                 {canSeePay && <th className="num-col">CTC</th>}
+                {canManageLocations && <th>Locations</th>}
               </tr>
             </thead>
             <tbody>
@@ -297,6 +342,8 @@ export function TeamDirectoryPage() {
                   <Row
                     member={member}
                     canSeePay={canSeePay}
+                    canManageLocations={canManageLocations}
+                    onEditLocations={setEditingLocations}
                     onOpen={(id) => navigate(`/me/${id}`)}
                     key={member.id}
                   />
@@ -307,6 +354,14 @@ export function TeamDirectoryPage() {
         </div>
         <Pagination page={page} unit="people" />
       </div>
+
+      {editingLocations && (
+        <LocationsModal
+          employeeId={editingLocations.id}
+          employeeName={editingLocations.fullName}
+          onClose={() => setEditingLocations(null)}
+        />
+      )}
     </div>
   )
 }

@@ -45,7 +45,7 @@ export interface TodayView {
   geofence: GeofencePolicy | null
 }
 
-export type ZoneKind = 'office' | 'home'
+export type ZoneKind = 'office' | 'home' | 'second'
 
 /** One allowed place: a circle on the map. */
 export interface GeofenceZone {

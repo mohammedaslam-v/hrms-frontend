@@ -56,7 +56,11 @@ function distanceMeters(a: { lat: number; lng: number }, b: { lat: number; lng: 
 const formatDistance = (meters: number) =>
   meters < 1000 ? `${Math.round(meters)} m` : `${(meters / 1000).toFixed(1)} km`
 
-export const PLACE: Record<ZoneKind, string> = { office: 'the office', home: 'your home location' }
+export const PLACE: Record<ZoneKind, string> = {
+  office: 'the office',
+  home: 'your home location',
+  second: 'your second location',
+}
 
 const placesOf = (zones: GeofenceZone[]) => zones.map((z) => PLACE[z.kind]).join(' or ')
 

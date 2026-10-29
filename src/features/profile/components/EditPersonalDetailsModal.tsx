@@ -5,6 +5,8 @@ import { employeeFormApi } from '../../employees/api/employee-form.api'
 import type { ManagerOption } from '../../employees/types/employee-form.types'
 import { useAuth } from '../../../app/auth-context'
 import { SearchableManagerSelect } from '../../employees/components/SearchableManagerSelect'
+import { LocationFields } from './LocationFields'
+import { checkLocationChange } from './location-check'
 
 const DAYS_OF_WEEK = [
   { key: 'Mon', label: 'Mon' },
@@ -124,40 +126,6 @@ export function EditPersonalDetailsModal({
   const initialHomeLng = employee.homeLocation ? String(employee.homeLocation.lng) : ''
   const [homeLat, setHomeLat] = useState<string>(initialHomeLat)
   const [homeLng, setHomeLng] = useState<string>(initialHomeLng)
-  const [locating, setLocating] = useState<boolean>(false)
-  const [locateNote, setLocateNote] = useState<string | null>(null)
-
-  /** Fills the two fields from this device — the easy way to save "here". */
-  const fillFromCurrentLocation = () => {
-    if (!('geolocation' in navigator) || !window.isSecureContext) {
-      setLocateNote('This browser cannot share your location. Enter the coordinates by hand.')
-      return
-    }
-    setLocating(true)
-    setLocateNote(null)
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setHomeLat(position.coords.latitude.toFixed(6))
-        setHomeLng(position.coords.longitude.toFixed(6))
-        const accuracy = Math.round(position.coords.accuracy)
-        setLocateNote(
-          accuracy > 50
-            ? `Filled, but only accurate to ±${accuracy} m. For a better reading try from your phone, or near a window.`
-            : `Filled from this device (accurate to ±${accuracy} m).`,
-        )
-        setLocating(false)
-      },
-      (err) => {
-        setLocateNote(
-          err.code === err.PERMISSION_DENIED
-            ? 'Location access is blocked for this site. Allow it in the browser, or enter the coordinates by hand.'
-            : 'Could not get your location. Turn on location services, or enter the coordinates by hand.',
-        )
-        setLocating(false)
-      },
-      { enableHighAccuracy: true, timeout: 20_000, maximumAge: 0 },
-    )
-  }
 
   // Manager List for searchable dropdown
   const [managers, setManagers] = useState<ManagerOption[]>([])
@@ -238,35 +206,31 @@ export function EditPersonalDetailsModal({
     // Home location: sent only when it changed, and never once it is locked.
     const cleanHomeLat = homeLat.trim()
     const cleanHomeLng = homeLng.trim()
-    const homeChanged =
-      !homeLocked && (cleanHomeLat !== initialHomeLat || cleanHomeLng !== initialHomeLng)
-    if (homeChanged) {
-      if (Boolean(cleanHomeLat) !== Boolean(cleanHomeLng)) {
-        setError('Enter both latitude and longitude for the home location.')
-        return
-      }
-      if (cleanHomeLat) {
-        const latNum = Number(cleanHomeLat)
-        const lngNum = Number(cleanHomeLng)
-        if (!Number.isFinite(latNum) || Math.abs(latNum) > 90) {
-          setError('Latitude must be a number between -90 and 90 (e.g. 12.910486).')
-          return
-        }
-        if (!Number.isFinite(lngNum) || Math.abs(lngNum) > 180) {
-          setError('Longitude must be a number between -180 and 180 (e.g. 77.648218).')
-          return
-        }
-      }
-      // The employee gets exactly one save, so make sure they mean it.
-      if (
-        !isAdmin &&
-        cleanHomeLat &&
-        !window.confirm(
-          `Save ${cleanHomeLat}, ${cleanHomeLng} as your home location?\n\nYou can set this only once. After saving, only HR can change it.`,
-        )
-      ) {
-        return
-      }
+    const homeCheck = checkLocationChange(
+      'home location',
+      cleanHomeLat,
+      cleanHomeLng,
+      initialHomeLat,
+      initialHomeLng,
+      homeLocked,
+    )
+    const locationError = homeCheck.error
+    if (locationError) {
+      setError(locationError)
+      return
+    }
+    const homeChanged = homeCheck.changed
+
+    // The employee gets exactly one save, so make sure they mean it.
+    if (
+      !isAdmin &&
+      homeChanged &&
+      cleanHomeLat &&
+      !window.confirm(
+        `Save ${cleanHomeLat}, ${cleanHomeLng} as your home location?\n\nYou can set this only once. After saving, only HR can change it.`,
+      )
+    ) {
+      return
     }
 
     if (isAdmin) {
@@ -685,108 +649,25 @@ export function EditPersonalDetailsModal({
               {/* Home location — the attendance geofence. WFH may check in only
                   here; WFO here or at the office. One save for the employee. */}
               {showHomeSection && (
-                <>
-                  <div style={sectionHeaderStyle}>
-                    <span>📍 Home location (for check-in)</span>
-                  </div>
-
-                  <div className="f" style={{ gridColumn: '1 / -1' }}>
-                    <div
-                      className={homeLocked ? 'notice blue' : 'notice'}
-                      style={{ fontSize: 11.5, padding: '8px 12px', borderRadius: 8, lineHeight: 1.5 }}
-                    >
-                      {homeLocked ? (
-                        <>
-                          Saved
-                          {employee.homeLocation?.setAt
-                            ? ` on ${employee.homeLocation.setAt.slice(0, 10)}`
-                            : ''}
-                          {employee.homeLocation?.setByName
-                            ? ` by ${employee.homeLocation.setByName}`
-                            : ''}
-                          . It can be set only once — ask HR if it needs to change.
-                        </>
-                      ) : isAdmin ? (
-                        <>
-                          HR can set, change or clear this at any time. Clearing it lets the
-                          employee save it again themselves.
-                        </>
-                      ) : (
-                        <>
-                          {employee.workMode === 'WFO'
-                            ? 'Your second allowed check-in place, besides the office. '
-                            : 'The only place you can check in and out from. '}
-                          Save it <b>while you are at home</b> with “Use my current location”.{' '}
-                          <b>You can set it only once</b> — after that only HR can change it.
-                        </>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="f">
-                    <label htmlFor="homeLat" style={labelStyle}>
-                      Latitude
-                    </label>
-                    <input
-                      id="homeLat"
-                      type="text"
-                      inputMode="decimal"
-                      placeholder="e.g. 12.910486"
-                      value={homeLat}
-                      onChange={(e) => setHomeLat(e.target.value)}
-                      disabled={homeLocked}
-                      style={{ ...inputStyle, ...(homeLocked ? { backgroundColor: 'var(--panel)' } : {}) }}
-                    />
-                  </div>
-
-                  <div className="f">
-                    <label htmlFor="homeLng" style={labelStyle}>
-                      Longitude
-                    </label>
-                    <input
-                      id="homeLng"
-                      type="text"
-                      inputMode="decimal"
-                      placeholder="e.g. 77.648218"
-                      value={homeLng}
-                      onChange={(e) => setHomeLng(e.target.value)}
-                      disabled={homeLocked}
-                      style={{ ...inputStyle, ...(homeLocked ? { backgroundColor: 'var(--panel)' } : {}) }}
-                    />
-                  </div>
-
-                  <div
-                    className="f"
-                    style={{ gridColumn: '1 / -1', display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}
-                  >
-                    {!homeLocked && (
-                      <button
-                        type="button"
-                        className="btn ghost sm"
-                        onClick={fillFromCurrentLocation}
-                        disabled={locating}
-                        style={{ height: 30, padding: '0 12px', fontSize: 12, borderRadius: 8 }}
-                      >
-                        {locating ? 'Finding you…' : '📍 Use my current location'}
-                      </button>
-                    )}
-                    {homeLat.trim() && homeLng.trim() && (
-                      <a
-                        href={`https://www.google.com/maps?q=${encodeURIComponent(homeLat.trim())},${encodeURIComponent(homeLng.trim())}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        style={{ fontSize: 12 }}
-                      >
-                        View on map ↗
-                      </a>
-                    )}
-                    {locateNote && (
-                      <span className="hint" style={{ fontSize: 11.5, flexBasis: '100%' }}>
-                        {locateNote}
-                      </span>
-                    )}
-                  </div>
-                </>
+                <LocationFields
+                  idPrefix="home"
+                  title="📍 Home location (for check-in)"
+                  employeeHint={
+                    employee.workMode === 'WFO'
+                      ? 'An allowed check-in place besides the office — save it from home.'
+                      : 'The main place you check in and out from — save it from home.'
+                  }
+                  saved={employee.homeLocation}
+                  locked={homeLocked}
+                  isAdmin={isAdmin}
+                  lat={homeLat}
+                  lng={homeLng}
+                  onLat={setHomeLat}
+                  onLng={setHomeLng}
+                  inputStyle={inputStyle}
+                  labelStyle={labelStyle}
+                  sectionHeaderStyle={sectionHeaderStyle}
+                />
               )}
 
               {/* SECTION 2: Role, Shift & Organization (Admin only) */}

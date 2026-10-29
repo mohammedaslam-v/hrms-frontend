@@ -2,7 +2,7 @@ import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { attendanceApi } from './attendance.api'
 import { STATUS_CLASS, type TodayView } from './attendance.types'
-import { useGeofence } from './useGeofence'
+import { PLACE, useGeofence } from './useGeofence'
 import { asHours } from '../../shared/lib/format'
 import { Modal } from '../../shared/ui/Modal'
 import { AddActivityButton } from '../work-activity'
@@ -292,7 +292,7 @@ export function TodayCard({ employeeId, isSelf, isAdmin, employeeName }: TodayCa
           )}
           {geo.state.kind === 'inside' && (
             <div className="hint" style={{ marginTop: 6, fontSize: 12, textAlign: 'center' }}>
-              📍 At {geo.state.zone === 'home' ? 'your home location' : 'the office'}
+              📍 At {PLACE[geo.state.zone]}
               {/* The distance only while within the stated radius, so the hidden
                   margin never shows as "180 m away". */}
               {geo.state.distanceM <= geo.state.radiusM &&
