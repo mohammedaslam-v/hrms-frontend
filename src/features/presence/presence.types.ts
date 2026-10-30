@@ -82,6 +82,8 @@ export interface BoardPerson {
   subtitle: string | null
   /** Admin-panel role (as the new admin shows it), else the HRMS department. */
   team: string | null
+  /** Shift start time (HH:MM), or null for unlinked accounts. */
+  shiftStart: string | null
   leave: { type: string; isHalfDay: boolean } | null
   /** 'Weekly off' or 'Holiday' for the shift day running now, else null. */
   dayOff: string | null

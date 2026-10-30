@@ -68,44 +68,57 @@ function chipsOf(p: BoardPerson, tab: Tab): Chip[] {
 
 /**
  * The Active tab's line: how long they have been active, or how long not.
- * Not active is counted from their last activity, but never from before the
- * shift began — last seen yesterday is "since the shift started", not 20 hours.
+ * Shows shift start time (e.g. SS 08:00) in place of the redundant "Active" status,
+ * since the status chip already indicates Active / Not active.
  */
-function activeLineOf(p: BoardPerson, today: string): string {
+function activeLineOf(p: BoardPerson, today: string, shiftStart?: string | null): string {
   const s = p.presence
+  const ss = p.shiftStart || shiftStart ? `SS ${p.shiftStart || shiftStart}` : null
   if (s?.status === 'online') {
     const where = placeLabel(s.page)
     const length = s.sessionMinutes >= 1 ? `for ${durationLabel(s.sessionMinutes)}` : 'just arrived'
-    return ['Active', length, where].filter(Boolean).join(' · ')
+    return [ss, length, where].filter(Boolean).join(' · ')
   }
   const seenToday = s && s.lastSeenDate === today
   const sinceSeen = seenToday ? Math.floor(s.secondsAgo / 60) : null
   const shift = p.shiftMinutesIn
   if (sinceSeen !== null && (shift === null || sinceSeen <= shift)) {
-    return `Not active for ${durationLabel(sinceSeen)} · last active ${s!.lastSeenTime}`
+    return [ss, `not active for ${durationLabel(sinceSeen)}`, `last active ${s!.lastSeenTime}`].filter(Boolean).join(' · ')
   }
-  if (shift !== null) return `Not active for ${durationLabel(shift)} · since the shift started`
-  return 'Not active'
+  if (shift !== null) return [ss, `not active for ${durationLabel(shift)}`, 'since shift start'].filter(Boolean).join(' · ')
+  return [ss, 'not active'].filter(Boolean).join(' · ')
 }
 
-function lineOf(p: BoardPerson, today: string): string {
+function lineOf(p: BoardPerson, today: string, shiftStart?: string | null): string {
   const s = p.presence
-  if (!s) return 'Not seen on any panel'
+  const ss = p.shiftStart || shiftStart ? `SS ${p.shiftStart || shiftStart}` : null
+  if (!s) return ss ? `${ss} · Not seen on any panel` : 'Not seen on any panel'
   const where = placeLabel(s.page)
   if (s.status === 'online') {
-    const length = s.sessionMinutes >= 1 ? `${durationLabel(s.sessionMinutes)} in` : 'just arrived'
-    return ['Active now', where, length].filter(Boolean).join(' · ')
+    const length = s.sessionMinutes >= 1 ? `for ${durationLabel(s.sessionMinutes)}` : 'just arrived'
+    return [ss, length, where].filter(Boolean).join(' · ')
   }
   const when = lastSeenLabel(s.secondsAgo, s.lastSeenDate, s.lastSeenTime, today)
-  if (s.status === 'signed_off') return `Logged out · ${when}`
-  return [`Last seen ${when}`, where].filter(Boolean).join(' · ')
+  if (s.status === 'signed_off') return [ss, `Logged out · ${when}`].filter(Boolean).join(' · ')
+  return [ss, `Last seen ${when}`, where].filter(Boolean).join(' · ')
 }
 
 /** Today's total on the admin panel: "0 min", "45 min", "3 hr 12 min". */
 const todayLabel = (seconds: number): string => (seconds < 60 ? '0 min' : durationLabel(seconds / 60))
 
-function Row({ p, today, tab }: { p: BoardPerson; today: string; tab: Tab }) {
+function Row({
+  p,
+  today,
+  tab,
+  shiftStart,
+}: {
+  p: BoardPerson
+  today: string
+  tab: Tab
+  shiftStart?: string | null
+}) {
   const chips = chipsOf(p, tab)
+  const shift = p.shiftStart || shiftStart
   return (
     <div className="on-row">
       <InitialsAvatar name={p.name || '?'} dot={p.presence?.status} />
@@ -124,7 +137,7 @@ function Row({ p, today, tab }: { p: BoardPerson; today: string; tab: Tab }) {
         </div>
         <div className="on-line-row">
           <p className={`on-line${p.presence?.status === 'online' ? ' is-online' : ''}`}>
-            {tab === 'active' ? activeLineOf(p, today) : lineOf(p, today)}
+            {tab === 'active' ? activeLineOf(p, today, shift) : lineOf(p, today, shift)}
           </p>
           <span className="on-today" title="Total time active today, across all Bambinos panels">
             Today <b>{todayLabel(p.activeTodaySeconds)}</b>
@@ -300,6 +313,7 @@ export function OnlineNow() {
                             p={p}
                             today={board.today}
                             tab={tab}
+                            shiftStart={g.shiftStart}
                           />
                         ))}
                         {hidden > 0 && (
