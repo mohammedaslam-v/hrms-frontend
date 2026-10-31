@@ -269,5 +269,59 @@ export interface PunctualitySummaryDto {
   summary: PunctualityEmployeeSummary[]
 }
 
-export type AttendanceTab = 'today' | 'range' | 'summary'
+export type AttendanceTab = 'today' | 'range' | 'summary' | 'active'
+
+// ── Active time tab ──────────────────────────────────────────────────────────
+
+/**
+ * A day's status as the reports read it. 'No login' = a working day with no
+ * check-in (shown as Absent); 'Not in yet' = today, before the shift starts.
+ */
+export type ActiveTimeStatus =
+  | 'On time'
+  | 'Late'
+  | 'Half day'
+  | 'Leave'
+  | 'Weekly off'
+  | 'Holiday'
+  | 'Not in yet'
+  | 'No login'
+
+export interface ActiveTimeDay {
+  date: string
+  /** Active on the Bambinos panels (every tracked panel added together). */
+  panelSeconds: number
+  /** Checked in; today's open check-in counts up to now. */
+  shiftMinutes: number
+  /** Null = not with the company that day (before joining, after leaving). */
+  status: ActiveTimeStatus | null
+}
+
+export interface ActiveTimeRow {
+  employeeId: number
+  code: string
+  name: string
+  department: string | null
+  shiftStart: string
+  shiftEnd: string
+  days: ActiveTimeDay[]
+  totals: { panelSeconds: number; shiftMinutes: number }
+}
+
+export interface ActiveTimePerson {
+  id: number
+  code: string
+  name: string
+  department: string | null
+}
+
+export interface ActiveTimeView {
+  from: string
+  to: string
+  today: string
+  dates: string[]
+  /** Everyone the viewer may pick: the whole company for an admin, the team for a manager. */
+  people: ActiveTimePerson[]
+  rows: ActiveTimeRow[]
+}
 

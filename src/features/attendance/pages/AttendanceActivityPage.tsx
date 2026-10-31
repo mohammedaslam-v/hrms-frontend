@@ -8,6 +8,7 @@ import { AttendanceQuickFilters } from '../components/AttendanceQuickFilters'
 import { TodayLiveTable } from '../components/TodayLiveTable'
 import { DateRangeLedgerTable } from '../components/DateRangeLedgerTable'
 import { PunctualitySummaryTable } from '../components/PunctualitySummaryTable'
+import { ActiveTimeTable } from '../components/ActiveTimeTable'
 // oxlint-disable-next-line eslint(no-restricted-imports), no-restricted-imports
 // eslint-disable-next-line no-restricted-imports
 import { useAuth } from '../../../app/auth-context'
@@ -196,6 +197,13 @@ export function AttendanceActivityPage() {
         >
           Punctuality summary
         </button>
+        <button
+          type="button"
+          className={`tab ${activeTab === 'active' ? 'on' : ''}`}
+          onClick={() => setActiveTab('active')}
+        >
+          Active time
+        </button>
       </div>
 
       {loading && !board ? (
@@ -338,6 +346,7 @@ export function AttendanceActivityPage() {
           {activeTab === 'summary' && (
             <PunctualitySummaryTable departments={departments} />
           )}
+          {activeTab === 'active' && <ActiveTimeTable />}
         </>
       )}
     </div>

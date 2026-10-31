@@ -1,4 +1,5 @@
 import type {
+  ActiveTimeView,
   AttendanceRangeDto,
   CalendarView,
   DeviceFix,
@@ -78,5 +79,19 @@ export const attendanceApi = {
     q.set('to', params.to)
     if (params.department) q.set('department', params.department)
     return request<PunctualitySummaryDto>(`/attendance/summary?${q.toString()}`)
+  },
+
+  /**
+   * Active time tab: panel active time and checked-in time per person per day.
+   * The server decides who is visible (admin: everyone, manager: their team);
+   * no employee ids = everyone in that scope.
+   */
+  getActiveTime: (params: { from: string; to: string; employeeIds?: number[]; department?: string }) => {
+    const q = new URLSearchParams()
+    q.set('from', params.from)
+    q.set('to', params.to)
+    if (params.employeeIds?.length) q.set('employeeIds', params.employeeIds.join(','))
+    if (params.department) q.set('department', params.department)
+    return request<ActiveTimeView>(`/reports/active-time?${q.toString()}`)
   },
 }
