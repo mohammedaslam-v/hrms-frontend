@@ -29,7 +29,6 @@
 .at-key { display: inline-flex; align-items: center; gap: 6px; }
 .at-key i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-left: 6px; }
 .at-key .k-panel { background: rgba(15, 169, 104, 0.3); }
-.at-key .k-shift { background: #e7f1fb; }
 
 .at-card { padding: 0; overflow: hidden; transition: opacity 0.15s; }
 .at-card.is-loading { opacity: 0.55; }
@@ -86,24 +85,13 @@
 .at-name button:hover { color: var(--blue); text-decoration: underline; }
 .at-name small { display: block; margin-top: 2px; font-size: 11px; color: var(--muted); font-weight: 400; }
 
-.at-kind,
-.at-kind-h { font-size: 10.5px; font-weight: 600; color: var(--muted); text-align: left !important; }
-.at-panel td { border-bottom-style: dashed; color: var(--ink2); }
-.at-shift td { background: #f7fafd; }
-.at-shift .at-kind { background: #f7fafd; }
+.at-panel td { color: var(--ink2); }
 
 .at-total,
 .at-total-h { font-weight: 700; color: var(--ink); border-left: 1px solid var(--line); }
-.at-shift .at-total { background: #eef4fb; }
 
-/* Shift line tones */
-.at-grid .t-work { color: var(--ink2); }
-.at-grid .t-late { color: #b45309; }
-.at-grid .t-half { color: var(--amber); font-weight: 600; }
-.at-grid .t-leave { color: #6d53f0; font-weight: 600; }
+/* A day off with no panel time */
 .at-grid .t-off { color: #8c827a; font-weight: 600; }
-.at-grid .t-absent { color: var(--red); font-weight: 600; }
-.at-grid .t-none { color: var(--muted); }
 
 @media (max-width: 640px) {
   .at-filters { width: 100%; }

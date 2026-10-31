@@ -9,10 +9,9 @@ import './active-time.css'
 /*
  * Attendance & activity → Active time.
  *
- * Per person, per day, two figures:
- *   Panel — time actively used on the Bambinos panels (every tracked panel);
- *   Shift — time checked in, or the day's status where there were no working
- *           hours (Leave, Weekly off, Holiday, Absent).
+ * Per person, per day: time actively used on the Bambinos panels (every
+ * tracked panel). A day with no panel time that was leave, a weekly off or a
+ * holiday says so instead of 0m.
  *
  * Who appears is decided by the server: an admin sees the whole company, a
  * manager their reporting tree. Picking nobody in Employees means everyone.
@@ -76,28 +75,17 @@ const hm = (minutes: number): string => {
   return `${Math.floor(m / 60)}h ${String(m % 60).padStart(2, '0')}m`
 }
 
-/** What the Shift line says, and how it is coloured. */
-function shiftCell(day: ActiveTimeDay, today: string): { text: string; tone: string; title?: string } {
-  if (day.status === null) return { text: '—', tone: 'none', title: 'Not with the company on this date' }
-  if (day.date > today) return { text: '—', tone: 'none' }
-  switch (day.status) {
-    case 'Leave':
-      return { text: 'Leave', tone: 'leave' }
-    case 'Weekly off':
-      return { text: 'Weekly off', tone: 'off' }
-    case 'Holiday':
-      return { text: 'Holiday', tone: 'off' }
-    case 'No login':
-      return { text: 'Absent', tone: 'absent', title: 'A working day with no check-in' }
-    case 'Not in yet':
-      return { text: 'Not in yet', tone: 'none' }
-    case 'Half day':
-      return { text: day.shiftMinutes > 0 ? `Half day · ${hm(day.shiftMinutes)}` : 'Half day', tone: 'half' }
-    case 'Late':
-      return { text: hm(day.shiftMinutes), tone: 'late', title: 'Checked in late' }
-    default:
-      return { text: hm(day.shiftMinutes), tone: 'work' }
-  }
+/** A day off with no panel time is named rather than shown as 0m. */
+const OFF_LABEL: Partial<Record<NonNullable<ActiveTimeDay['status']>, string>> = {
+  Leave: 'Leave',
+  'Weekly off': 'Weekly off',
+  Holiday: 'Holiday',
+}
+
+function panelCell(day: ActiveTimeDay, today: string): { text: string; off: boolean } {
+  if (day.date > today || day.status === null) return { text: '—', off: false }
+  const off = day.status && day.panelSeconds < 60 ? OFF_LABEL[day.status] : undefined
+  return off ? { text: off, off: true } : { text: hm(day.panelSeconds / 60), off: false }
 }
 
 /** A light green wash that deepens with panel time, full at 8 hours. */
@@ -112,12 +100,11 @@ const csvCell = (v: string | number): string => {
 function downloadCsv(view: ActiveTimeView) {
   const header = [
     'Date', 'Day', 'Employee code', 'Employee', 'Department', 'Shift hours',
-    'Panel active time', 'Panel active (minutes)', 'Shift status', 'Checked-in time', 'Checked-in (minutes)',
+    'Panel active time', 'Panel active (minutes)', 'Day status',
   ]
   const lines = [header.join(',')]
   for (const row of view.rows) {
     for (const day of row.days) {
-      const shift = shiftCell(day, view.today)
       const panelMin = Math.round(day.panelSeconds / 60)
       lines.push(
         [
@@ -130,8 +117,6 @@ function downloadCsv(view: ActiveTimeView) {
           day.date > view.today ? '' : hm(panelMin),
           day.date > view.today ? '' : panelMin,
           day.status === null ? 'Not employed' : day.date > view.today ? '' : day.status === 'No login' ? 'Absent' : day.status,
-          shift.tone === 'work' || shift.tone === 'late' || shift.tone === 'half' ? hm(day.shiftMinutes) : '',
-          shift.tone === 'work' || shift.tone === 'late' || shift.tone === 'half' ? day.shiftMinutes : '',
         ]
           .map(csvCell)
           .join(','),
@@ -205,13 +190,7 @@ export function ActiveTimeTable() {
     if (next !== 'custom') setRange(rangeOf(next))
   }
 
-  const totals = useMemo(() => {
-    const rows = view?.rows ?? []
-    return {
-      panel: rows.reduce((s, r) => s + r.totals.panelSeconds, 0),
-      shift: rows.reduce((s, r) => s + r.totals.shiftMinutes, 0),
-    }
-  }, [view])
+  const totalPanel = useMemo(() => (view?.rows ?? []).reduce((s, r) => s + r.totals.panelSeconds, 0), [view])
 
   return (
     <div className="at">
@@ -309,11 +288,10 @@ export function ActiveTimeTable() {
           <div className="at-meta">
             <span>
               {view.rows.length} {view.rows.length === 1 ? 'person' : 'people'} · {view.dates.length}{' '}
-              {view.dates.length === 1 ? 'day' : 'days'} · Panel <b>{hm(totals.panel / 60)}</b> · Shift{' '}
-              <b>{hm(totals.shift)}</b>
+              {view.dates.length === 1 ? 'day' : 'days'} · Active <b>{hm(totalPanel / 60)}</b>
             </span>
             <span className="at-key">
-              <i className="k-panel" /> Panel = active on Bambinos panels <i className="k-shift" /> Shift = checked in
+              <i className="k-panel" /> Time active on the Bambinos panels
             </span>
           </div>
           <div className={`card at-card${loading ? ' is-loading' : ''}`}>
@@ -322,7 +300,6 @@ export function ActiveTimeTable() {
                 <thead>
                   <tr>
                     <th className="at-name-h">Employee</th>
-                    <th className="at-kind-h" aria-label="Measure" />
                     {view.dates.map((d) => {
                       const h = dayHead(d)
                       return (
@@ -337,7 +314,7 @@ export function ActiveTimeTable() {
                 </thead>
                 <tbody>
                   {view.rows.map((row) => (
-                    <PersonRows key={row.employeeId} row={row} today={view.today} onOpen={() => navigate(`/me/${row.employeeId}`)} />
+                    <PersonRow key={row.employeeId} row={row} today={view.today} onOpen={() => navigate(`/me/${row.employeeId}`)} />
                   ))}
                 </tbody>
               </table>
@@ -349,38 +326,30 @@ export function ActiveTimeTable() {
   )
 }
 
-function PersonRows({ row, today, onOpen }: { row: ActiveTimeRow; today: string; onOpen: () => void }) {
+function PersonRow({ row, today, onOpen }: { row: ActiveTimeRow; today: string; onOpen: () => void }) {
   return (
-    <>
-      <tr className="at-panel">
-        <th rowSpan={2} scope="rowgroup" className="at-name">
-          <button type="button" onClick={onOpen} title="Open profile">
-            {row.name}
-          </button>
-          <small>
-            {row.code} · {row.shiftStart}–{row.shiftEnd}
-          </small>
-        </th>
-        <td className="at-kind">Panel</td>
-        {row.days.map((d) => (
-          <td key={d.date} style={{ background: d.date > today ? undefined : heat(d.panelSeconds) }}>
-            {d.date > today || d.status === null ? '—' : hm(d.panelSeconds / 60)}
+    <tr className="at-panel">
+      <th scope="row" className="at-name">
+        <button type="button" onClick={onOpen} title="Open profile">
+          {row.name}
+        </button>
+        <small>
+          {row.code} · {row.shiftStart}–{row.shiftEnd}
+        </small>
+      </th>
+      {row.days.map((d) => {
+        const c = panelCell(d, today)
+        return (
+          <td
+            key={d.date}
+            className={c.off ? 't-off' : undefined}
+            style={{ background: c.off || d.date > today ? undefined : heat(d.panelSeconds) }}
+          >
+            {c.text}
           </td>
-        ))}
-        <td className="at-total">{hm(row.totals.panelSeconds / 60)}</td>
-      </tr>
-      <tr className="at-shift">
-        <td className="at-kind">Shift</td>
-        {row.days.map((d) => {
-          const c = shiftCell(d, today)
-          return (
-            <td key={d.date} className={`t-${c.tone}`} title={c.title}>
-              {c.text}
-            </td>
-          )
-        })}
-        <td className="at-total">{hm(row.totals.shiftMinutes)}</td>
-      </tr>
-    </>
+        )
+      })}
+      <td className="at-total">{hm(row.totals.panelSeconds / 60)}</td>
+    </tr>
   )
 }
