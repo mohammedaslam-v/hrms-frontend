@@ -88,6 +88,27 @@ function panelCell(day: ActiveTimeDay, today: string): { text: string; off: bool
   return off ? { text: off, off: true } : { text: hm(day.panelSeconds / 60), off: false }
 }
 
+/**
+ * The days an average is taken over: working days the person was with the
+ * company, up to today. A leave day, weekly off or holiday counts only if they
+ * were active on it anyway, and today only once it has some activity, so a
+ * morning view does not drag the average down.
+ */
+function averageDays(days: ActiveTimeDay[], today: string): number {
+  return days.filter((d) => {
+    if (d.status === null || d.date > today) return false
+    if (d.panelSeconds >= 60) return true
+    if (d.date === today) return false
+    return !(d.status in OFF_LABEL)
+  }).length
+}
+
+/** Seconds per counted day, or null when there is no day to count. */
+function averageOf(row: ActiveTimeRow, today: string): number | null {
+  const n = averageDays(row.days, today)
+  return n > 0 ? row.totals.panelSeconds / n : null
+}
+
 /** A light green wash that deepens with panel time, full at 8 hours. */
 const heat = (seconds: number): string | undefined =>
   seconds >= 60 ? `rgba(15, 169, 104, ${(Math.min(1, seconds / 28_800) * 0.22 + 0.04).toFixed(3)})` : undefined
@@ -100,10 +121,11 @@ const csvCell = (v: string | number): string => {
 function downloadCsv(view: ActiveTimeView) {
   const header = [
     'Date', 'Day', 'Employee code', 'Employee', 'Department', 'Shift hours',
-    'Panel active time', 'Panel active (minutes)', 'Day status',
+    'Panel active time', 'Panel active (minutes)', 'Day status', 'Average per working day (range)',
   ]
   const lines = [header.join(',')]
   for (const row of view.rows) {
+    const avg = averageOf(row, view.today)
     for (const day of row.days) {
       const panelMin = Math.round(day.panelSeconds / 60)
       lines.push(
@@ -117,6 +139,7 @@ function downloadCsv(view: ActiveTimeView) {
           day.date > view.today ? '' : hm(panelMin),
           day.date > view.today ? '' : panelMin,
           day.status === null ? 'Not employed' : day.date > view.today ? '' : day.status === 'No login' ? 'Absent' : day.status,
+          avg === null ? '' : hm(avg / 60),
         ]
           .map(csvCell)
           .join(','),
@@ -190,7 +213,12 @@ export function ActiveTimeTable() {
     if (next !== 'custom') setRange(rangeOf(next))
   }
 
-  const totalPanel = useMemo(() => (view?.rows ?? []).reduce((s, r) => s + r.totals.panelSeconds, 0), [view])
+  const summary = useMemo(() => {
+    const rows = view?.rows ?? []
+    const total = rows.reduce((s, r) => s + r.totals.panelSeconds, 0)
+    const days = rows.reduce((s, r) => s + averageDays(r.days, view?.today ?? ''), 0)
+    return { total, average: days > 0 ? total / days : null }
+  }, [view])
 
   return (
     <div className="at">
@@ -288,7 +316,13 @@ export function ActiveTimeTable() {
           <div className="at-meta">
             <span>
               {view.rows.length} {view.rows.length === 1 ? 'person' : 'people'} · {view.dates.length}{' '}
-              {view.dates.length === 1 ? 'day' : 'days'} · Active <b>{hm(totalPanel / 60)}</b>
+              {view.dates.length === 1 ? 'day' : 'days'} · Active <b>{hm(summary.total / 60)}</b>
+              {summary.average !== null && (
+                <>
+                  {' '}
+                  · Average <b>{hm(summary.average / 60)}</b> per person per working day
+                </>
+              )}
             </span>
             <span className="at-key">
               <i className="k-panel" /> Time active on the Bambinos panels
@@ -310,6 +344,9 @@ export function ActiveTimeTable() {
                       )
                     })}
                     <th className="at-total-h">Total</th>
+                    <th className="at-avg-h" title="Total ÷ working days in the range (leave, weekly offs and holidays left out unless active)">
+                      Avg / day
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -327,6 +364,7 @@ export function ActiveTimeTable() {
 }
 
 function PersonRow({ row, today, onOpen }: { row: ActiveTimeRow; today: string; onOpen: () => void }) {
+  const avg = averageOf(row, today)
   return (
     <tr className="at-panel">
       <th scope="row" className="at-name">
@@ -350,6 +388,7 @@ function PersonRow({ row, today, onOpen }: { row: ActiveTimeRow; today: string; 
         )
       })}
       <td className="at-total">{hm(row.totals.panelSeconds / 60)}</td>
+      <td className="at-avg">{avg === null ? '—' : hm(avg / 60)}</td>
     </tr>
   )
 }

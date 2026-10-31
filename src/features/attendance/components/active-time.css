@@ -89,6 +89,8 @@
 
 .at-total,
 .at-total-h { font-weight: 700; color: var(--ink); border-left: 1px solid var(--line); }
+.at-avg,
+.at-avg-h { font-weight: 600; color: var(--ink2); }
 
 /* A day off with no panel time */
 .at-grid .t-off { color: #8c827a; font-weight: 600; }
