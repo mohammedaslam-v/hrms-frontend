@@ -22,20 +22,22 @@ const STATUS_CLASS: Record<LeaveStatus, string> = {
 }
 
 type Tab = 'pending' | 'balances' | 'log'
-type StatusFilter = 'all' | 'requested' | 'approved' | 'rejected'
+type StatusFilter = 'all' | 'requested' | 'approved' | 'rejected' | 'cancelled'
 
 const STATUS_OPTIONS: CustomSelectOption<StatusFilter>[] = [
   { value: 'all', label: 'All Statuses', dotColor: '#94a3b8' },
   { value: 'requested', label: 'Requested', dotColor: '#f59e0b' },
   { value: 'approved', label: 'Approved', dotColor: '#10b981' },
   { value: 'rejected', label: 'Rejected', dotColor: '#ef4444' },
+  { value: 'cancelled', label: 'Cancelled', dotColor: '#a8a29e' },
 ]
 
 export function LeaveApprovalsPage() {
   const [view, setView] = useState<ApprovalsView | null>(null)
   const [tab, setTab] = useState<Tab>('pending')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
-  const [dateFilter, setDateFilter] = useState<string>('')
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
@@ -112,16 +114,17 @@ export function LeaveApprovalsPage() {
         if (statusFilter === 'requested') return s === 'pending' || s === 'requested'
         if (statusFilter === 'approved') return s === 'approved'
         if (statusFilter === 'rejected') return s === 'rejected'
+        if (statusFilter === 'cancelled') return s === 'cancelled'
         return true
       })
     }
-    if (dateFilter) {
+    if (dateFrom || dateTo) {
       list = list.filter((r) => {
         const from = (r.fromDate ?? '').slice(0, 10)
         const to = (r.toDate ?? r.fromDate ?? '').slice(0, 10)
         const minDate = from <= to ? from : to
         const maxDate = from <= to ? to : from
-        return minDate <= dateFilter && maxDate >= dateFilter
+        return (!dateTo || minDate <= dateTo) && (!dateFrom || maxDate >= dateFrom)
       })
     }
     if (!q) return list
@@ -131,7 +134,7 @@ export function LeaveApprovalsPage() {
         r.ref.toLowerCase().includes(q) ||
         (r.reason && r.reason.toLowerCase().includes(q)),
     )
-  }, [view?.log, statusFilter, dateFilter, q])
+  }, [view?.log, statusFilter, dateFrom, dateTo, q])
 
   // Called before the early returns below — hooks cannot sit behind a branch.
   const pendingPage = usePage(filteredPending)
@@ -226,109 +229,21 @@ export function LeaveApprovalsPage() {
                 />
               </div>
 
-              {/* Date Filter */}
+              {/* Date range: a request shows if any of its days fall inside. */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <label
-                  htmlFor="dateFilter"
+                <span
                   style={{
                     fontSize: 13,
                     fontWeight: 500,
                     color: 'var(--muted2, #64748b)',
-                    margin: 0,
-                    textTransform: 'none',
-                    letterSpacing: 'normal',
                     whiteSpace: 'nowrap',
                   }}
                 >
                   Date:
-                </label>
-                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                  <svg
-                    width="13"
-                    height="13"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="var(--muted, #94a3b8)"
-                    strokeWidth="2.2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    style={{
-                      position: 'absolute',
-                      left: 11,
-                      pointerEvents: 'none',
-                      zIndex: 1,
-                    }}
-                  >
-                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-                    <line x1="16" y1="2" x2="16" y2="6" />
-                    <line x1="8" y1="2" x2="8" y2="6" />
-                    <line x1="3" y1="10" x2="21" y2="10" />
-                  </svg>
-                  <input
-                    id="dateFilter"
-                    type="date"
-                    value={dateFilter}
-                    onChange={(e) => setDateFilter(e.target.value)}
-                    style={{
-                      height: 34,
-                      padding: dateFilter ? '0 28px 0 30px' : '0 12px 0 30px',
-                      borderRadius: 99,
-                      border: '1px solid var(--line, #e2e8f0)',
-                      backgroundColor: '#fff',
-                      fontSize: 13,
-                      fontFamily: "'Inter', sans-serif",
-                      outline: 'none',
-                      color: dateFilter ? 'var(--ink, #0f172a)' : 'var(--muted, #94a3b8)',
-                      boxShadow: '0 1px 2px rgba(0, 0, 0, 0.03)',
-                      cursor: 'pointer',
-                      transition: 'border-color 0.15s, box-shadow 0.15s',
-                    }}
-                    onFocus={(e) => {
-                      e.currentTarget.style.borderColor = 'var(--blue, #2563eb)'
-                      e.currentTarget.style.boxShadow = '0 0 0 2px rgba(37, 99, 235, 0.15)'
-                    }}
-                    onBlur={(e) => {
-                      e.currentTarget.style.borderColor = 'var(--line, #e2e8f0)'
-                      e.currentTarget.style.boxShadow = '0 1px 2px rgba(0, 0, 0, 0.03)'
-                    }}
-                  />
-                  {dateFilter && (
-                    <button
-                      type="button"
-                      onClick={() => setDateFilter('')}
-                      aria-label="Clear date filter"
-                      title="Clear date"
-                      style={{
-                        position: 'absolute',
-                        right: 8,
-                        top: '50%',
-                        transform: 'translateY(-50%)',
-                        border: 'none',
-                        background: 'transparent',
-                        color: 'var(--muted, #94a3b8)',
-                        cursor: 'pointer',
-                        fontSize: 11,
-                        lineHeight: 1,
-                        padding: '3px 4px',
-                        borderRadius: '50%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        transition: 'background-color 0.15s, color 0.15s',
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.color = 'var(--ink, #0f172a)'
-                        e.currentTarget.style.backgroundColor = 'var(--line2, #f1f5f9)'
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.color = 'var(--muted, #94a3b8)'
-                        e.currentTarget.style.backgroundColor = 'transparent'
-                      }}
-                    >
-                      ✕
-                    </button>
-                  )}
-                </div>
+                </span>
+                <DateBox id="dateFrom" label="From date" value={dateFrom} max={dateTo || undefined} onChange={setDateFrom} />
+                <span style={{ fontSize: 13, color: 'var(--muted, #94a3b8)' }}>to</span>
+                <DateBox id="dateTo" label="To date" value={dateTo} min={dateFrom || undefined} onChange={setDateTo} />
               </div>
             </>
           )}
@@ -756,8 +671,8 @@ export function LeaveApprovalsPage() {
                   <tr>
                     <td colSpan={view.isAdmin ? 10 : 9}>
                       <div className="empty">
-                        <b>{q || statusFilter !== 'all' || dateFilter ? 'No matching requests' : 'No requests this year.'}</b>
-                        {q || statusFilter !== 'all' || dateFilter
+                        <b>{q || statusFilter !== 'all' || dateFrom || dateTo ? 'No matching requests' : 'No requests this year.'}</b>
+                        {q || statusFilter !== 'all' || dateFrom || dateTo
                           ? `No requests match the selected filters. Try clearing the search or changing the date/status filter.`
                           : 'Decided requests move to the All requests tab.'}
                       </div>
@@ -824,3 +739,69 @@ export function LeaveApprovalsPage() {
 
 const sum = (values: number[]): number =>
   Math.round(values.reduce((total, v) => total + v, 0) * 10) / 10
+
+/** One date box of the All requests range, with its own clear button. */
+function DateBox({
+  id,
+  label,
+  value,
+  min,
+  max,
+  onChange,
+}: {
+  id: string
+  label: string
+  value: string
+  min?: string
+  max?: string
+  onChange: (next: string) => void
+}) {
+  return (
+    <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+      <input
+        id={id}
+        type="date"
+        aria-label={label}
+        value={value}
+        min={min}
+        max={max}
+        onChange={(e) => onChange(e.target.value)}
+        style={{
+          width: 'auto',
+          height: 34,
+          padding: value ? '0 28px 0 12px' : '0 12px',
+          borderRadius: 99,
+          border: '1px solid var(--line, #e2e8f0)',
+          backgroundColor: '#fff',
+          fontSize: 13,
+          fontFamily: "'Inter', sans-serif",
+          outline: 'none',
+          color: value ? 'var(--ink, #0f172a)' : 'var(--muted, #94a3b8)',
+          boxShadow: '0 1px 2px rgba(0, 0, 0, 0.03)',
+          cursor: 'pointer',
+        }}
+      />
+      {value && (
+        <button
+          type="button"
+          onClick={() => onChange('')}
+          aria-label={`Clear ${label.toLowerCase()}`}
+          title="Clear"
+          style={{
+            position: 'absolute',
+            right: 8,
+            border: 'none',
+            background: 'transparent',
+            color: 'var(--muted, #94a3b8)',
+            cursor: 'pointer',
+            fontSize: 11,
+            lineHeight: 1,
+            padding: '3px 4px',
+          }}
+        >
+          ✕
+        </button>
+      )}
+    </div>
+  )
+}
