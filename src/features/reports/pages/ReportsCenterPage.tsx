@@ -66,7 +66,7 @@ const REPORT_NOTES: Partial<Record<ReportType, string>> = {
     'Bank payout file with zero-padding protection for account numbers, IFSC, and net salary.',
   income_tax: 'Monthly TDS computation, taxable income, slab tax, and cess statement.',
   leave:
-    '2 paid leaves are credited on the 1st of every month. Balance = opening + credited − taken.',
+    'Who was on leave in the selected dates: the days, paid leave (EL), loss of pay and requests awaiting approval in that period, with each person’s balance today.',
   goals:
     'Goals run over a quarter, a half year or the full financial year. The period filter does not change these.',
   basic: '',
