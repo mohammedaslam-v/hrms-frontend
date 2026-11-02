@@ -9,6 +9,19 @@ export const HALF_DAY_LABEL: Record<HalfDaySession, string> = {
 }
 export type LeaveStatus = 'Pending' | 'Approved' | 'Rejected' | 'Cancelled'
 
+export interface ApprovalStep {
+  by: number
+  name: string
+  at: string
+  note?: string | null
+  role?: 'manager' | 'senior_manager' | 'admin'
+}
+
+export interface ApprovalProgress {
+  l1?: ApprovalStep | null
+  l2?: ApprovalStep | null
+}
+
 export interface LedgerRow {
   month: string
   credit: number
@@ -51,6 +64,13 @@ export interface LeaveRequest {
   /** Days of this request deducted so far — a request running into a future
       month only counts its elapsed portion, so the ledger stays balanced. */
   daysCounted: number
+  isTwoLevel?: boolean
+  directApproval?: ApprovalStep | null
+  seniorApproval?: ApprovalStep | null
+  directManagerName?: string | null
+  grandManagerName?: string | null
+  awaitingApproval?: 'direct' | 'senior' | 'both' | null
+  decisionNote?: string | null
 }
 
 export interface LeavePolicy {
@@ -112,6 +132,7 @@ export interface PendingApproval {
   employeeName: string
   employeeCode: string
   designation: string | null
+  department?: string | null
   leaveType: LeaveType
   fromDate: string
   toDate: string
@@ -126,6 +147,14 @@ export interface PendingApproval {
   unpaidDays: number
   /** Approving would take the balance below zero — needs explicit confirmation. */
   createsLossOfPay: boolean
+  isTwoLevel?: boolean
+  directApproval?: ApprovalStep | null
+  seniorApproval?: ApprovalStep | null
+  directManagerName?: string | null
+  grandManagerName?: string | null
+  hasViewerApproved?: boolean
+  awaitingApproval?: 'direct' | 'senior' | 'both' | null
+  decisionNote?: string | null
 }
 
 export interface TeamBalanceRow {

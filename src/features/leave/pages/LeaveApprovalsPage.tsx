@@ -355,6 +355,34 @@ export function LeaveApprovalsPage() {
                         <div className="stack">
                           <b>{p.employeeName}</b>
                           <span>{p.designation ?? p.employeeCode}</span>
+                          {p.isTwoLevel && (
+                            <div style={{ marginTop: 3 }}>
+                              {p.directApproval || p.seniorApproval ? (
+                                <span
+                                  className="chip"
+                                  style={{ background: '#dbeafe', color: '#1e40af', fontSize: 11, padding: '2px 6px' }}
+                                  title={`1 of 2 approved by ${p.directApproval?.name || p.seniorApproval?.name}`}
+                                >
+                                  1/2 approved
+                                </span>
+                              ) : (
+                                <span
+                                  className="chip"
+                                  style={{ background: '#fef3c7', color: '#92400e', fontSize: 11, padding: '2px 6px' }}
+                                  title="Requires direct manager and senior manager/admin approvals"
+                                >
+                                  2-level (0/2)
+                                </span>
+                              )}
+                              <div className="hint" style={{ fontSize: 11, marginTop: 1 }}>
+                                {p.awaitingApproval === 'direct'
+                                  ? `Waiting on: Direct Mgr${p.directManagerName ? ` (${p.directManagerName})` : ''}`
+                                  : p.awaitingApproval === 'senior'
+                                  ? `Waiting on: Senior Mgr${p.grandManagerName ? ` (${p.grandManagerName})` : ''} / Admin`
+                                  : 'Waiting on: Direct & Senior Mgr'}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </td>
                       <td>
@@ -389,20 +417,36 @@ export function LeaveApprovalsPage() {
                       </td>
                       <td>
                         <div className="row-actions">
-                          <button
-                            className="btn success sm"
-                            onClick={() => setActionConfirmation({ item: p, decision: 'Approved' })}
-                            disabled={decidingId === p.id}
-                          >
-                            {decidingId === p.id ? '…' : 'Approve'}
-                          </button>
-                          <button
-                            className="btn ghost sm"
-                            onClick={() => setActionConfirmation({ item: p, decision: 'Rejected' })}
-                            disabled={decidingId === p.id}
-                          >
-                            Reject
-                          </button>
+                          {p.hasViewerApproved ? (
+                            <div style={{ textAlign: 'center' }}>
+                              <span
+                                className="chip c-in"
+                                style={{ fontSize: 11.5, padding: '3px 8px', display: 'inline-block' }}
+                              >
+                                ✓ Approved (1/2)
+                              </span>
+                              <div className="hint" style={{ fontSize: 11, marginTop: 2 }}>
+                                Awaiting 2nd approver
+                              </div>
+                            </div>
+                          ) : (
+                            <>
+                              <button
+                                className="btn success sm"
+                                onClick={() => setActionConfirmation({ item: p, decision: 'Approved' })}
+                                disabled={decidingId === p.id}
+                              >
+                                {decidingId === p.id ? '…' : 'Approve'}
+                              </button>
+                              <button
+                                className="btn ghost sm"
+                                onClick={() => setActionConfirmation({ item: p, decision: 'Rejected' })}
+                                disabled={decidingId === p.id}
+                              >
+                                Reject
+                              </button>
+                            </>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -510,7 +554,11 @@ export function LeaveApprovalsPage() {
                 {actionConfirmation.decision === 'Approved'
                   ? actionConfirmation.item.createsLossOfPay
                     ? 'Confirm approval (costs pay)?'
-                    : 'Confirm leave approval'
+                    : actionConfirmation.item.isTwoLevel
+                      ? actionConfirmation.item.directApproval || actionConfirmation.item.seniorApproval
+                        ? 'Confirm final approval (2 of 2)'
+                        : 'Confirm 1st approval (1 of 2)'
+                      : 'Confirm leave approval'
                   : 'Confirm leave rejection'}
               </h3>
               <button
@@ -570,6 +618,21 @@ export function LeaveApprovalsPage() {
             </div>
 
             {/* Guidance & Alerts */}
+            {actionConfirmation.decision === 'Approved' && actionConfirmation.item.isTwoLevel && (
+              actionConfirmation.item.directApproval || actionConfirmation.item.seniorApproval ? (
+                <div className="notice blue" style={{ marginBottom: 10 }}>
+                  <b>Final Approval (2 of 2):</b> 1st approval was given by{' '}
+                  <b>{actionConfirmation.item.directApproval?.name || actionConfirmation.item.seniorApproval?.name}</b>.
+                  Your approval will complete the workflow and mark this leave as fully <b>Approved</b>.
+                </div>
+              ) : (
+                <div className="notice blue" style={{ marginBottom: 10 }}>
+                  <b>2-Level Approval (Sales):</b> This request requires 2 approvals (Direct Manager and Senior Manager / Admin).
+                  Your approval will record <b>Approval 1 of 2</b>. The leave will remain pending until the 2nd approval is completed.
+                </div>
+              )
+            )}
+
             {actionConfirmation.decision === 'Approved' ? (
               actionConfirmation.item.createsLossOfPay ? (
                 <>
@@ -591,7 +654,10 @@ export function LeaveApprovalsPage() {
               )
             ) : (
               <div className="notice bad">
-                Are you sure you want to reject this leave request? The employee will be notified of the rejection.
+                Are you sure you want to reject this leave request?
+                {actionConfirmation.item.isTwoLevel
+                  ? ' Rejection by any approver rejects the request immediately.'
+                  : ' The employee will be notified of the rejection.'}
               </div>
             )}
 
@@ -613,7 +679,11 @@ export function LeaveApprovalsPage() {
                 {decidingId === actionConfirmation.item.id
                   ? 'Submitting…'
                   : actionConfirmation.decision === 'Approved'
-                    ? 'Yes, Approve'
+                    ? actionConfirmation.item.isTwoLevel
+                      ? actionConfirmation.item.directApproval || actionConfirmation.item.seniorApproval
+                        ? 'Yes, Fully Approve (2/2)'
+                        : 'Yes, Approve (1/2)'
+                      : 'Yes, Approve'
                     : 'Yes, Reject'}
               </button>
             </div>
@@ -693,7 +763,16 @@ export function LeaveApprovalsPage() {
                       <td>
                         <span className={`chip ${STATUS_CLASS[r.status]}`}>{r.status}</span>
                       </td>
-                      <td>{r.decidedBy ?? '—'}</td>
+                      <td>
+                        <div>{r.decidedBy ?? '—'}</div>
+                        {r.isTwoLevel && (
+                          <div className="hint" style={{ fontSize: 11 }}>
+                            {r.directApproval && r.seniorApproval
+                              ? `2-level: ${r.directApproval.name} & ${r.seniorApproval.name}`
+                              : '2-level approval'}
+                          </div>
+                        )}
+                      </td>
                       {view.isAdmin && (
                         <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
                           {r.status === 'Approved' ? (
