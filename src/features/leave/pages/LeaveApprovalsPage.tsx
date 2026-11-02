@@ -627,7 +627,7 @@ export function LeaveApprovalsPage() {
                 </div>
               ) : (
                 <div className="notice blue" style={{ marginBottom: 10 }}>
-                  <b>2-Level Approval (Sales):</b> This request requires 2 approvals (Direct Manager and Senior Manager / Admin).
+                  <b>2-Level Approval (Sales & Operations):</b> This request requires 2 approvals (Direct Manager and Senior Manager / Admin).
                   Your approval will record <b>Approval 1 of 2</b>. The leave will remain pending until the 2nd approval is completed.
                 </div>
               )
