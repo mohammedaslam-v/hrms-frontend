@@ -378,8 +378,8 @@ export function LeaveApprovalsPage() {
                                 {p.awaitingApproval === 'direct'
                                   ? `Waiting on: Direct Mgr${p.directManagerName ? ` (${p.directManagerName})` : ''}`
                                   : p.awaitingApproval === 'senior'
-                                  ? `Waiting on: Senior Mgr${p.grandManagerName ? ` (${p.grandManagerName})` : ''} / Admin`
-                                  : 'Waiting on: Direct & Senior Mgr'}
+                                  ? `Waiting on: Senior Mgr${p.grandManagerName ? ` (${p.grandManagerName})` : ''} / Admin / Rhea`
+                                  : 'Waiting on: Direct Mgr & Senior Mgr / Admin / Rhea'}
                               </div>
                             </div>
                           )}
@@ -627,7 +627,7 @@ export function LeaveApprovalsPage() {
                 </div>
               ) : (
                 <div className="notice blue" style={{ marginBottom: 10 }}>
-                  <b>2-Level Approval (Sales & Operations):</b> This request requires 2 approvals (Direct Manager and Senior Manager / Admin).
+                  <b>2-Level Approval (Sales & Operations):</b> This request requires 2 approvals (Direct Manager and Senior Manager / Admin / Rhea).
                   Your approval will record <b>Approval 1 of 2</b>. The leave will remain pending until the 2nd approval is completed.
                 </div>
               )
