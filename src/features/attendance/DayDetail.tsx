@@ -39,7 +39,7 @@ const nowHm = (): string => new Date().toTimeString().slice(0, 5)
 function figures({ bar, activities }: DayData) {
   const now = nowHm()
   const spans = bar.segments.map((s) => ({ from: s.from, to: s.to }))
-  const running = spans.some((s) => s.to === null)
+  const running = bar.isToday && spans.some((s) => s.to === null)
   const checkedIn = running ? coveredMinutes(spans, now) / 60 : bar.hours
   const extra =
     addedMinutes(
@@ -53,7 +53,7 @@ function figures({ bar, activities }: DayData) {
 }
 
 const runsLabel = (bar: WeekBar): string =>
-  bar.segments.map((r) => `${r.from} – ${r.to ?? 'still in'}`).join(', ')
+  bar.segments.map((r) => `${r.from} – ${r.to ?? (bar.isToday ? 'still in' : 'no check-out')}`).join(', ')
 
 /** The compact box shown on hover or focus, positioned over the bar. */
 export function DayPopover({ x, y, ...day }: DayData & { x: number; y: number }) {
@@ -185,7 +185,7 @@ export function DayDetailModal({
             {bar.segments.map((r) => (
               <li key={r.from}>
                 <span className="dd-time">
-                  {r.from} – {r.to ?? 'still in'}
+                  {r.from} – {r.to ?? (bar.isToday ? 'still in' : 'no check-out')}
                 </span>
               </li>
             ))}
