@@ -168,6 +168,11 @@ export function TodayCard({ employeeId, isSelf, isAdmin, employeeName }: TodayCa
               {view.lateByMinutes} min late
             </span>
           )}
+          {view.status === 'Half day' && view.lateByMinutes >= 25 && (
+            <span className="hint" style={{ color: 'var(--red)', marginLeft: 6 }}>
+              {view.lateByMinutes} min late (Half day)
+            </span>
+          )}
         </span>
       </div>
       {view.recheckInAt && (
