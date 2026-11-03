@@ -87,7 +87,7 @@ export function TodayCard({ employeeId, isSelf, isAdmin, employeeName }: TodayCa
     return () => clearInterval(id)
   }, [isRunning])
 
-  const act = async (what: 'in' | 'out') => {
+  const act = async (what: 'in' | 'out'): Promise<boolean> => {
     setBusy(true)
     setError(null)
     try {
@@ -102,10 +102,12 @@ export function TodayCard({ employeeId, isSelf, isAdmin, employeeName }: TodayCa
           : await attendanceApi.checkOutFor(employeeId)
       }
       apply(next)
+      return true
     } catch (err) {
       setError(err instanceof Error ? err.message : 'That did not go through.')
       // The server refused, so re-read rather than leaving the card guessing.
       void load()
+      return false
     } finally {
       setBusy(false)
     }
@@ -190,7 +192,7 @@ export function TodayCard({ employeeId, isSelf, isAdmin, employeeName }: TodayCa
         </span>
       </div>
 
-      {error && (
+      {error && !showCheckInConfirm && !showCheckOutConfirm && (
         <div className="notice bad mt8" role="alert">
           {error}
         </div>
@@ -222,7 +224,10 @@ export function TodayCard({ employeeId, isSelf, isAdmin, employeeName }: TodayCa
               <button
                 type="button"
                 className="btn success"
-                onClick={() => setShowCheckInConfirm(true)}
+                onClick={() => {
+                  setError(null)
+                  setShowCheckInConfirm(true)
+                }}
                 disabled={checkInDisabled}
                 aria-describedby={geo.message ? geoMessageId : undefined}
                 style={{
@@ -252,7 +257,10 @@ export function TodayCard({ employeeId, isSelf, isAdmin, employeeName }: TodayCa
               <button
                 type="button"
                 className="btn danger"
-                onClick={() => setShowCheckOutConfirm(true)}
+                onClick={() => {
+                  setError(null)
+                  setShowCheckOutConfirm(true)
+                }}
                 disabled={checkOutDisabled}
                 aria-describedby={geo.message ? geoMessageId : undefined}
                 style={{
@@ -316,16 +324,19 @@ export function TodayCard({ employeeId, isSelf, isAdmin, employeeName }: TodayCa
       {showCheckInConfirm && (
         <Modal
           title="Confirm Check-in"
-          onClose={() => setShowCheckInConfirm(false)}
+          onClose={() => {
+            if (!busy) setShowCheckInConfirm(false)
+          }}
           busy={busy}
+          error={error}
           maxWidth={420}
           confirm={
             <button
               className="btn success"
               type="button"
               onClick={async () => {
-                setShowCheckInConfirm(false)
-                await act('in')
+                const ok = await act('in')
+                if (ok) setShowCheckInConfirm(false)
               }}
               disabled={busy}
               style={{ fontWeight: 600 }}
@@ -349,16 +360,19 @@ export function TodayCard({ employeeId, isSelf, isAdmin, employeeName }: TodayCa
       {showCheckOutConfirm && (
         <Modal
           title="Confirm Check-out"
-          onClose={() => setShowCheckOutConfirm(false)}
+          onClose={() => {
+            if (!busy) setShowCheckOutConfirm(false)
+          }}
           busy={busy}
+          error={error}
           maxWidth={420}
           confirm={
             <button
               className="btn danger"
               type="button"
               onClick={async () => {
-                setShowCheckOutConfirm(false)
-                await act('out')
+                const ok = await act('out')
+                if (ok) setShowCheckOutConfirm(false)
               }}
               disabled={busy}
               style={{ fontWeight: 600 }}
