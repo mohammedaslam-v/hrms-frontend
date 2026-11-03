@@ -4,6 +4,7 @@ export type ReportType =
   | 'attsummary'
   | 'late'
   | 'nologin'
+  | 'lop'
   | 'active'
   | 'salary'
   | 'income_tax'
@@ -65,6 +66,7 @@ export interface ReportFilterDto {
   employeeId?: number | string;
   /** The screen's search box, so a download matches the table on screen. */
   search?: string;
+  lopCategory?: 'all' | 'half_day' | 'full_day';
 }
 
 export interface ReportCatalogItem {

@@ -43,6 +43,8 @@ const SEARCHABLE_KEYS = [
   'name',
   'code',
   'manager',
+  'reason',
+  'lopCategory',
 ] as const
 
 const REPORT_NOTES: Partial<Record<ReportType, string>> = {
@@ -51,6 +53,7 @@ const REPORT_NOTES: Partial<Record<ReportType, string>> = {
   late: 'A login more than 15 minutes after shift start is treated as late.',
   nologin:
     'Working days with no system activity at all — excludes approved leave, weekly offs and holidays.',
+  lop: 'Loss of Pay (LOP) records covering Half-Day LOP (late check-in >= 25m or manual) and Full-Day LOP (no login, missed check-out, or manual).',
   active: '',
   salary: '',
   pf: 'PF wages are capped at the statutory ceiling of ₹15,000 a month. EPS is capped at ₹1,250.',
@@ -102,14 +105,20 @@ export const ReportsCenterPage: React.FC = () => {
     return true;
   }, [isManager, isAdmin, catalog]);
 
-  // The activity log is admins only; the server refuses anyone else too.
+  // The activity log and LOP reports are admins only; the server refuses anyone else too.
   const canViewActivityLog = useMemo(
     () => isAdmin && (catalog.length === 0 || catalog.some((item) => item.type === 'activity_log')),
     [isAdmin, catalog],
   );
 
+  const canViewLop = useMemo(
+    () => isAdmin && (catalog.length === 0 || catalog.some((item) => item.type === 'lop')),
+    [isAdmin, catalog],
+  );
+
   const [selectedType, setSelectedType] = useState<ReportType>('attendance');
   const [period, setPeriod] = useState<'daily' | 'weekly' | 'monthly' | 'range' | 'fytd'>('monthly');
+  const [lopCategory, setLopCategory] = useState<'all' | 'half_day' | 'full_day'>('all');
 
   // If a non-admin/manager user ever has a payroll report selected, fallback to attendance
   useEffect(() => {
@@ -119,7 +128,10 @@ export const ReportsCenterPage: React.FC = () => {
     if (!canViewActivityLog && selectedType === 'activity_log') {
       setSelectedType('attendance');
     }
-  }, [canViewPayroll, canViewActivityLog, selectedType]);
+    if (!canViewLop && selectedType === 'lop') {
+      setSelectedType('attendance');
+    }
+  }, [canViewPayroll, canViewActivityLog, canViewLop, selectedType]);
 
   // Dates
   const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
@@ -239,6 +251,7 @@ export const ReportsCenterPage: React.FC = () => {
           to: period === 'range' ? toDate : undefined,
           department: department || undefined,
           employeeId: employeeId || undefined,
+          lopCategory: type === 'lop' && lopCategory !== 'all' ? lopCategory : undefined,
         };
 
         const data = await reportsApi.getReportData(filter);
@@ -250,12 +263,12 @@ export const ReportsCenterPage: React.FC = () => {
         setLoadingData(false);
       }
     },
-    [period, day, week, month, fromDate, toDate, department, employeeId]
+    [period, day, week, month, fromDate, toDate, department, employeeId, lopCategory]
   );
 
   useEffect(() => {
     loadReport(selectedType);
-  }, [selectedType, period, day, week, month, fromDate, toDate, department, employeeId, loadReport]);
+  }, [selectedType, period, day, week, month, fromDate, toDate, department, employeeId, lopCategory, loadReport]);
 
   const handleDownloadCsv = async () => {
     try {
@@ -270,6 +283,7 @@ export const ReportsCenterPage: React.FC = () => {
         to: period === 'range' ? toDate : undefined,
         department: department || undefined,
         employeeId: employeeId || undefined,
+        lopCategory: selectedType === 'lop' && lopCategory !== 'all' ? lopCategory : undefined,
         // Download what is on screen, not what was on screen before typing.
         search: rowSearch.trim() || undefined,
       };
@@ -313,6 +327,35 @@ export const ReportsCenterPage: React.FC = () => {
   const renderCell = (col: ReportColumn, val: any) => {
     if (val === null || val === undefined || val === '') {
       return <span style={{ color: 'var(--muted2, #9ca3af)' }}>—</span>;
+    }
+    if (col.key === 'lopCategory') {
+      const isHalfLop = val === 'Half-Day LOP';
+      const isFullLop = val === 'Full-Day LOP';
+      const isHalfLeave = val === 'Half-Day Leave';
+      return (
+        <span
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            padding: '2px 8px',
+            borderRadius: '9999px',
+            fontSize: '11px',
+            fontWeight: 600,
+            background: isHalfLop ? '#fef3c7' : isFullLop ? '#fee2e2' : isHalfLeave ? '#dbeafe' : 'var(--bg-subtle, #f3f4f6)',
+            color: isHalfLop ? '#92400e' : isFullLop ? '#991b1b' : isHalfLeave ? '#1e40af' : 'inherit',
+            border: `1px solid ${isHalfLop ? '#fde68a' : isFullLop ? '#fecaca' : isHalfLeave ? '#bfdbfe' : 'transparent'}`,
+          }}
+        >
+          {val}
+        </span>
+      );
+    }
+    if (col.key === 'lopDays' && typeof val === 'number') {
+      return (
+        <span style={{ fontWeight: 600 }}>
+          {val} {val === 1 ? 'day' : 'days'}
+        </span>
+      );
     }
     if (col.isCurrency && typeof val === 'number') {
       return formatInr(val);
@@ -404,6 +447,9 @@ export const ReportsCenterPage: React.FC = () => {
                   <option value="active">Daily active hours</option>
                   {canViewActivityLog && (
                     <option value="activity_log">Activity log — check-in, activities, admin panel</option>
+                  )}
+                  {canViewLop && (
+                    <option value="lop">Loss of pay (LOP) report</option>
                   )}
                 </optgroup>
                 {canViewPayroll && (
@@ -546,6 +592,23 @@ export const ReportsCenterPage: React.FC = () => {
               </div>
             )}
 
+            {selectedType === 'lop' && (
+              <div className="f" id="rpLopCategoryWrap">
+                <label>LOP category</label>
+                <select
+                  id="rpLopCategory"
+                  value={lopCategory}
+                  onChange={(e) =>
+                    setLopCategory(e.target.value as 'all' | 'half_day' | 'full_day')
+                  }
+                >
+                  <option value="all">All LOP</option>
+                  <option value="half_day">Half-Day LOP only (0.5 day)</option>
+                  <option value="full_day">Full-Day LOP only (1.0 day)</option>
+                </select>
+              </div>
+            )}
+
             <div className="f">
               <label>Department</label>
               <select
@@ -619,6 +682,62 @@ export const ReportsCenterPage: React.FC = () => {
                   ? `${rows.length} of ${allRows.length} rows`
                   : `${rows.length} row${rows.length === 1 ? '' : 's'}`}
               </div>
+
+              {selectedType === 'lop' && (
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setLopCategory('all')}
+                    style={{
+                      padding: '4px 10px',
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                      fontWeight: 500,
+                      cursor: 'pointer',
+                      border: '1px solid',
+                      borderColor: lopCategory === 'all' ? 'var(--blue, #2563eb)' : 'var(--border, #e5e7eb)',
+                      background: lopCategory === 'all' ? 'var(--blue, #2563eb)' : '#fff',
+                      color: lopCategory === 'all' ? '#fff' : 'inherit',
+                    }}
+                  >
+                    All LOP
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLopCategory('half_day')}
+                    style={{
+                      padding: '4px 10px',
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                      fontWeight: 500,
+                      cursor: 'pointer',
+                      border: '1px solid',
+                      borderColor: lopCategory === 'half_day' ? '#d97706' : 'var(--border, #e5e7eb)',
+                      background: lopCategory === 'half_day' ? '#fef3c7' : '#fff',
+                      color: lopCategory === 'half_day' ? '#92400e' : 'inherit',
+                    }}
+                  >
+                    Half-Day LOP (0.5 day)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLopCategory('full_day')}
+                    style={{
+                      padding: '4px 10px',
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                      fontWeight: 500,
+                      cursor: 'pointer',
+                      border: '1px solid',
+                      borderColor: lopCategory === 'full_day' ? '#dc2626' : 'var(--border, #e5e7eb)',
+                      background: lopCategory === 'full_day' ? '#fee2e2' : '#fff',
+                      color: lopCategory === 'full_day' ? '#991b1b' : 'inherit',
+                    }}
+                  >
+                    Full-Day LOP (1.0 day)
+                  </button>
+                </div>
+              )}
             </div>
 
             <div style={{ position: 'relative', flexShrink: 0 }}>
