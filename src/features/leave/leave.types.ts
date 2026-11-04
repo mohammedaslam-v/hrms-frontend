@@ -219,3 +219,8 @@ export interface EditApprovedResult {
   updatedRequest: LeaveRequest
 }
 
+export interface DeleteLeaveResult {
+  view: ApprovalsView
+  message: string
+}
+

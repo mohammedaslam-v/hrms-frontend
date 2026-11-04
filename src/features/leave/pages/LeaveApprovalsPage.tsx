@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { PageHero } from '../../../shared/ui/PageHero'
 import { Pagination, usePage } from '../../../shared/ui/Pagination'
+import { DeleteLeaveModal } from '../components/DeleteLeaveModal'
 import { EditApprovedLeaveModal } from '../components/EditApprovedLeaveModal'
 import { approvalsApi } from '../leave.api'
 import {
@@ -47,6 +48,7 @@ export function LeaveApprovalsPage() {
     decision: 'Approved' | 'Rejected'
   } | null>(null)
   const [editingLeave, setEditingLeave] = useState<(LeaveRequest & { employeeName: string }) | null>(null)
+  const [deletingLeave, setDeletingLeave] = useState<(LeaveRequest & { employeeName: string }) | null>(null)
 
   const load = useCallback(async () => {
     try {
@@ -775,19 +777,32 @@ export function LeaveApprovalsPage() {
                       </td>
                       {view.isAdmin && (
                         <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
-                          {r.status === 'Approved' ? (
+                          <div className="row-actions" style={{ justifyContent: 'flex-end' }}>
+                            {r.status === 'Approved' && (
+                              <button
+                                type="button"
+                                className="btn ghost sm"
+                                onClick={() => setEditingLeave(r)}
+                                style={{ padding: '4px 10px', fontSize: 12, color: 'var(--blue)' }}
+                                title="Edit approved leave dates, duration, or type"
+                              >
+                                ✏️ Edit
+                              </button>
+                            )}
                             <button
                               type="button"
                               className="btn ghost sm"
-                              onClick={() => setEditingLeave(r)}
-                              style={{ padding: '4px 10px', fontSize: 12, color: 'var(--blue)' }}
-                              title="Edit approved leave dates, duration, or type"
+                              onClick={() => setDeletingLeave(r)}
+                              style={{ padding: '4px 10px', fontSize: 12, color: 'var(--red)' }}
+                              title={
+                                r.status === 'Approved'
+                                  ? 'Delete this leave — days return to the balance and attendance is restored'
+                                  : 'Delete this request from the log'
+                              }
                             >
-                              ✏️ Edit
+                              🗑 Delete
                             </button>
-                          ) : (
-                            <span style={{ color: 'var(--muted)', fontSize: 12 }}>—</span>
-                          )}
+                          </div>
                         </td>
                       )}
                     </tr>
@@ -809,6 +824,20 @@ export function LeaveApprovalsPage() {
             setView(updatedView)
             setNotice(successMsg)
             setEditingLeave(null)
+          }}
+        />
+      )}
+
+      {/* Admin Delete Leave Modal — any status; the row is gone for good afterwards. */}
+      {deletingLeave && (
+        <DeleteLeaveModal
+          leave={deletingLeave}
+          onClose={() => setDeletingLeave(null)}
+          onSuccess={(updatedView, successMsg) => {
+            setView(updatedView)
+            setError(null)
+            setNotice(successMsg)
+            setDeletingLeave(null)
           }}
         />
       )}
