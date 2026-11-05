@@ -187,6 +187,11 @@ export function DayDetailModal({
                 <span className="dd-time">
                   {r.from} – {r.to ?? (bar.isToday ? 'still in' : 'no check-out')}
                 </span>
+                {bar.recheckInAt && (
+                  <span className="hint" style={{ color: 'var(--muted)', marginLeft: 8, fontSize: 12 }}>
+                    (Re-check-in at {bar.recheckInAt})
+                  </span>
+                )}
               </li>
             ))}
           </ul>

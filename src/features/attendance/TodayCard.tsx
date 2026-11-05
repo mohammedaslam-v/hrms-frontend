@@ -243,7 +243,7 @@ export function TodayCard({ employeeId, isSelf, isAdmin, employeeName }: TodayCa
                   cursor: checkInDisabled ? 'not-allowed' : 'pointer',
                 }}
               >
-                {busy && !isCheckedIn ? 'Recording…' : 'Check in'}
+                {busy && !isCheckedIn ? 'Recording…' : isCheckedOut ? 'Check in again' : 'Check in'}
               </button>
             </span>
 

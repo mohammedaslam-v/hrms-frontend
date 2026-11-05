@@ -120,6 +120,7 @@ export interface WeekBar {
   source: DaySource
   /** On a Leave or Half day: which kind. Unpaid is shown as LOP. Null otherwise. */
   leaveType: LeaveType | null
+  recheckInAt?: string | null
 }
 
 /** How a day is shown on the calendar: its code, its colour, and its name. */
@@ -211,6 +212,7 @@ export interface TodayBoardRow {
   shiftEnd: string
   loginAt: string | null
   logoutAt: string | null
+  recheckInAt?: string | null
   activeHours: number
   lateByMinutes: number
   status: AttendanceStatus
@@ -235,6 +237,7 @@ export interface AttendanceRangeRow {
   shiftEnd: string
   loginAt: string | null
   logoutAt: string | null
+  recheckInAt?: string | null
   activeHours: number
   lateByMinutes: number
   status: AttendanceStatus
