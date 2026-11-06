@@ -95,6 +95,26 @@
 /* A day off with no panel time */
 .at-grid .t-off { color: #8c827a; font-weight: 600; }
 
+/* Activities tab — see ActivitiesTable.tsx. The date leads, so the name is not sticky-left there. */
+.ac-grid .at-name-h,
+.ac-grid .at-name { position: static; }
+.ac-grid tbody td,
+.ac-grid tbody th { vertical-align: top; }
+.ac-date { text-align: left !important; min-width: 84px; }
+.ac-date b { display: block; font-weight: 600; color: var(--ink); }
+.ac-date small { display: block; font-size: 11px; color: var(--muted); }
+.ac-date .ac-off { margin-top: 3px; color: #8c827a; font-weight: 600; }
+.ac-act-h { min-width: 180px; text-align: left !important; }
+.ac-act {
+  min-width: 180px;
+  max-width: 260px;
+  text-align: left !important;
+  white-space: normal !important;
+}
+.ac-act b { display: block; font-weight: 600; color: var(--ink); }
+.ac-act .ac-note { display: block; margin-top: 1px; color: var(--ink2); overflow-wrap: anywhere; }
+.ac-act small { display: block; margin-top: 2px; font-size: 11px; color: var(--muted); }
+
 @media (max-width: 640px) {
   .at-filters { width: 100%; }
   .at-f,

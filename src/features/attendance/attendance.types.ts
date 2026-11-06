@@ -272,7 +272,7 @@ export interface PunctualitySummaryDto {
   summary: PunctualityEmployeeSummary[]
 }
 
-export type AttendanceTab = 'today' | 'range' | 'summary' | 'active'
+export type AttendanceTab = 'today' | 'range' | 'summary' | 'active' | 'activities'
 
 // ── Active time tab ──────────────────────────────────────────────────────────
 
@@ -326,5 +326,41 @@ export interface ActiveTimeView {
   /** Everyone the viewer may pick: the whole company for an admin, the team for a manager. */
   people: ActiveTimePerson[]
   rows: ActiveTimeRow[]
+}
+
+// ── Activities tab ───────────────────────────────────────────────────────────
+
+export interface ActivityItem {
+  id: number
+  type: 'phone_call' | 'external_meeting' | 'other'
+  note: string | null
+  /** HH:MM, India time. */
+  startTime: string
+  endTime: string
+  minutes: number
+}
+
+/** One person's day: panel time plus the activities they recorded. */
+export interface ActivityDayRow {
+  date: string
+  employeeId: number
+  code: string
+  name: string
+  department: string | null
+  panelSeconds: number
+  /** Shown under the date. */
+  dayOff: 'Weekly off' | 'Holiday' | null
+  activityMinutes: number
+  activities: ActivityItem[]
+}
+
+export interface ActivitiesView {
+  from: string
+  to: string
+  today: string
+  /** Everyone the viewer may pick: all for an admin, the team for a manager. */
+  people: ActiveTimePerson[]
+  /** Newest date first, then by name. */
+  rows: ActivityDayRow[]
 }
 

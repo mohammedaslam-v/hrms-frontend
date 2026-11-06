@@ -1,5 +1,6 @@
 import type {
   ActiveTimeView,
+  ActivitiesView,
   AttendanceRangeDto,
   CalendarView,
   DeviceFix,
@@ -93,5 +94,19 @@ export const attendanceApi = {
     if (params.employeeIds?.length) q.set('employeeIds', params.employeeIds.join(','))
     if (params.department) q.set('department', params.department)
     return request<ActiveTimeView>(`/reports/active-time?${q.toString()}`)
+  },
+
+  /**
+   * Activities tab: per person per day, panel time and recorded activities.
+   * The server decides who is visible (admin: everyone; manager: direct
+   * reports, plus Sales/Operations two levels down).
+   */
+  getActivities: (params: { from: string; to: string; employeeIds?: number[]; department?: string }) => {
+    const q = new URLSearchParams()
+    q.set('from', params.from)
+    q.set('to', params.to)
+    if (params.employeeIds?.length) q.set('employeeIds', params.employeeIds.join(','))
+    if (params.department) q.set('department', params.department)
+    return request<ActivitiesView>(`/reports/activities?${q.toString()}`)
   },
 }
