@@ -95,25 +95,163 @@
 /* A day off with no panel time */
 .at-grid .t-off { color: #8c827a; font-weight: 600; }
 
-/* Activities tab — see ActivitiesTable.tsx. The date leads, so the name is not sticky-left there. */
-.ac-grid .at-name-h,
-.ac-grid .at-name { position: static; }
-.ac-grid tbody td,
-.ac-grid tbody th { vertical-align: top; }
-.ac-date { text-align: left !important; min-width: 84px; }
-.ac-date b { display: block; font-weight: 600; color: var(--ink); }
-.ac-date small { display: block; font-size: 11px; color: var(--muted); }
-.ac-date .ac-off { margin-top: 3px; color: #8c827a; font-weight: 600; }
-.ac-act-h { min-width: 180px; text-align: left !important; }
-.ac-act {
-  min-width: 180px;
-  max-width: 260px;
-  text-align: left !important;
-  white-space: normal !important;
+/* ==========================================================================
+   Activities Tab Styling (Consistent with BConnect Design Language)
+   ========================================================================== */
+
+.ac-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
 }
-.ac-act b { display: block; font-weight: 600; color: var(--ink); }
-.ac-act .ac-note { display: block; margin-top: 1px; color: var(--ink2); overflow-wrap: anywhere; }
-.ac-act small { display: block; margin-top: 2px; font-size: 11px; color: var(--muted); }
+
+.ac-search-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.ac-search-box svg {
+  position: absolute;
+  left: 11px;
+  color: var(--muted);
+  pointer-events: none;
+}
+
+.ac-search-input {
+  width: 230px;
+  height: 36px;
+  padding: 0 12px 0 32px !important;
+  border-radius: 9px !important;
+  font-size: 13px !important;
+  background: var(--card) !important;
+  border: 1px solid var(--line) !important;
+}
+
+.ac-search-input:focus {
+  border-color: var(--blue) !important;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+/* Time Pills for Metrics */
+.ac-panel-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #e6f6ee;
+  color: #0fa968;
+  font: 700 11.5px 'Inter', sans-serif;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-variant-numeric: tabular-nums;
+  border: 1px solid rgba(15, 169, 104, 0.18);
+  white-space: nowrap;
+}
+
+.ac-act-total-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #eeeafe;
+  color: #6d53f0;
+  font: 700 11.5px 'Inter', sans-serif;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-variant-numeric: tabular-nums;
+  border: 1px solid rgba(109, 83, 240, 0.18);
+  white-space: nowrap;
+}
+
+/* Activity Items Stack & Cards */
+.ac-items-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 2px 0;
+  max-width: 520px;
+}
+
+.ac-item-card {
+  background: #faf8f5;
+  border: 1px solid var(--line2);
+  border-radius: 8px;
+  padding: 7px 10px;
+  transition: all 0.15s ease;
+}
+
+.ac-item-card:hover {
+  background: #ffffff;
+  border-color: var(--line);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.04);
+}
+
+.ac-item-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.ac-type-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font: 700 10.5px 'Inter', sans-serif;
+  padding: 2.5px 7.5px;
+  border-radius: 6px;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+.ac-type-chip.type-phone_call {
+  background: #eaf0fe;
+  color: #2563eb;
+  border: 1px solid rgba(37, 99, 235, 0.18);
+}
+
+.ac-type-chip.type-external_meeting {
+  background: #eeeafe;
+  color: #6d53f0;
+  border: 1px solid rgba(109, 83, 240, 0.18);
+}
+
+.ac-type-chip.type-other {
+  background: #fdefe4;
+  color: #ea6a18;
+  border: 1px solid rgba(234, 106, 24, 0.18);
+}
+
+.ac-item-time {
+  font-size: 11px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.ac-item-dur {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.ac-item-note {
+  margin-top: 5px;
+  font-size: 11.5px;
+  color: var(--ink2);
+  line-height: 1.38;
+  word-break: break-word;
+  background: rgba(0, 0, 0, 0.025);
+  padding: 5px 8px;
+  border-radius: 6px;
+  border-left: 2px solid var(--line);
+  font-style: italic;
+}
 
 @media (max-width: 640px) {
   .at-filters { width: 100%; }
@@ -121,4 +259,6 @@
   .at-people { flex: 1 1 100%; }
   .at-name-h,
   .at-name { min-width: 140px; }
+  .ac-search-input { width: 100%; }
+  .ac-search-box { width: 100%; }
 }
