@@ -1,4 +1,4 @@
-import { type CSSProperties, type ReactNode, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { attendanceApi } from '../attendance.api'
 import type { ActivitiesView, ActivityDayRow, ActivityItem } from '../attendance.types'
@@ -193,24 +193,6 @@ export function ActivitiesTable() {
     if (next !== 'custom') setRange(rangeOf(next))
   }
 
-  // Aggregate KPI summary
-  const summary = useMemo(() => {
-    const rows = view?.rows ?? []
-    const panelSec = rows.reduce((s, r) => s + r.panelSeconds, 0)
-    const actMin = rows.reduce((s, r) => s + r.activityMinutes, 0)
-    const totalMin = Math.round(panelSec / 60) + actMin
-    const actCount = rows.reduce((s, r) => s + r.activities.length, 0)
-    const contributors = new Set(rows.filter((r) => r.activities.length > 0).map((r) => r.employeeId)).size
-
-    return {
-      panelSec,
-      actMin,
-      totalMin,
-      actCount,
-      contributors,
-    }
-  }, [view])
-
   // Quick filter counts
   const quickCounts = useMemo(() => {
     const rows = view?.rows ?? []
@@ -252,101 +234,9 @@ export function ActivitiesTable() {
 
   const page = usePage(filteredRows, 25)
 
-  const kpis: {
-    label: string
-    num: string
-    sub: string
-    c: string
-    cs: string
-    icon: ReactNode
-  }[] = [
-    {
-      label: 'TOTAL PANEL TIME',
-      num: hm(summary.panelSec / 60),
-      sub: 'Tracked active portal time',
-      c: '#0FA968',
-      cs: '#E6F6EE',
-      icon: (
-        <>
-          <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
-          <line x1="8" y1="21" x2="16" y2="21" />
-          <line x1="12" y1="17" x2="12" y2="21" />
-        </>
-      ),
-    },
-    {
-      label: 'ACTIVITIES TIME',
-      num: hm(summary.actMin),
-      sub: `${summary.actCount.toLocaleString()} logged tasks & calls`,
-      c: '#2563EB',
-      cs: '#EAF0FE',
-      icon: (
-        <>
-          <circle cx="12" cy="12" r="10" />
-          <polyline points="12 6 12 12 16 14" />
-        </>
-      ),
-    },
-    {
-      label: 'TOTAL WORK LOGGED',
-      num: hm(summary.totalMin),
-      sub: 'Cumulative panel + activities',
-      c: '#6D53F0',
-      cs: '#EEEAFE',
-      icon: (
-        <>
-          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
-        </>
-      ),
-    },
-    {
-      label: 'RECORDED ACTIVITIES',
-      num: summary.actCount.toLocaleString(),
-      sub: `Across ${summary.contributors} team members`,
-      c: '#EA6A18',
-      cs: '#FDEFE4',
-      icon: (
-        <>
-          <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
-          <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
-          <path d="M9 14l2 2 4-4" />
-        </>
-      ),
-    },
-  ]
-
   return (
     <div className="at">
-      {/* 1. Top KPI Summary Cards */}
-      {view && (
-        <div className="grid g4" style={{ marginBottom: 16 }}>
-          {kpis.map((k) => (
-            <div className="kpi" key={k.label} title={k.sub}>
-              <div className="kpi-head">
-                <span className="kpi-ico" style={{ '--c': k.c, '--cs': k.cs } as CSSProperties}>
-                  <svg
-                    width="13"
-                    height="13"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.3"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    {k.icon}
-                  </svg>
-                </span>
-                <span className="kpi-lbl">{k.label}</span>
-              </div>
-              <div className="kpi-num">{k.num}</div>
-              <div className="kpi-sub">{k.sub}</div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* 2. Filter Controls Bar */}
+      {/* Filter Controls Bar */}
       <div className="card at-bar">
         <div className="at-filters">
           <div className="f at-f">
