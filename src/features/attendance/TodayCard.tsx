@@ -60,10 +60,11 @@ export function TodayCard({ employeeId, isSelf, isAdmin, employeeName }: TodayCa
     }
   }, [])
 
-  const load = useCallback(async () => {
+  /** `keepError`: a re-read after a refused punch must not wipe the refusal's message. */
+  const load = useCallback(async (keepError = false) => {
     try {
       apply(isSelf ? await attendanceApi.getToday() : await attendanceApi.getTodayFor(employeeId))
-      setError(null)
+      if (!keepError) setError(null)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not load today’s attendance.')
     } finally {
@@ -105,8 +106,9 @@ export function TodayCard({ employeeId, isSelf, isAdmin, employeeName }: TodayCa
       return true
     } catch (err) {
       setError(err instanceof Error ? err.message : 'That did not go through.')
-      // The server refused, so re-read rather than leaving the card guessing.
-      void load()
+      // The server refused, so re-read rather than leaving the card guessing —
+      // keeping the message, or the popup sits open saying nothing.
+      void load(true)
       return false
     } finally {
       setBusy(false)
@@ -138,7 +140,11 @@ export function TodayCard({ employeeId, isSelf, isAdmin, employeeName }: TodayCa
   const isCheckedIn = Boolean(view.loginAt && !view.logoutAt)
   const isCheckedOut = Boolean(view.loginAt && view.logoutAt)
   const geoBlocked = !geo.allowed
-  const checkInDisabled = busy || isCheckedIn || geoBlocked
+  // Approved full-day leave or weekly off: no punching until HR changes the day.
+  const onLeave = view.status === 'Leave' && !view.loginAt
+  const onOff = view.status === 'Weekly off' && !view.loginAt
+  const dayBlocked = onLeave || onOff
+  const checkInDisabled = busy || isCheckedIn || geoBlocked || dayBlocked
   const checkOutDisabled = busy || !isCheckedIn || geoBlocked
 
   return (
@@ -219,7 +225,11 @@ export function TodayCard({ employeeId, isSelf, isAdmin, employeeName }: TodayCa
               title={
                 isCheckedIn
                   ? 'Already checked in'
-                  : geoBlocked && geo.message
+                  : onLeave
+                    ? 'On approved leave today'
+                    : onOff
+                      ? 'Weekly off today'
+                      : geoBlocked && geo.message
                     ? geo.message
                     : isCheckedOut
                       ? 'Check in again'
@@ -239,7 +249,7 @@ export function TodayCard({ employeeId, isSelf, isAdmin, employeeName }: TodayCa
                   flex: 1,
                   minHeight: 38,
                   fontWeight: 600,
-                  opacity: isCheckedIn || geoBlocked ? 0.45 : 1,
+                  opacity: isCheckedIn || geoBlocked || dayBlocked ? 0.45 : 1,
                   cursor: checkInDisabled ? 'not-allowed' : 'pointer',
                 }}
               >
@@ -281,6 +291,18 @@ export function TodayCard({ employeeId, isSelf, isAdmin, employeeName }: TodayCa
               </button>
             </span>
           </div>
+
+          {dayBlocked && (
+            <div className="notice mt8" role="status" style={{ fontSize: 12.5 }}>
+              {onLeave
+                ? isSelf
+                  ? 'You are on approved leave today, so check-in is off. If you are working, ask HR to remove the leave first.'
+                  : `${employeeName.split(' ')[0]} is on approved leave today. Remove the leave first to check in.`
+                : isSelf
+                  ? 'Today is your weekly off, so check-in is off. If you are working, ask HR to mark it as a working day first.'
+                  : `Today is ${employeeName.split(' ')[0]}'s weekly off. Mark it as a working day first to check in.`}
+            </div>
+          )}
 
           {/* Visible, not hover-only: phones have no hover. */}
           {geo.message && (
