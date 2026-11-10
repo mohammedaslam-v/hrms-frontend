@@ -163,6 +163,12 @@ export function DayDetailModal({
         </div>
       )}
 
+      {bar.note && (
+        <div className="notice blue" style={{ marginBottom: 12 }} role="note">
+          <b>Reason:</b> {bar.note}
+        </div>
+      )}
+
       <div className="dd-summary">
         <div>
           <div className="dd-total">{asHours(f.total)}</div>

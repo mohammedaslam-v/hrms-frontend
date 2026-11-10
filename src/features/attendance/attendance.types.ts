@@ -121,6 +121,11 @@ export interface WeekBar {
   /** On a Leave or Half day: which kind. Unpaid is shown as LOP. Null otherwise. */
   leaveType: LeaveType | null
   recheckInAt?: string | null
+  /**
+   * Calendar only: why the day was set by hand — an admin's edit, an
+   * auto-closed check-out, or the Sales productivity rule.
+   */
+  note?: string | null
 }
 
 /** How a day is shown on the calendar: its code, its colour, and its name. */
