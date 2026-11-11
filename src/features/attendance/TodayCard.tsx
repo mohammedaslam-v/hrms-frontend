@@ -323,6 +323,26 @@ export function TodayCard({ employeeId, isSelf, isAdmin, employeeName }: TodayCa
                   </Link>
                 </>
               )}
+              {(geo.state.kind === 'unavailable' ||
+                geo.state.kind === 'inaccurate' ||
+                geo.state.kind === 'outside' ||
+                geo.state.kind === 'denied') && (
+                <button
+                  type="button"
+                  className="btn ghost sm"
+                  onClick={geo.retry}
+                  style={{
+                    marginLeft: 8,
+                    padding: '2px 8px',
+                    fontSize: 11.5,
+                    verticalAlign: 'baseline',
+                    lineHeight: '1.2',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {geo.state.kind === 'outside' ? 'Check again' : 'Retry location'}
+                </button>
+              )}
             </div>
           )}
           {geo.state.kind === 'inside' && (

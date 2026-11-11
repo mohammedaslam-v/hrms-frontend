@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import type { DeviceFix, GeofencePolicy, GeofenceZone, ZoneKind } from './attendance.types'
 
 /**
@@ -9,8 +9,12 @@ import type { DeviceFix, GeofencePolicy, GeofenceZone, ZoneKind } from './attend
  * buttons grey out for exactly the punches the server would refuse. The server
  * still decides — this only spares the person a click that cannot succeed.
  *
- * Watches rather than reading once, so walking into the office turns the
- * buttons on without a refresh.
+ * Uses progressive multi-tier location acquisition:
+ *   1. Fast immediate fix via low-accuracy / cached network location (< 300ms)
+ *   2. Parallel background refinement via high-accuracy watchPosition
+ *   3. Graceful fallback to network/Wi-Fi positioning if high accuracy times out (vital for laptops without GPS)
+ *   4. Automatic retry on initial lock failures before marking unavailable
+ *   5. Seamless permission-change listener & manual retry trigger
  */
 export type GeofenceState =
   | { kind: 'off' }
@@ -38,6 +42,10 @@ export interface GeofenceCheck {
   message: string | null
   /** The fix to send with the punch. */
   fix: DeviceFix | null
+  /** Retrigger location detection without needing a page refresh. */
+  retry: () => void
+  /** True while actively locating the device. */
+  isChecking: boolean
 }
 
 const EARTH_RADIUS_M = 6_371_000
@@ -99,13 +107,13 @@ function messageFor(state: GeofenceState, policy: GeofencePolicy | null): string
     case 'no-home':
       return 'Save your home location before checking in or out: My page → Edit personal details → Home location.'
     case 'checking':
-      return 'Checking your location… Allow location access if your browser asks.'
+      return 'Locating your device… Allow location access if your browser asks.'
     case 'unsupported':
       return 'This browser cannot share your location, so check-in is unavailable here. Use Chrome, Safari or Edge, or check in from your phone.'
     case 'denied':
-      return 'Location access is blocked for this site. Click the lock icon next to the website address → Site settings → Location → Allow, then refresh the page.'
+      return 'Location access is blocked for this site. Click the site settings icon next to the address → Location → Allow, then retry.'
     case 'unavailable':
-      return 'Your device could not find its location. Turn on location services (and Wi-Fi on a laptop), then refresh the page.'
+      return 'Your device could not find its location. Ensure location services and Wi-Fi are turned on.'
     case 'inaccurate':
       return `Your location is not precise enough (±${Math.round(state.fix.accuracy)} m). Turn on Wi-Fi or location services, or check in from your phone.`
     case 'outside': {
@@ -126,23 +134,6 @@ interface Reading {
   at: number
 }
 
-/**
- * Turns a stream of noisy GPS readings into a steady answer.
- *
- * A browser reports a new position every few seconds, each with its own ±
- * accuracy, and indoors that swings between ±15 m and ±150 m. Judging every
- * reading alone made the buttons flicker. Two rules stop it:
- *
- *   1. Best of the window — judge the MOST ACCURATE reading of the last minute,
- *      not the latest, so one bad reading cannot override a good one.
- *   2. Hysteresis — once a good reading puts you inside, only a CONFIDENT
- *      reading (precise enough) that is outside takes you out. Vague readings
- *      never do, for up to STICKY_MS. Like a thermostat that does not click on
- *      and off around one exact temperature.
- *
- * The fix this returns is the one the punch sends, so the server checks the
- * same reading the screen decided on.
- */
 function settle(
   readings: Reading[],
   lastInside: { state: GeofenceState; at: number } | null,
@@ -167,6 +158,11 @@ const usable = (policy: GeofencePolicy | null): policy is GeofencePolicy =>
 export function useGeofence(policy: GeofencePolicy | null): GeofenceCheck {
   const active = usable(policy) ? policy : null
   const [state, setState] = useState<GeofenceState>({ kind: active ? 'checking' : 'off' })
+  const [retryNonce, setRetryNonce] = useState(0)
+
+  const retry = useCallback(() => {
+    setRetryNonce((n) => n + 1)
+  }, [])
 
   // A string, not the object: every Today reload brings a new object with the
   // same numbers, and restarting the watch each time would flicker.
@@ -193,43 +189,147 @@ export function useGeofence(policy: GeofencePolicy | null): GeofenceCheck {
     const current = JSON.parse(key) as GeofencePolicy
     setState({ kind: 'checking' })
 
-    // Lives for this watch only — a new policy starts a fresh history.
+    let cancelled = false
+    let watchId: number | null = null
+    let retryTimeoutId: ReturnType<typeof setTimeout> | null = null
+    let autoRetriesLeft = 2
     let readings: Reading[] = []
     let lastInside: { state: GeofenceState; at: number } | null = null
 
-    const id = navigator.geolocation.watchPosition(
-      (position) => {
-        const now = Date.now()
-        readings = [
-          ...readings.filter((r) => now - r.at <= WINDOW_MS),
-          {
-            fix: {
-              lat: position.coords.latitude,
-              lng: position.coords.longitude,
-              accuracy: position.coords.accuracy,
-            },
-            at: now,
+    const handlePosition = (position: GeolocationPosition) => {
+      if (cancelled) return
+      const now = Date.now()
+      readings = [
+        ...readings.filter((r) => now - r.at <= WINDOW_MS),
+        {
+          fix: {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+            accuracy: position.coords.accuracy,
           },
-        ]
-        const next = settle(readings, lastInside, now, current)
-        lastInside = next.lastInside
-        setState(next.state)
-      },
-      (err) => {
-        if (err.code === err.PERMISSION_DENIED) setState({ kind: 'denied' })
-        // A timeout keeps the last good reading if there was one; the watch
-        // carries on and the next fix replaces it.
-        else setState((prev) => ('fix' in prev ? prev : { kind: 'unavailable' }))
-      },
-      { enableHighAccuracy: true, maximumAge: 10_000, timeout: 20_000 },
-    )
-    return () => navigator.geolocation.clearWatch(id)
-  }, [key])
+          at: now,
+        },
+      ]
+      const next = settle(readings, lastInside, now, current)
+      lastInside = next.lastInside
+      setState(next.state)
+    }
+
+    const startFallbackWatch = () => {
+      if (cancelled) return
+      // If we already have readings from fast cache, keep it
+      if (readings.length > 0) return
+
+      // Attempt low accuracy / cached fix
+      navigator.geolocation.getCurrentPosition(
+        (pos) => handlePosition(pos),
+        (err) => {
+          if (cancelled) return
+          if (err.code === err.PERMISSION_DENIED) {
+            setState({ kind: 'denied' })
+          } else if (readings.length === 0) {
+            if (autoRetriesLeft > 0) {
+              autoRetriesLeft--
+              setState({ kind: 'checking' })
+              retryTimeoutId = setTimeout(startPipeline, 2500)
+            } else {
+              setState({ kind: 'unavailable' })
+            }
+          }
+        },
+        { enableHighAccuracy: false, timeout: 12_000, maximumAge: 300_000 },
+      )
+
+      // And keep watching with enableHighAccuracy: false
+      watchId = navigator.geolocation.watchPosition(
+        (pos) => handlePosition(pos),
+        (err) => {
+          if (cancelled) return
+          if (err.code === err.PERMISSION_DENIED) {
+            setState({ kind: 'denied' })
+          } else if (readings.length === 0 && autoRetriesLeft <= 0) {
+            setState({ kind: 'unavailable' })
+          }
+        },
+        { enableHighAccuracy: false, timeout: 20_000, maximumAge: 60_000 },
+      )
+    }
+
+    const startPipeline = () => {
+      if (cancelled) return
+      if (watchId !== null) {
+        navigator.geolocation.clearWatch(watchId)
+        watchId = null
+      }
+
+      // Step 1: Fast cached / network fix (typically < 300ms)
+      navigator.geolocation.getCurrentPosition(
+        (pos) => handlePosition(pos),
+        (err) => {
+          if (cancelled) return
+          if (err.code === err.PERMISSION_DENIED) {
+            setState({ kind: 'denied' })
+          }
+          // Do not fail here on timeout/unavailable; let the watch handle it
+        },
+        { enableHighAccuracy: false, timeout: 6_000, maximumAge: 120_000 },
+      )
+
+      // Step 2: High accuracy refinement watch
+      watchId = navigator.geolocation.watchPosition(
+        (pos) => handlePosition(pos),
+        (err) => {
+          if (cancelled) return
+          if (err.code === err.PERMISSION_DENIED) {
+            setState({ kind: 'denied' })
+            return
+          }
+          // If high accuracy fails/times out and we have no fix yet, downgrade gracefully
+          if (readings.length === 0) {
+            if (watchId !== null) {
+              navigator.geolocation.clearWatch(watchId)
+              watchId = null
+            }
+            startFallbackWatch()
+          }
+        },
+        { enableHighAccuracy: true, timeout: 15_000, maximumAge: 30_000 },
+      )
+    }
+
+    // React automatically to browser permission status changes (e.g., user just clicked Allow)
+    if (typeof navigator !== 'undefined' && 'permissions' in navigator && navigator.permissions?.query) {
+      navigator.permissions
+        .query({ name: 'geolocation' as PermissionName })
+        .then((permissionStatus) => {
+          if (cancelled) return
+          permissionStatus.onchange = () => {
+            if (cancelled) return
+            if (permissionStatus.state === 'granted') {
+              startPipeline()
+            } else if (permissionStatus.state === 'denied') {
+              setState({ kind: 'denied' })
+            }
+          }
+        })
+        .catch(() => {})
+    }
+
+    startPipeline()
+
+    return () => {
+      cancelled = true
+      if (watchId !== null) navigator.geolocation.clearWatch(watchId)
+      if (retryTimeoutId !== null) clearTimeout(retryTimeoutId)
+    }
+  }, [key, retryNonce])
 
   return {
     state,
     allowed: state.kind === 'off' || state.kind === 'inside',
     message: messageFor(state, active),
     fix: 'fix' in state ? state.fix : null,
+    retry,
+    isChecking: state.kind === 'checking',
   }
 }
