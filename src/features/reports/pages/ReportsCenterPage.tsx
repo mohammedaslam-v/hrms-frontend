@@ -75,6 +75,8 @@ const REPORT_NOTES: Partial<Record<ReportType, string>> = {
   basic: '',
   appraisals: 'Compensation revisions, increment amount, percentage hike, and revised annual CTC.',
   all_employees: 'Directory list of all currently active company employees.',
+  shift_roster:
+    'Every active employee with their shift start, shift end and weekly off days, as set on their profile today. The period filter does not change these.',
   recent_joinees: 'New workforce additions in the chosen timeframe.',
   recent_resignees: 'Departures and exit clearances in the chosen timeframe.',
 };
@@ -116,6 +118,11 @@ export const ReportsCenterPage: React.FC = () => {
     [isAdmin, catalog],
   );
 
+  const canViewShiftRoster = useMemo(
+    () => isAdmin && (catalog.length === 0 || catalog.some((item) => item.type === 'shift_roster')),
+    [isAdmin, catalog],
+  );
+
   const [selectedType, setSelectedType] = useState<ReportType>('attendance');
   const [period, setPeriod] = useState<'daily' | 'weekly' | 'monthly' | 'range' | 'fytd'>('monthly');
   const [lopCategory, setLopCategory] = useState<'all' | 'half_day' | 'full_day'>('all');
@@ -131,7 +138,10 @@ export const ReportsCenterPage: React.FC = () => {
     if (!canViewLop && selectedType === 'lop') {
       setSelectedType('attendance');
     }
-  }, [canViewPayroll, canViewActivityLog, canViewLop, selectedType]);
+    if (!canViewShiftRoster && selectedType === 'shift_roster') {
+      setSelectedType('attendance');
+    }
+  }, [canViewPayroll, canViewActivityLog, canViewLop, canViewShiftRoster, selectedType]);
 
   // Dates
   const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
@@ -469,6 +479,9 @@ export const ReportsCenterPage: React.FC = () => {
                   <option value="goals">Goals and progress</option>
                   <option value="basic">Employee basic information</option>
                   <option value="all_employees">All Active Employees</option>
+                  {canViewShiftRoster && (
+                    <option value="shift_roster">Shift timings and weekly offs</option>
+                  )}
                   <option value="recent_joinees">Recent Joinees</option>
                   <option value="recent_resignees">Recent Resignees</option>
                   {canViewPayroll && <option value="appraisals">Appraisal &amp; Increment Report</option>}
