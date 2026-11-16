@@ -14,6 +14,7 @@ import {
 import { fmtShort } from '../../../shared/lib/date'
 
 import { CustomSelect, type CustomSelectOption } from '../../../shared/ui/CustomSelect'
+import { employeeFormApi } from '../../employees/api/employee-form.api'
 
 const STATUS_CLASS: Record<LeaveStatus, string> = {
   Approved: 'c-in',
@@ -85,19 +86,77 @@ export function LeaveApprovalsPage() {
 
   const [search, setSearch] = useState('')
   const [managerFilter, setManagerFilter] = useState<string>('all')
+  const [metaManagers, setMetaManagers] = useState<string[]>([])
   const q = search.trim().toLowerCase()
 
+  useEffect(() => {
+    let active = true
+    employeeFormApi
+      .fetchMeta()
+      .then((meta) => {
+        if (active && meta?.managers) {
+          const names = meta.managers
+            .filter((m) => {
+              const des = (m.designation || '').toLowerCase()
+              return (
+                des.includes('manager') ||
+                des.includes('lead') ||
+                des.includes('head') ||
+                des.includes('director') ||
+                des.includes('vp') ||
+                des.includes('chief') ||
+                des.includes('founder')
+              )
+            })
+            .map((m) => m.name.trim())
+            .filter(Boolean)
+          setMetaManagers(names)
+        }
+      })
+      .catch(() => {})
+    return () => {
+      active = false
+    }
+  }, [])
+
   const managerOptions = useMemo<CustomSelectOption<string>[]>(() => {
-    const list = tab === 'log' ? view?.log ?? [] : view?.pending ?? []
     const set = new Set<string>()
     let hasUnassigned = false
 
-    for (const item of list) {
-      const name = (item.directManagerName || (item as any).managerName || '').trim()
-      if (name) {
-        set.add(name)
-      } else {
-        hasUnassigned = true
+    // 1. All managers in the company from backend approvals view
+    if (view?.allManagers) {
+      for (const m of view.allManagers) {
+        const name = (m || '').trim()
+        if (name) set.add(name)
+      }
+    }
+
+    // 2. Managers from metadata
+    for (const m of metaManagers) {
+      if (m && m.trim()) set.add(m.trim())
+    }
+
+    // 3. Managers present in pending approvals
+    if (view?.pending) {
+      for (const p of view.pending) {
+        const name = (p.directManagerName || p.managerName || '').trim()
+        if (name) {
+          set.add(name)
+        } else {
+          hasUnassigned = true
+        }
+      }
+    }
+
+    // 4. Managers present in all requests log
+    if (view?.log) {
+      for (const l of view.log) {
+        const name = (l.directManagerName || (l as any).managerName || '').trim()
+        if (name) {
+          set.add(name)
+        } else {
+          hasUnassigned = true
+        }
       }
     }
 
@@ -112,7 +171,7 @@ export function LeaveApprovalsPage() {
     }
 
     return opts
-  }, [tab, view?.pending, view?.log])
+  }, [view?.allManagers, metaManagers, view?.pending, view?.log])
 
   useEffect(() => {
     if (managerFilter !== 'all' && !managerOptions.some((o) => o.value === managerFilter)) {
