@@ -84,10 +84,53 @@ export function LeaveApprovalsPage() {
   }
 
   const [search, setSearch] = useState('')
+  const [managerFilter, setManagerFilter] = useState<string>('all')
   const q = search.trim().toLowerCase()
 
+  const managerOptions = useMemo<CustomSelectOption<string>[]>(() => {
+    const list = tab === 'log' ? view?.log ?? [] : view?.pending ?? []
+    const set = new Set<string>()
+    let hasUnassigned = false
+
+    for (const item of list) {
+      const name = (item.directManagerName || (item as any).managerName || '').trim()
+      if (name) {
+        set.add(name)
+      } else {
+        hasUnassigned = true
+      }
+    }
+
+    const sorted = Array.from(set).sort((a, b) => a.localeCompare(b))
+    const opts: CustomSelectOption<string>[] = [
+      { value: 'all', label: 'All managers' },
+      ...sorted.map((m) => ({ value: m, label: m })),
+    ]
+
+    if (hasUnassigned && set.size > 0) {
+      opts.push({ value: '__none__', label: 'No manager / Direct' })
+    }
+
+    return opts
+  }, [tab, view?.pending, view?.log])
+
+  useEffect(() => {
+    if (managerFilter !== 'all' && !managerOptions.some((o) => o.value === managerFilter)) {
+      setManagerFilter('all')
+    }
+  }, [managerOptions, managerFilter])
+
   const filteredPending = useMemo(() => {
-    const list = view?.pending ?? []
+    let list = view?.pending ?? []
+    if (managerFilter !== 'all') {
+      list = list.filter((p) => {
+        const mgr = (p.directManagerName || p.managerName || '').trim()
+        if (managerFilter === '__none__') {
+          return !mgr
+        }
+        return mgr.toLowerCase() === managerFilter.toLowerCase()
+      })
+    }
     if (!q) return list
     return list.filter(
       (p) =>
@@ -97,7 +140,7 @@ export function LeaveApprovalsPage() {
         ((p.directManagerName || p.managerName) &&
           (p.directManagerName || p.managerName)!.toLowerCase().includes(q)),
     )
-  }, [view?.pending, q])
+  }, [view?.pending, managerFilter, q])
 
   const filteredBalances = useMemo(() => {
     const list = view?.balances ?? []
@@ -112,6 +155,15 @@ export function LeaveApprovalsPage() {
 
   const filteredLog = useMemo(() => {
     let list = view?.log ?? []
+    if (managerFilter !== 'all') {
+      list = list.filter((r) => {
+        const mgr = (r.directManagerName || (r as any).managerName || '').trim()
+        if (managerFilter === '__none__') {
+          return !mgr
+        }
+        return mgr.toLowerCase() === managerFilter.toLowerCase()
+      })
+    }
     if (statusFilter !== 'all') {
       list = list.filter((r) => {
         const s = (r.status ?? '').toLowerCase()
@@ -136,9 +188,11 @@ export function LeaveApprovalsPage() {
       (r) =>
         r.employeeName.toLowerCase().includes(q) ||
         r.ref.toLowerCase().includes(q) ||
-        (r.reason && r.reason.toLowerCase().includes(q)),
+        (r.reason && r.reason.toLowerCase().includes(q)) ||
+        ((r.directManagerName || (r as any).managerName) &&
+          (r.directManagerName || (r as any).managerName)!.toLowerCase().includes(q)),
     )
-  }, [view?.log, statusFilter, dateFrom, dateTo, q])
+  }, [view?.log, managerFilter, statusFilter, dateFrom, dateTo, q])
 
   // Called before the early returns below — hooks cannot sit behind a branch.
   const pendingPage = usePage(filteredPending)
@@ -190,19 +244,67 @@ export function LeaveApprovalsPage() {
         }}
       >
         <div className="tabs" style={{ marginBottom: 0 }}>
-          <button className={`tab${tab === 'pending' ? ' on' : ''}`} onClick={() => setTab('pending')}>
-            Approvals <span className="n">{q ? filteredPending.length : pending.length}</span>
+          <button
+            className={`tab${tab === 'pending' ? ' on' : ''}`}
+            onClick={() => {
+              setTab('pending')
+              setManagerFilter('all')
+            }}
+          >
+            Approvals <span className="n">{managerFilter !== 'all' || q ? filteredPending.length : pending.length}</span>
           </button>
-          <button className={`tab${tab === 'balances' ? ' on' : ''}`} onClick={() => setTab('balances')}>
+          <button
+            className={`tab${tab === 'balances' ? ' on' : ''}`}
+            onClick={() => {
+              setTab('balances')
+              setManagerFilter('all')
+            }}
+          >
             Balances
           </button>
-          <button className={`tab${tab === 'log' ? ' on' : ''}`} onClick={() => setTab('log')}>
+          <button
+            className={`tab${tab === 'log' ? ' on' : ''}`}
+            onClick={() => {
+              setTab('log')
+              setManagerFilter('all')
+            }}
+          >
             All requests
           </button>
         </div>
 
         {/* Search & Filter Controls */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          {/* Manager Filter */}
+          {(tab === 'pending' || tab === 'log') && managerOptions.length > 1 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <label
+                htmlFor="managerFilter"
+                style={{
+                  fontSize: 13,
+                  fontWeight: 500,
+                  color: 'var(--muted2, #64748b)',
+                  margin: 0,
+                  textTransform: 'none',
+                  letterSpacing: 'normal',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                Manager:
+              </label>
+              <CustomSelect
+                id="managerFilter"
+                ariaLabel="Filter by manager"
+                value={managerFilter}
+                onChange={(val) => setManagerFilter(val)}
+                options={managerOptions}
+                variant="pill"
+                size="md"
+                minWidth={160}
+              />
+            </div>
+          )}
+
           {tab === 'log' && (
             <>
               {/* Status Filter */}
@@ -322,7 +424,43 @@ export function LeaveApprovalsPage() {
 
       {tab === 'pending' && (
         <div className="card">
-          <h3>Pending approvals</h3>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: 16,
+              flexWrap: 'wrap',
+              gap: 12,
+            }}
+          >
+            <h3 style={{ margin: 0 }}>
+              Pending approvals
+              {(managerFilter !== 'all' || q) && (
+                <span
+                  className="sub"
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 400,
+                    color: 'var(--muted2, #64748b)',
+                    marginLeft: 8,
+                  }}
+                >
+                  · {filteredPending.length} of {pending.length} shown
+                </span>
+              )}
+            </h3>
+            {managerFilter !== 'all' && (
+              <button
+                type="button"
+                className="btn ghost sm"
+                onClick={() => setManagerFilter('all')}
+                style={{ padding: '3px 8px', fontSize: 12 }}
+              >
+                Clear manager filter
+              </button>
+            )}
+          </div>
           <div className="scroll">
             {/* The decision buttons stay pinned to the right edge, so a manager
                 never has to scroll the table to act on a row. */}
@@ -346,9 +484,9 @@ export function LeaveApprovalsPage() {
                   <tr>
                     <td colSpan={10}>
                       <div className="empty">
-                        <b>{q ? 'No matching leave requests' : 'Nothing waiting on you'}</b>
-                        {q
-                          ? `No pending requests match "${search}". Try clearing the search.`
+                        <b>{q || managerFilter !== 'all' ? 'No matching leave requests' : 'Nothing waiting on you'}</b>
+                        {q || managerFilter !== 'all'
+                          ? `No pending requests match the current filters. Try resetting the filters or clearing the search.`
                           : 'Decided requests move to the All requests tab.'}
                       </div>
                     </td>
@@ -727,6 +865,16 @@ export function LeaveApprovalsPage() {
                 </span>
               )}
             </h3>
+            {managerFilter !== 'all' && (
+              <button
+                type="button"
+                className="btn ghost sm"
+                onClick={() => setManagerFilter('all')}
+                style={{ padding: '3px 8px', fontSize: 12 }}
+              >
+                Clear manager filter
+              </button>
+            )}
           </div>
           <div className="scroll">
             <table>
@@ -734,6 +882,7 @@ export function LeaveApprovalsPage() {
                 <tr>
                   <th>Ref</th>
                   <th>Member</th>
+                  <th>Manager</th>
                   <th>Type</th>
                   <th>From</th>
                   <th>To</th>
@@ -747,11 +896,11 @@ export function LeaveApprovalsPage() {
               <tbody>
                 {filteredLog.length === 0 ? (
                   <tr>
-                    <td colSpan={view.isAdmin ? 10 : 9}>
+                    <td colSpan={view.isAdmin ? 11 : 10}>
                       <div className="empty">
-                        <b>{q || statusFilter !== 'all' || dateFrom || dateTo ? 'No matching requests' : 'No requests this year.'}</b>
-                        {q || statusFilter !== 'all' || dateFrom || dateTo
-                          ? `No requests match the selected filters. Try clearing the search or changing the date/status filter.`
+                        <b>{q || managerFilter !== 'all' || statusFilter !== 'all' || dateFrom || dateTo ? 'No matching requests' : 'No requests this year.'}</b>
+                        {q || managerFilter !== 'all' || statusFilter !== 'all' || dateFrom || dateTo
+                          ? `No requests match the selected filters. Try clearing the search or changing the date/status/manager filter.`
                           : 'Decided requests move to the All requests tab.'}
                       </div>
                     </td>
@@ -763,6 +912,9 @@ export function LeaveApprovalsPage() {
                         <span className="tag">{r.ref}</span>
                       </td>
                       <td>{r.employeeName}</td>
+                      <td>
+                        <b>{r.directManagerName || (r as any).managerName || '—'}</b>
+                      </td>
                       <td>{r.leaveType}</td>
                       <td>{fmtShort(r.fromDate)}</td>
                       <td>{fmtShort(r.toDate)}</td>
