@@ -93,7 +93,9 @@ export function LeaveApprovalsPage() {
       (p) =>
         p.employeeName.toLowerCase().includes(q) ||
         p.employeeCode.toLowerCase().includes(q) ||
-        (p.designation && p.designation.toLowerCase().includes(q)),
+        (p.designation && p.designation.toLowerCase().includes(q)) ||
+        ((p.directManagerName || p.managerName) &&
+          (p.directManagerName || p.managerName)!.toLowerCase().includes(q)),
     )
   }, [view?.pending, q])
 
@@ -328,6 +330,7 @@ export function LeaveApprovalsPage() {
               <thead>
                 <tr>
                   <th>Member</th>
+                  <th>Manager</th>
                   <th>Type</th>
                   <th>From</th>
                   <th>To</th>
@@ -341,7 +344,7 @@ export function LeaveApprovalsPage() {
               <tbody>
                 {filteredPending.length === 0 ? (
                   <tr>
-                    <td colSpan={9}>
+                    <td colSpan={10}>
                       <div className="empty">
                         <b>{q ? 'No matching leave requests' : 'Nothing waiting on you'}</b>
                         {q
@@ -386,6 +389,9 @@ export function LeaveApprovalsPage() {
                             </div>
                           )}
                         </div>
+                      </td>
+                      <td>
+                        <b>{p.directManagerName || p.managerName || '—'}</b>
                       </td>
                       <td>
                         <span className={`chip ${p.leaveType === 'Unpaid' ? 'c-abs' : 'c-leave'}`}>

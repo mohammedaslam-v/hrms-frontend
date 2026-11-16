@@ -68,6 +68,7 @@ export interface LeaveRequest {
   directApproval?: ApprovalStep | null
   seniorApproval?: ApprovalStep | null
   directManagerName?: string | null
+  managerName?: string | null
   grandManagerName?: string | null
   awaitingApproval?: 'direct' | 'senior' | 'both' | null
   decisionNote?: string | null
@@ -151,6 +152,7 @@ export interface PendingApproval {
   directApproval?: ApprovalStep | null
   seniorApproval?: ApprovalStep | null
   directManagerName?: string | null
+  managerName?: string | null
   grandManagerName?: string | null
   hasViewerApproved?: boolean
   awaitingApproval?: 'direct' | 'senior' | 'both' | null
