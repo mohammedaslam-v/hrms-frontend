@@ -77,6 +77,8 @@ const REPORT_NOTES: Partial<Record<ReportType, string>> = {
   all_employees: 'Directory list of all currently active company employees.',
   shift_roster:
     'Every active employee with their shift start, shift end and weekly off days, as set on their profile today. The period filter does not change these.',
+  productivity_lop:
+    'Sales days the productivity rule marked as loss of pay: panel time plus activities came to less than 8h 06m. Active hrs is that total.',
   recent_joinees: 'New workforce additions in the chosen timeframe.',
   recent_resignees: 'Departures and exit clearances in the chosen timeframe.',
 };
@@ -123,6 +125,11 @@ export const ReportsCenterPage: React.FC = () => {
     [isAdmin, catalog],
   );
 
+  const canViewProductivityLop = useMemo(
+    () => isAdmin && (catalog.length === 0 || catalog.some((item) => item.type === 'productivity_lop')),
+    [isAdmin, catalog],
+  );
+
   const [selectedType, setSelectedType] = useState<ReportType>('attendance');
   const [period, setPeriod] = useState<'daily' | 'weekly' | 'monthly' | 'range' | 'fytd'>('monthly');
   const [lopCategory, setLopCategory] = useState<'all' | 'half_day' | 'full_day'>('all');
@@ -141,7 +148,10 @@ export const ReportsCenterPage: React.FC = () => {
     if (!canViewShiftRoster && selectedType === 'shift_roster') {
       setSelectedType('attendance');
     }
-  }, [canViewPayroll, canViewActivityLog, canViewLop, canViewShiftRoster, selectedType]);
+    if (!canViewProductivityLop && selectedType === 'productivity_lop') {
+      setSelectedType('attendance');
+    }
+  }, [canViewPayroll, canViewActivityLog, canViewLop, canViewShiftRoster, canViewProductivityLop, selectedType]);
 
   // Dates
   const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
@@ -460,6 +470,9 @@ export const ReportsCenterPage: React.FC = () => {
                   )}
                   {canViewLop && (
                     <option value="lop">Loss of pay (LOP) report</option>
+                  )}
+                  {canViewProductivityLop && (
+                    <option value="productivity_lop">Productivity auto LOP marked</option>
                   )}
                 </optgroup>
                 {canViewPayroll && (
