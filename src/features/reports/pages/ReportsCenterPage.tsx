@@ -131,7 +131,10 @@ export const ReportsCenterPage: React.FC = () => {
   );
 
   const [selectedType, setSelectedType] = useState<ReportType>('attendance');
-  const [period, setPeriod] = useState<'daily' | 'weekly' | 'monthly' | 'range' | 'fytd'>('monthly');
+  const [chosenPeriod, setPeriod] = useState<'daily' | 'weekly' | 'monthly' | 'range' | 'fytd'>('monthly');
+  // The productivity report is always a From–To range: no Period choice.
+  const datesOnly = selectedType === 'productivity_lop';
+  const period = datesOnly ? 'range' : chosenPeriod;
   const [lopCategory, setLopCategory] = useState<'all' | 'half_day' | 'full_day'>('all');
 
   // If a non-admin/manager user ever has a payroll report selected, fallback to attendance
@@ -502,6 +505,7 @@ export const ReportsCenterPage: React.FC = () => {
               </select>
             </div>
 
+            {!datesOnly && (
             <div className="f">
               <label>Period</label>
               <select
@@ -518,6 +522,7 @@ export const ReportsCenterPage: React.FC = () => {
                 <option value="fytd">Financial year to date</option>
               </select>
             </div>
+            )}
 
             {/* Date field - present whenever daily or monthly (matching prototype design) */}
             {(period === 'daily' || period === 'monthly') && (
