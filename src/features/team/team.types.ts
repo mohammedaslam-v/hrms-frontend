@@ -13,6 +13,8 @@ export interface DirectoryMember {
   weeklyOff: string[]
   dateOfJoining: string
   dateOfLeaving: string | null
+  /** Employee, Probation or Contractor. */
+  employmentType?: 'Employee' | 'Probation' | 'Contractor' | null
   /**
    * Absent entirely — not null — for anyone who may not see pay. The server
    * never fetches it for them, so there is nothing here to hide.

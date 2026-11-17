@@ -154,6 +154,7 @@ export function TeamDirectoryPage() {
   const [query, setQuery] = useState('')
   const [dept, setDept] = useState('')
   const [mode, setMode] = useState('')
+  const [empType, setEmpType] = useState('')
   const [status, setStatus] = useState<StatusFilter>('active')
   // Admin: whose locations the popup is editing, if any.
   const [editingLocations, setEditingLocations] = useState<DirectoryMember | null>(null)
@@ -200,20 +201,23 @@ export function TeamDirectoryPage() {
         matchesText &&
         (!dept || m.department === dept) &&
         (!mode || m.workMode === mode) &&
+        (!empType || (m.employmentType ?? 'Employee') === empType) &&
         (!status || (status === 'active' ? !hasLeft : hasLeft))
       )
     })
-  }, [view, query, dept, mode, status])
+  }, [view, query, dept, mode, empType, status])
 
   const page = usePage(filtered)
 
   // 'active' is the default, so having it set is not "filtered".
-  const isFiltered = query.trim() !== '' || dept !== '' || mode !== '' || status !== 'active'
+  const isFiltered =
+    query.trim() !== '' || dept !== '' || mode !== '' || empType !== '' || status !== 'active'
 
   const clearFilters = () => {
     setQuery('')
     setDept('')
     setMode('')
+    setEmpType('')
     setStatus('active')
   }
 
@@ -279,6 +283,15 @@ export function TeamDirectoryPage() {
             <option value="WFO">WFO</option>
             <option value="WFH">WFH</option>
             <option value="Hybrid">Hybrid</option>
+          </select>
+        </div>
+        <div className="f">
+          <label htmlFor="teamType">Type</label>
+          <select id="teamType" value={empType} onChange={(e) => setEmpType(e.target.value)}>
+            <option value="">All types</option>
+            <option value="Employee">Employee</option>
+            <option value="Probation">Probation</option>
+            <option value="Contractor">Contractor</option>
           </select>
         </div>
         <div className="f">
