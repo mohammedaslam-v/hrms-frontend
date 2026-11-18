@@ -10,6 +10,55 @@ import { fmtDateShortYear } from '../../shared/lib/date'
 import { initials } from '../../shared/lib/format'
 import { DEPT_COLOR } from '../../shared/lib/departments'
 
+/** A CSV cell: quoted when it holds a comma, quote or line break. */
+const csvCell = (v: string | number | null | undefined): string => {
+  const s = v == null ? '' : String(v)
+  return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
+}
+
+/**
+ * The directory as a CSV: exactly the rows the filters leave on screen, every
+ * page of them, not just the page being looked at. CTC only when the server
+ * sent it, so a manager's file has no pay column at all.
+ */
+function downloadDirectoryCsv(members: DirectoryMember[], canSeePay: boolean): void {
+  const header = [
+    'Emp code', 'Name', 'Title', 'Department', 'Manager', 'Work mode', 'Type',
+    'Shift start', 'Shift end', 'Weekly off', 'Joined', 'Left',
+    ...(canSeePay ? ['CTC'] : []),
+  ]
+  const lines = [header.map(csvCell).join(',')]
+  for (const m of members) {
+    lines.push(
+      [
+        m.employeeCode,
+        m.fullName,
+        m.designation,
+        m.department,
+        m.managerName,
+        m.workMode,
+        m.employmentType ?? 'Employee',
+        m.shiftStart,
+        m.shiftEnd,
+        m.weeklyOff.join(' + '),
+        m.dateOfJoining,
+        m.dateOfLeaving,
+        ...(canSeePay ? [m.ctc ?? ''] : []),
+      ]
+        .map(csvCell)
+        .join(','),
+    )
+  }
+  // A BOM so Excel reads names in other scripts correctly.
+  const blob = new Blob(['\uFEFF' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `team_directory_${new Date().toISOString().slice(0, 10)}.csv`
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
 /** Department colours from the design. Unset falls back to neutral, not random. */
 
 /**
@@ -253,7 +302,31 @@ export function TeamDirectoryPage() {
               ? `${members.length} people across the company`
               : `${members.length} in your team`
         }
-      />
+      >
+        <button
+          type="button"
+          className="btn ghost sm"
+          onClick={() => downloadDirectoryCsv(filtered, canSeePay)}
+          disabled={filtered.length === 0}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+        >
+          <svg
+            width="13"
+            height="13"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="7 10 12 15 17 10" />
+            <line x1="12" y1="15" x2="12" y2="3" />
+          </svg>
+          <span>Download CSV</span>
+        </button>
+      </PageHero>
 
       <div className="filters">
         <div className="f">
