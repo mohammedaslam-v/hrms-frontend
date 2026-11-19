@@ -25,6 +25,27 @@ function Row({ label, value, muted }: { label: string; value: string; muted?: bo
   )
 }
 
+/** Marks a dummy salary, so nobody mistakes it for real pay. */
+function PlaceholderBadge() {
+  return (
+    <span
+      title="Temporary figure. HR will replace it with the real compensation. Salary is not paid on a placeholder."
+      style={{
+        fontSize: 10,
+        fontWeight: 700,
+        textTransform: 'uppercase',
+        color: '#92400e',
+        backgroundColor: '#fef3c7',
+        border: '1px solid #fcd34d',
+        borderRadius: 999,
+        padding: '1px 8px',
+      }}
+    >
+      Placeholder
+    </span>
+  )
+}
+
 export function CompensationCard({
   canSee,
   compensation,
@@ -59,7 +80,10 @@ export function CompensationCard({
     return (
       <div className="card top-card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-          <h3 style={{ margin: 0 }}>Contractor Retainer</h3>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <h3 style={{ margin: 0 }}>Contractor Retainer</h3>
+            {compensation?.isPlaceholder && <PlaceholderBadge />}
+          </div>
           {isAdmin && (
             <button
               type="button"
@@ -219,6 +243,7 @@ export function CompensationCard({
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <h3 style={{ margin: 0 }}>Compensation</h3>
+          {c.isPlaceholder && <PlaceholderBadge />}
           <div
             style={{
               display: 'inline-flex',

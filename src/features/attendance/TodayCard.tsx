@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { attendanceApi } from './attendance.api'
 import { STATUS_CLASS, type TodayView } from './attendance.types'
-import { useGeofence } from './useGeofence'
+import { PLACE, useGeofence } from './useGeofence'
 import { asHours } from '../../shared/lib/format'
 import { Modal } from '../../shared/ui/Modal'
 import { AddActivityButton } from '../work-activity'
@@ -30,6 +31,7 @@ export function TodayCard({ employeeId, isSelf, isAdmin, employeeName }: TodayCa
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [showCheckInConfirm, setShowCheckInConfirm] = useState(false)
   const [showCheckOutConfirm, setShowCheckOutConfirm] = useState(false)
 
   const canPunch = isSelf || Boolean(isAdmin)
@@ -58,10 +60,11 @@ export function TodayCard({ employeeId, isSelf, isAdmin, employeeName }: TodayCa
     }
   }, [])
 
-  const load = useCallback(async () => {
+  /** `keepError`: a re-read after a refused punch must not wipe the refusal's message. */
+  const load = useCallback(async (keepError = false) => {
     try {
       apply(isSelf ? await attendanceApi.getToday() : await attendanceApi.getTodayFor(employeeId))
-      setError(null)
+      if (!keepError) setError(null)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not load today’s attendance.')
     } finally {
@@ -85,7 +88,7 @@ export function TodayCard({ employeeId, isSelf, isAdmin, employeeName }: TodayCa
     return () => clearInterval(id)
   }, [isRunning])
 
-  const act = async (what: 'in' | 'out') => {
+  const act = async (what: 'in' | 'out'): Promise<boolean> => {
     setBusy(true)
     setError(null)
     try {
@@ -100,10 +103,13 @@ export function TodayCard({ employeeId, isSelf, isAdmin, employeeName }: TodayCa
           : await attendanceApi.checkOutFor(employeeId)
       }
       apply(next)
+      return true
     } catch (err) {
       setError(err instanceof Error ? err.message : 'That did not go through.')
-      // The server refused, so re-read rather than leaving the card guessing.
-      void load()
+      // The server refused, so re-read rather than leaving the card guessing —
+      // keeping the message, or the popup sits open saying nothing.
+      void load(true)
+      return false
     } finally {
       setBusy(false)
     }
@@ -134,7 +140,11 @@ export function TodayCard({ employeeId, isSelf, isAdmin, employeeName }: TodayCa
   const isCheckedIn = Boolean(view.loginAt && !view.logoutAt)
   const isCheckedOut = Boolean(view.loginAt && view.logoutAt)
   const geoBlocked = !geo.allowed
-  const checkInDisabled = busy || isCheckedIn || geoBlocked
+  // Approved full-day leave or weekly off: no punching until HR changes the day.
+  const onLeave = view.status === 'Leave' && !view.loginAt
+  const onOff = view.status === 'Weekly off' && !view.loginAt
+  const dayBlocked = onLeave || onOff
+  const checkInDisabled = busy || isCheckedIn || geoBlocked || dayBlocked
   const checkOutDisabled = busy || !isCheckedIn || geoBlocked
 
   return (
@@ -164,6 +174,11 @@ export function TodayCard({ employeeId, isSelf, isAdmin, employeeName }: TodayCa
               {view.lateByMinutes} min late
             </span>
           )}
+          {view.status === 'Half day' && view.lateByMinutes >= 25 && (
+            <span className="hint" style={{ color: 'var(--red)', marginLeft: 6 }}>
+              {view.lateByMinutes} min late (Half day)
+            </span>
+          )}
         </span>
       </div>
       {view.recheckInAt && (
@@ -188,7 +203,7 @@ export function TodayCard({ employeeId, isSelf, isAdmin, employeeName }: TodayCa
         </span>
       </div>
 
-      {error && (
+      {error && !showCheckInConfirm && !showCheckOutConfirm && (
         <div className="notice bad mt8" role="alert">
           {error}
         </div>
@@ -210,7 +225,11 @@ export function TodayCard({ employeeId, isSelf, isAdmin, employeeName }: TodayCa
               title={
                 isCheckedIn
                   ? 'Already checked in'
-                  : geoBlocked && geo.message
+                  : onLeave
+                    ? 'On approved leave today'
+                    : onOff
+                      ? 'Weekly off today'
+                      : geoBlocked && geo.message
                     ? geo.message
                     : isCheckedOut
                       ? 'Check in again'
@@ -220,18 +239,21 @@ export function TodayCard({ employeeId, isSelf, isAdmin, employeeName }: TodayCa
               <button
                 type="button"
                 className="btn success"
-                onClick={() => void act('in')}
+                onClick={() => {
+                  setError(null)
+                  setShowCheckInConfirm(true)
+                }}
                 disabled={checkInDisabled}
                 aria-describedby={geo.message ? geoMessageId : undefined}
                 style={{
                   flex: 1,
                   minHeight: 38,
                   fontWeight: 600,
-                  opacity: isCheckedIn || geoBlocked ? 0.45 : 1,
+                  opacity: isCheckedIn || geoBlocked || dayBlocked ? 0.45 : 1,
                   cursor: checkInDisabled ? 'not-allowed' : 'pointer',
                 }}
               >
-                {busy && !isCheckedIn ? 'Recording…' : 'Check in'}
+                {busy && !isCheckedIn ? 'Recording…' : isCheckedOut ? 'Check in again' : 'Check in'}
               </button>
             </span>
 
@@ -250,7 +272,10 @@ export function TodayCard({ employeeId, isSelf, isAdmin, employeeName }: TodayCa
               <button
                 type="button"
                 className="btn danger"
-                onClick={() => setShowCheckOutConfirm(true)}
+                onClick={() => {
+                  setError(null)
+                  setShowCheckOutConfirm(true)
+                }}
                 disabled={checkOutDisabled}
                 aria-describedby={geo.message ? geoMessageId : undefined}
                 style={{
@@ -267,6 +292,18 @@ export function TodayCard({ employeeId, isSelf, isAdmin, employeeName }: TodayCa
             </span>
           </div>
 
+          {dayBlocked && (
+            <div className="notice mt8" role="status" style={{ fontSize: 12.5 }}>
+              {onLeave
+                ? isSelf
+                  ? 'You are on approved leave today, so check-in is off. If you are working, ask HR to remove the leave first.'
+                  : `${employeeName.split(' ')[0]} is on approved leave today. Remove the leave first to check in.`
+                : isSelf
+                  ? 'Today is your weekly off, so check-in is off. If you are working, ask HR to mark it as a working day first.'
+                  : `Today is ${employeeName.split(' ')[0]}'s weekly off. Mark it as a working day first to check in.`}
+            </div>
+          )}
+
           {/* Visible, not hover-only: phones have no hover. */}
           {geo.message && (
             <div
@@ -277,11 +314,44 @@ export function TodayCard({ employeeId, isSelf, isAdmin, employeeName }: TodayCa
               style={{ fontSize: 12.5 }}
             >
               {geo.message}
+              {geo.state.kind === 'no-home' && (
+                <>
+                  {' '}
+                  {/* Opens Edit personal details straight away (MyPage reads ?edit). */}
+                  <Link to="/me?edit=personal" style={{ fontWeight: 600 }}>
+                    Set it now →
+                  </Link>
+                </>
+              )}
+              {(geo.state.kind === 'unavailable' ||
+                geo.state.kind === 'inaccurate' ||
+                geo.state.kind === 'outside' ||
+                geo.state.kind === 'denied') && (
+                <button
+                  type="button"
+                  className="btn ghost sm"
+                  onClick={geo.retry}
+                  style={{
+                    marginLeft: 8,
+                    padding: '2px 8px',
+                    fontSize: 11.5,
+                    verticalAlign: 'baseline',
+                    lineHeight: '1.2',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {geo.state.kind === 'outside' ? 'Check again' : 'Retry location'}
+                </button>
+              )}
             </div>
           )}
           {geo.state.kind === 'inside' && (
             <div className="hint" style={{ marginTop: 6, fontSize: 12, textAlign: 'center' }}>
-              📍 At the office ({Math.round(geo.state.distanceM)} m away)
+              📍 At {PLACE[geo.state.zone]}
+              {/* The distance only while within the stated radius, so the hidden
+                  margin never shows as "180 m away". */}
+              {geo.state.distanceM <= geo.state.radiusM &&
+                ` (${Math.round(geo.state.distanceM)} m away)`}
             </div>
           )}
 
@@ -298,19 +368,58 @@ export function TodayCard({ employeeId, isSelf, isAdmin, employeeName }: TodayCa
         </div>
       )}
 
+      {showCheckInConfirm && (
+        <Modal
+          title="Confirm Check-in"
+          onClose={() => {
+            if (!busy) setShowCheckInConfirm(false)
+          }}
+          busy={busy}
+          error={error}
+          maxWidth={420}
+          confirm={
+            <button
+              className="btn success"
+              type="button"
+              onClick={async () => {
+                const ok = await act('in')
+                if (ok) setShowCheckInConfirm(false)
+              }}
+              disabled={busy}
+              style={{ fontWeight: 600 }}
+            >
+              {busy ? 'Checking in…' : 'Yes, Check in'}
+            </button>
+          }
+        >
+          <div style={{ fontSize: 14, color: 'var(--text)', lineHeight: 1.5, padding: '8px 0 16px' }}>
+            {isSelf
+              ? isCheckedOut
+                ? 'Are you sure you want to check in again for today?'
+                : 'Are you sure you want to check in for today?'
+              : isCheckedOut
+                ? `Are you sure you want to check in ${employeeName.split(' ')[0]} again for today?`
+                : `Are you sure you want to check in ${employeeName.split(' ')[0]} for today?`}
+          </div>
+        </Modal>
+      )}
+
       {showCheckOutConfirm && (
         <Modal
           title="Confirm Check-out"
-          onClose={() => setShowCheckOutConfirm(false)}
+          onClose={() => {
+            if (!busy) setShowCheckOutConfirm(false)
+          }}
           busy={busy}
+          error={error}
           maxWidth={420}
           confirm={
             <button
               className="btn danger"
               type="button"
               onClick={async () => {
-                setShowCheckOutConfirm(false)
-                await act('out')
+                const ok = await act('out')
+                if (ok) setShowCheckOutConfirm(false)
               }}
               disabled={busy}
               style={{ fontWeight: 600 }}

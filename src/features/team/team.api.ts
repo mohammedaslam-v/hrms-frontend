@@ -1,5 +1,5 @@
 import { request } from '../../shared/api/client'
-import type { DirectoryView } from './team.types'
+import type { DirectoryView, EmployeeLocations, SaveLocationsPayload } from './team.types'
 
 export const teamApi = {
   /**
@@ -8,4 +8,15 @@ export const teamApi = {
    */
   getDirectory: (includeLeavers = false) =>
     request<DirectoryView>(`/team${includeLeavers ? '?includeLeavers=true' : ''}`),
+
+  /** Admin only: one person's check-in locations, for the Locations popup. */
+  getLocations: (employeeId: number) =>
+    request<EmployeeLocations>(`/profile/${employeeId}/locations`),
+
+  /** Admin only: save home, the dual-location switch and the second point. */
+  saveLocations: (employeeId: number, payload: SaveLocationsPayload) =>
+    request<EmployeeLocations>(`/profile/${employeeId}/locations`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    }),
 }

@@ -138,7 +138,8 @@ export function PunctualitySummaryTable({
                   <th className="num-col">Late</th>
                   <th className="num-col">Absent</th>
                   <th className="num-col">Leave</th>
-                  <th className="num-col">Avg Active</th>
+                  {/* <th className="num-col">Avg Active</th> */}
+                  <th className="num-col">Total Active</th>
                   <th className="num-col">Punctuality %</th>
                 </tr>
               </thead>
@@ -220,8 +221,12 @@ export function PunctualitySummaryTable({
 
                       <td className="num-col">{row.leave}</td>
 
-                      <td className="num-col">
+                      {/* <td className="num-col">
                         {row.avgActiveHours > 0 ? asHours(row.avgActiveHours) : '—'}
+                      </td> */}
+
+                      <td className="num-col">
+                        {row.totalActiveHours > 0 ? asHours(row.totalActiveHours) : '—'}
                       </td>
 
                       <td className="num-col">

@@ -24,6 +24,7 @@ import {
   type LoanMetaDto,
 } from '../../loans'
 import { payrollApi } from '../../payroll/api/payroll.api'
+import { DisburseOtpModal } from '../components/DisburseOtpModal'
 
 export function AdminReimbursementsPage() {
   // Main Tab: Reimbursements vs Loans
@@ -51,6 +52,21 @@ export function AdminReimbursementsPage() {
   const [selectedLoan, setSelectedLoan] = useState<AdminLoanItem | null>(null)
   const [closingLoan, setClosingLoan] = useState<AdminLoanItem | null>(null)
   const [loanSubmitting, setLoanSubmitting] = useState(false)
+
+  // 2FA Payout OTP state for RazorpayX disbursements
+  const [payoutOtpState, setPayoutOtpState] = useState<{
+    type: 'loan' | 'reimbursement'
+    loan?: AdminLoanItem
+    claim?: ReimbursementItem
+    approvedAmount?: number
+    challengeId: string
+    maskedEmail: string
+    amount: number
+    beneficiaryName: string
+    beneficiaryCode?: string
+    department?: string | null
+    purposeText: string
+  } | null>(null)
 
   // Load Reimbursements
   const loadData = useCallback(async () => {
@@ -98,21 +114,8 @@ export function AdminReimbursementsPage() {
   const handleIssueLoan = async (payload: CreateLoanPayload) => {
     try {
       setLoanSubmitting(true)
-      const res = await loansApi.createLoan(payload)
-      let payoutPushed = false
-      if (res?.id) {
-        try {
-          await payrollApi.pushLoanDisbursement(res.id)
-          payoutPushed = true
-        } catch (pErr: unknown) {
-          console.warn('Auto disbursement push note:', pErr)
-        }
-      }
-      setNotice(
-        payoutPushed
-          ? 'Loan issued & disbursement request sent to RazorpayX dashboard!'
-          : 'Loan issued as pending disbursement. You can click 💳 Disburse anytime.',
-      )
+      await loansApi.createLoan(payload)
+      setNotice('Loan issued as pending disbursement. You can click 💳 Disburse anytime to disburse funds.')
       setIsIssueModalOpen(false)
       void loadLoans()
     } catch (err: unknown) {
@@ -125,14 +128,80 @@ export function AdminReimbursementsPage() {
   const handleDisburseLoan = async (loan: AdminLoanItem) => {
     try {
       setLoanSubmitting(true)
-      await payrollApi.pushLoanDisbursement(loan.id)
-      setNotice(`Loan disbursement pushed to RazorpayX for ${loan.employeeName}.`)
-      void loadLoans()
+      const otpRes = await payrollApi.requestPayoutOtp()
+      setPayoutOtpState({
+        type: 'loan',
+        loan,
+        challengeId: otpRes.challengeId,
+        maskedEmail: otpRes.sentTo,
+        amount: loan.principal,
+        beneficiaryName: loan.employeeName,
+        beneficiaryCode: loan.employeeCode,
+        department: loan.department,
+        purposeText: `Loan: ${loan.purpose}`,
+      })
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to disburse loan via Razorpay.')
+      setError(err instanceof Error ? err.message : 'Failed to request authorization code.')
     } finally {
       setLoanSubmitting(false)
     }
+  }
+
+  const handleInitiateReimbursementDisburse = async (
+    claim: ReimbursementItem,
+    approvedAmount?: number,
+  ) => {
+    try {
+      setLoading(true)
+      const finalAmount = approvedAmount ?? claim.approvedAmount ?? claim.claimAmount
+      const otpRes = await payrollApi.requestPayoutOtp()
+      setPayoutOtpState({
+        type: 'reimbursement',
+        claim,
+        approvedAmount: finalAmount,
+        challengeId: otpRes.challengeId,
+        maskedEmail: otpRes.sentTo,
+        amount: finalAmount,
+        beneficiaryName: claim.employeeName || 'Employee',
+        beneficiaryCode: claim.employeeCode,
+        department: claim.department,
+        purposeText: `Claim: ${claim.ref} (${claim.category})`,
+      })
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to request authorization code.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleConfirmDisburseOtp = async (challengeId: string, otp: string) => {
+    if (!payoutOtpState) return
+    if (payoutOtpState.type === 'loan' && payoutOtpState.loan) {
+      await payrollApi.pushLoanDisbursement(payoutOtpState.loan.id, challengeId, otp)
+      setNotice(
+        `Loan disbursement successfully authorized and sent to RazorpayX for ${payoutOtpState.loan.employeeName}.`,
+      )
+      setPayoutOtpState(null)
+      void loadLoans()
+    } else if (payoutOtpState.type === 'reimbursement' && payoutOtpState.claim) {
+      await payrollApi.pushReimbursementDisbursement(
+        payoutOtpState.claim.id,
+        challengeId,
+        otp,
+        payoutOtpState.approvedAmount,
+      )
+      setNotice(
+        `Reimbursement claim ${payoutOtpState.claim.ref} authorized and pushed to RazorpayX.`,
+      )
+      setPayoutOtpState(null)
+      setApprovingClaim(null)
+      void loadData()
+    }
+  }
+
+  const handleResendPayoutOtp = async (): Promise<string> => {
+    const res = await payrollApi.requestPayoutOtp()
+    return res.challengeId
   }
 
   const handleConfirmClose = async (reason: string) => {
@@ -514,14 +583,24 @@ export function AdminReimbursementsPage() {
                                 )}
 
                                 {isApproved && (
-                                  <button
-                                    type="button"
-                                    className="btn primary sm"
-                                    onClick={() => setPayingClaim(claim)}
-                                    style={{ height: 30, fontSize: 12, backgroundColor: '#8b5cf6', borderColor: '#8b5cf6' }}
-                                  >
-                                    Mark Paid (Razorpay)
-                                  </button>
+                                  <>
+                                    <button
+                                      type="button"
+                                      className="btn primary sm"
+                                      onClick={() => void handleInitiateReimbursementDisburse(claim)}
+                                      style={{ height: 30, fontSize: 12, backgroundColor: '#2563eb', borderColor: '#2563eb' }}
+                                    >
+                                      💳 Disburse (Razorpay)
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="btn ghost sm"
+                                      onClick={() => setPayingClaim(claim)}
+                                      style={{ height: 30, fontSize: 12 }}
+                                    >
+                                      Manual Paid
+                                    </button>
+                                  </>
                                 )}
 
                                 {isPaid && (
@@ -627,6 +706,29 @@ export function AdminReimbursementsPage() {
             setNotice(`Claim ${approvingClaim.ref} approved successfully.`)
             void loadData()
           }}
+          onApproveAndDisburse={(amount) => {
+            void handleInitiateReimbursementDisburse(approvingClaim, amount)
+          }}
+        />
+      )}
+
+      {payoutOtpState && (
+        <DisburseOtpModal
+          title={
+            payoutOtpState.type === 'loan'
+              ? 'Authorize Loan Disbursement'
+              : 'Authorize Reimbursement Payout'
+          }
+          beneficiaryName={payoutOtpState.beneficiaryName}
+          beneficiaryCode={payoutOtpState.beneficiaryCode}
+          department={payoutOtpState.department}
+          amount={payoutOtpState.amount}
+          purposeText={payoutOtpState.purposeText}
+          initialChallengeId={payoutOtpState.challengeId}
+          maskedEmail={payoutOtpState.maskedEmail}
+          onResendOtp={handleResendPayoutOtp}
+          onConfirm={handleConfirmDisburseOtp}
+          onClose={() => setPayoutOtpState(null)}
         />
       )}
 

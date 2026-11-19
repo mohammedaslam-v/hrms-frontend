@@ -235,7 +235,7 @@ export function SalarySlipCard({
                 {slip.isContractor ? (
                   <div className="kv">
                     <b>Professional Retainer Fee</b>
-                    <span>{formatInr(slip.earnings.gross)}</span>
+                    <span>{formatInr(slip.earnings.gross - slip.earnings.arrears)}</span>
                   </div>
                 ) : (
                   <>
@@ -252,6 +252,15 @@ export function SalarySlipCard({
                       <span>{formatInr(slip.earnings.special)}</span>
                     </div>
                   </>
+                )}
+                {slip.earnings.arrears !== 0 && (
+                  <div className="kv">
+                    <b>{slip.earnings.arrears > 0 ? 'Arrears (earlier months)' : 'Recovery (earlier months)'}</b>
+                    <span>
+                      {slip.earnings.arrears < 0 && '−'}
+                      {formatInr(Math.abs(slip.earnings.arrears))}
+                    </span>
+                  </div>
                 )}
                 <div className="kv total">
                   <b>{slip.isContractor ? 'Gross Invoiced' : 'Gross earnings'}</b>

@@ -5,9 +5,59 @@ import { Pagination, usePage } from '../../shared/ui/Pagination'
 import { WORK_MODE_CLASS } from '../profile'
 import { teamApi } from './team.api'
 import type { DirectoryMember, DirectoryView } from './team.types'
+import { LocationsModal } from './LocationsModal'
 import { fmtDateShortYear } from '../../shared/lib/date'
 import { initials } from '../../shared/lib/format'
 import { DEPT_COLOR } from '../../shared/lib/departments'
+
+/** A CSV cell: quoted when it holds a comma, quote or line break. */
+const csvCell = (v: string | number | null | undefined): string => {
+  const s = v == null ? '' : String(v)
+  return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
+}
+
+/**
+ * The directory as a CSV: exactly the rows the filters leave on screen, every
+ * page of them, not just the page being looked at. CTC only when the server
+ * sent it, so a manager's file has no pay column at all.
+ */
+function downloadDirectoryCsv(members: DirectoryMember[], canSeePay: boolean): void {
+  const header = [
+    'Emp code', 'Name', 'Title', 'Department', 'Manager', 'Work mode', 'Type',
+    'Shift start', 'Shift end', 'Weekly off', 'Joined', 'Left',
+    ...(canSeePay ? ['CTC'] : []),
+  ]
+  const lines = [header.map(csvCell).join(',')]
+  for (const m of members) {
+    lines.push(
+      [
+        m.employeeCode,
+        m.fullName,
+        m.designation,
+        m.department,
+        m.managerName,
+        m.workMode,
+        m.employmentType ?? 'Employee',
+        m.shiftStart,
+        m.shiftEnd,
+        m.weeklyOff.join(' + '),
+        m.dateOfJoining,
+        m.dateOfLeaving,
+        ...(canSeePay ? [m.ctc ?? ''] : []),
+      ]
+        .map(csvCell)
+        .join(','),
+    )
+  }
+  // A BOM so Excel reads names in other scripts correctly.
+  const blob = new Blob(['\uFEFF' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `team_directory_${new Date().toISOString().slice(0, 10)}.csv`
+  a.click()
+  URL.revokeObjectURL(url)
+}
 
 /** Department colours from the design. Unset falls back to neutral, not random. */
 
@@ -21,13 +71,49 @@ const lakh = (n: number): string => {
   return `₹${n.toLocaleString('en-IN')}`
 }
 
+/**
+ * Admin-only: the Edit button that opens the Locations popup. Clicks here must
+ * not open the person's page, so they stop at the cell.
+ */
+function LocationsCell({
+  member,
+  onEdit,
+}: {
+  member: DirectoryMember
+  onEdit: (member: DirectoryMember) => void
+}) {
+  return (
+    <td onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+      <button
+        type="button"
+        className="btn sm"
+        onClick={() => onEdit(member)}
+        aria-label={`Edit check-in locations for ${member.fullName}`}
+        style={{
+          background: 'var(--blue-soft)',
+          color: 'var(--blue)',
+          border: '1px solid #c7d8fb',
+          fontWeight: 600,
+          whiteSpace: 'nowrap',
+        }}
+      >
+        📍 Edit
+      </button>
+    </td>
+  )
+}
+
 function Row({
   member,
   canSeePay,
+  canManageLocations,
+  onEditLocations,
   onOpen,
 }: {
   member: DirectoryMember
   canSeePay: boolean
+  canManageLocations: boolean
+  onEditLocations: (member: DirectoryMember) => void
   onOpen: (id: number) => void
 }) {
   const colour = (member.department && DEPT_COLOR[member.department]) || 'var(--muted2)'
@@ -92,6 +178,9 @@ function Row({
           {member.ctc == null ? <span style={{ color: 'var(--muted2)' }}>—</span> : lakh(member.ctc)}
         </td>
       )}
+      {canManageLocations && (
+        <LocationsCell member={member} onEdit={onEditLocations} />
+      )}
     </tr>
   )
 }
@@ -114,7 +203,11 @@ export function TeamDirectoryPage() {
   const [query, setQuery] = useState('')
   const [dept, setDept] = useState('')
   const [mode, setMode] = useState('')
+  const [empType, setEmpType] = useState('')
   const [status, setStatus] = useState<StatusFilter>('active')
+  // Admin: whose locations the popup is editing, if any.
+  const [editingLocations, setEditingLocations] = useState<DirectoryMember | null>(null)
+
 
   const load = useCallback(async () => {
     try {
@@ -157,20 +250,23 @@ export function TeamDirectoryPage() {
         matchesText &&
         (!dept || m.department === dept) &&
         (!mode || m.workMode === mode) &&
+        (!empType || (m.employmentType ?? 'Employee') === empType) &&
         (!status || (status === 'active' ? !hasLeft : hasLeft))
       )
     })
-  }, [view, query, dept, mode, status])
+  }, [view, query, dept, mode, empType, status])
 
   const page = usePage(filtered)
 
   // 'active' is the default, so having it set is not "filtered".
-  const isFiltered = query.trim() !== '' || dept !== '' || mode !== '' || status !== 'active'
+  const isFiltered =
+    query.trim() !== '' || dept !== '' || mode !== '' || empType !== '' || status !== 'active'
 
   const clearFilters = () => {
     setQuery('')
     setDept('')
     setMode('')
+    setEmpType('')
     setStatus('active')
   }
 
@@ -188,7 +284,8 @@ export function TeamDirectoryPage() {
   }
 
   const { members, canSeePay, scope } = view
-  const columns = canSeePay ? 10 : 9
+  const canManageLocations = Boolean(view.canManageLocations)
+  const columns = 9 + (canSeePay ? 1 : 0) + (canManageLocations ? 1 : 0)
 
   return (
     <div className="page">
@@ -205,7 +302,31 @@ export function TeamDirectoryPage() {
               ? `${members.length} people across the company`
               : `${members.length} in your team`
         }
-      />
+      >
+        <button
+          type="button"
+          className="btn ghost sm"
+          onClick={() => downloadDirectoryCsv(filtered, canSeePay)}
+          disabled={filtered.length === 0}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+        >
+          <svg
+            width="13"
+            height="13"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="7 10 12 15 17 10" />
+            <line x1="12" y1="15" x2="12" y2="3" />
+          </svg>
+          <span>Download CSV</span>
+        </button>
+      </PageHero>
 
       <div className="filters">
         <div className="f">
@@ -235,6 +356,15 @@ export function TeamDirectoryPage() {
             <option value="WFO">WFO</option>
             <option value="WFH">WFH</option>
             <option value="Hybrid">Hybrid</option>
+          </select>
+        </div>
+        <div className="f">
+          <label htmlFor="teamType">Type</label>
+          <select id="teamType" value={empType} onChange={(e) => setEmpType(e.target.value)}>
+            <option value="">All types</option>
+            <option value="Employee">Employee</option>
+            <option value="Probation">Probation</option>
+            <option value="Contractor">Contractor</option>
           </select>
         </div>
         <div className="f">
@@ -269,6 +399,7 @@ export function TeamDirectoryPage() {
                 <th className="hide-lg">Weekly off</th>
                 <th className="hide-md">Joined</th>
                 {canSeePay && <th className="num-col">CTC</th>}
+                {canManageLocations && <th>Locations</th>}
               </tr>
             </thead>
             <tbody>
@@ -297,6 +428,8 @@ export function TeamDirectoryPage() {
                   <Row
                     member={member}
                     canSeePay={canSeePay}
+                    canManageLocations={canManageLocations}
+                    onEditLocations={setEditingLocations}
                     onOpen={(id) => navigate(`/me/${id}`)}
                     key={member.id}
                   />
@@ -307,6 +440,14 @@ export function TeamDirectoryPage() {
         </div>
         <Pagination page={page} unit="people" />
       </div>
+
+      {editingLocations && (
+        <LocationsModal
+          employeeId={editingLocations.id}
+          employeeName={editingLocations.fullName}
+          onClose={() => setEditingLocations(null)}
+        />
+      )}
     </div>
   )
 }

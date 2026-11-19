@@ -7,12 +7,14 @@ interface AdminApprovalModalProps {
   claim: ReimbursementItem
   onClose: () => void
   onSuccess: () => void
+  onApproveAndDisburse?: (amount: number, notes?: string) => void
 }
 
 export function AdminApprovalModal({
   claim,
   onClose,
   onSuccess,
+  onApproveAndDisburse,
 }: AdminApprovalModalProps) {
   const [approvedAmount, setApprovedAmount] = useState<string>(String(claim.claimAmount))
   const [adminNotes, setAdminNotes] = useState<string>('')
@@ -229,14 +231,43 @@ export function AdminApprovalModal({
               justifyContent: 'flex-end',
               gap: 10,
               backgroundColor: 'var(--panel)',
+              flexWrap: 'wrap',
             }}
           >
             <button type="button" className="btn ghost" onClick={onClose} disabled={submitting}>
               Cancel
             </button>
-            <button type="submit" className="btn primary" disabled={submitting}>
-              {submitting ? 'Approving…' : `Approve ${formatInr(parsedAmount || claim.claimAmount)}`}
+            <button
+              type="submit"
+              className="btn ghost"
+              disabled={submitting}
+              style={{ fontWeight: 600 }}
+            >
+              {submitting ? 'Approving…' : 'Approve Only'}
             </button>
+            {onApproveAndDisburse && (
+              <button
+                type="button"
+                className="btn primary"
+                disabled={submitting}
+                onClick={() => {
+                  if (isNaN(parsedAmount) || parsedAmount <= 0) {
+                    setError('Please enter a valid approved amount greater than ₹0.')
+                    return
+                  }
+                  onApproveAndDisburse(parsedAmount, adminNotes.trim() || undefined)
+                }}
+                style={{
+                  background: '#2563eb',
+                  borderColor: '#2563eb',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
+              >
+                Approve & Disburse via RazorpayX ⚡
+              </button>
+            )}
           </div>
         </form>
       </div>

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { PageHero } from '../../../shared/ui/PageHero'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { profileApi } from '../profile.api'
 import { FeedbackCard } from '../../feedback'
 import { GoalsCard } from '../../goals'
@@ -100,6 +100,18 @@ export function MyPage() {
     // oxlint-disable-next-line react/set-state-in-effect
     void load()
   }, [load])
+
+  // `/me?edit=personal` opens Edit personal details straight away — where the
+  // "save your home location" reminder sends people. Read once, then dropped
+  // from the URL so a refresh does not open it again.
+  const [searchParams, setSearchParams] = useSearchParams()
+  const openEditFromLink = searchParams.get('edit') === 'personal'
+  useEffect(() => {
+    if (!openEditFromLink || !view?.isSelf) return
+    // oxlint-disable-next-line react/set-state-in-effect
+    setShowEditDetails(true)
+    setSearchParams({}, { replace: true })
+  }, [openEditFromLink, view?.isSelf, setSearchParams])
 
   // Standard required documents (pan, aadhaar, resume, permanentAddress, temporaryAddress)
   const missingRequiredDocs =

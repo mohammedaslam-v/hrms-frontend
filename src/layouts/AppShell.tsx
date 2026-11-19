@@ -9,6 +9,7 @@ import { TIER_LABEL } from '../shared/types/session'
 import { Toast, type ToastMessage } from '../shared/ui/Toast'
 import { ChangePasswordForm } from '../features/auth'
 import { OnlineNow } from '../features/presence'
+import { HomeLocationReminder } from '../features/profile'
 import { initials } from '../shared/lib/format'
 import * as icon from '../navigation/icons'
 
@@ -176,6 +177,9 @@ export function AppShell() {
       />
 
       <Toast message={toast} onDismiss={() => setToast(null)} />
+
+      {/* 5 seconds on every visit until the home location is saved. */}
+      <HomeLocationReminder />
     </div>
   )
 }

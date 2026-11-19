@@ -283,7 +283,22 @@ export function MyLeavePage() {
                         <td className="num-col">{r.days}</td>
                         <td className="wrap">{r.reason}</td>
                         <td>
-                          <span className={`chip ${STATUS_CLASS[r.status]}`}>{r.status}</span>
+                          {r.status === 'Pending' && r.isTwoLevel ? (
+                            <div>
+                              <span className="chip c-pend">
+                                {r.directApproval || r.seniorApproval ? 'Pending (1/2)' : 'Pending (0/2)'}
+                              </span>
+                              <div className="hint" style={{ fontSize: 11, marginTop: 2 }}>
+                                {r.awaitingApproval === 'direct'
+                                  ? 'Awaiting Direct Mgr'
+                                  : r.awaitingApproval === 'senior'
+                                  ? 'Awaiting Senior Mgr / Admin'
+                                  : '2 approvals required'}
+                              </div>
+                            </div>
+                          ) : (
+                            <span className={`chip ${STATUS_CLASS[r.status]}`}>{r.status}</span>
+                          )}
                         </td>
                         <td>
                           {r.status === 'Pending' && (

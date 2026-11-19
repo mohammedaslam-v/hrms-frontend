@@ -1,0 +1,264 @@
+/* Attendance & activity → Active time — see ActiveTimeTable.tsx. */
+
+.at-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 18px;
+  margin-bottom: 14px;
+}
+.at-filters { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
+.at-f { margin: 0; min-width: 150px; }
+/* Date boxes sized and rounded like the dropdowns beside them. */
+.at-f input[type='date'] { height: 36px; padding: 0 12px; border-radius: 10px; font-size: 13px; }
+.at-dates { min-width: 150px; }
+.at-people { min-width: 230px; }
+
+.at-meta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px 16px;
+  margin: 0 4px 10px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.at-meta b { color: var(--ink); font-weight: 600; }
+.at-key { display: inline-flex; align-items: center; gap: 6px; }
+.at-key i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-left: 6px; }
+.at-key .k-panel { background: rgba(15, 169, 104, 0.3); }
+
+.at-card { padding: 0; overflow: hidden; transition: opacity 0.15s; }
+.at-card.is-loading { opacity: 0.55; }
+.at-scroll { overflow: auto; max-height: 70vh; }
+
+.at-grid { border-collapse: separate; border-spacing: 0; width: max-content; min-width: 100%; font-size: 12px; }
+.at-grid th,
+.at-grid td {
+  padding: 6px 10px;
+  text-align: center;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--line2);
+  font-variant-numeric: tabular-nums;
+}
+.at-grid thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--panel);
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--muted2);
+  border-bottom: 1px solid var(--line);
+}
+.at-grid thead th span { display: block; font-size: 10.5px; font-weight: 500; color: var(--muted); }
+.at-grid thead th.is-today { color: var(--blue); }
+
+/* The name column stays put while the days scroll sideways. */
+.at-name-h,
+.at-name {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  min-width: 190px;
+  max-width: 230px;
+  text-align: left !important;
+  background: #fff;
+  border-right: 1px solid var(--line);
+}
+.at-grid thead .at-name-h { z-index: 3; background: var(--panel); }
+.at-name button {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border: 0;
+  background: none;
+  padding: 0;
+  font: 600 12.5px 'Inter', sans-serif;
+  color: var(--ink);
+  cursor: pointer;
+  text-align: left;
+}
+.at-name button:hover { color: var(--blue); text-decoration: underline; }
+.at-name small { display: block; margin-top: 2px; font-size: 11px; color: var(--muted); font-weight: 400; }
+
+.at-panel td { color: var(--ink2); }
+
+.at-total,
+.at-total-h { font-weight: 700; color: var(--ink); border-left: 1px solid var(--line); }
+.at-avg,
+.at-avg-h { font-weight: 600; color: var(--ink2); }
+
+/* A day off with no panel time */
+.at-grid .t-off { color: #8c827a; font-weight: 600; }
+
+/* ==========================================================================
+   Activities Tab Styling (Consistent with BConnect Design Language)
+   ========================================================================== */
+
+.ac-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.ac-search-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.ac-search-box svg {
+  position: absolute;
+  left: 11px;
+  color: var(--muted);
+  pointer-events: none;
+}
+
+.ac-search-input {
+  width: 230px;
+  height: 36px;
+  padding: 0 12px 0 32px !important;
+  border-radius: 9px !important;
+  font-size: 13px !important;
+  background: var(--card) !important;
+  border: 1px solid var(--line) !important;
+}
+
+.ac-search-input:focus {
+  border-color: var(--blue) !important;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+/* Time Pills for Metrics */
+.ac-panel-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #e6f6ee;
+  color: #0fa968;
+  font: 700 11.5px 'Inter', sans-serif;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-variant-numeric: tabular-nums;
+  border: 1px solid rgba(15, 169, 104, 0.18);
+  white-space: nowrap;
+}
+
+.ac-act-total-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #eeeafe;
+  color: #6d53f0;
+  font: 700 11.5px 'Inter', sans-serif;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-variant-numeric: tabular-nums;
+  border: 1px solid rgba(109, 83, 240, 0.18);
+  white-space: nowrap;
+}
+
+/* Activity Items Stack & Cards */
+.ac-items-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 2px 0;
+  max-width: 520px;
+}
+
+.ac-item-card {
+  background: #faf8f5;
+  border: 1px solid var(--line2);
+  border-radius: 8px;
+  padding: 7px 10px;
+  transition: all 0.15s ease;
+}
+
+.ac-item-card:hover {
+  background: #ffffff;
+  border-color: var(--line);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.04);
+}
+
+.ac-item-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.ac-type-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font: 700 10.5px 'Inter', sans-serif;
+  padding: 2.5px 7.5px;
+  border-radius: 6px;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+.ac-type-chip.type-phone_call {
+  background: #eaf0fe;
+  color: #2563eb;
+  border: 1px solid rgba(37, 99, 235, 0.18);
+}
+
+.ac-type-chip.type-external_meeting {
+  background: #eeeafe;
+  color: #6d53f0;
+  border: 1px solid rgba(109, 83, 240, 0.18);
+}
+
+.ac-type-chip.type-other {
+  background: #fdefe4;
+  color: #ea6a18;
+  border: 1px solid rgba(234, 106, 24, 0.18);
+}
+
+.ac-item-time {
+  font-size: 11px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.ac-item-dur {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.ac-item-note {
+  margin-top: 5px;
+  font-size: 11.5px;
+  color: var(--ink2);
+  line-height: 1.38;
+  word-break: break-word;
+  background: rgba(0, 0, 0, 0.025);
+  padding: 5px 8px;
+  border-radius: 6px;
+  border-left: 2px solid var(--line);
+  font-style: italic;
+}
+
+@media (max-width: 640px) {
+  .at-filters { width: 100%; }
+  .at-f,
+  .at-people { flex: 1 1 100%; }
+  .at-name-h,
+  .at-name { min-width: 140px; }
+  .ac-search-input { width: 100%; }
+  .ac-search-box { width: 100%; }
+}

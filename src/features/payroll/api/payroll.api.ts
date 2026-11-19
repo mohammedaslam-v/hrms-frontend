@@ -33,7 +33,18 @@ export const payrollApi = {
     });
   },
 
-  pushLoanDisbursement: (loanId: number, mode = 'NEFT') => {
+  requestPayoutOtp: () => {
+    return request<{ challengeId: string; sentTo: string }>('/payouts/request-otp', {
+      method: 'POST',
+    });
+  },
+
+  pushLoanDisbursement: (
+    loanId: number,
+    challengeId: string,
+    otp: string,
+    mode = 'NEFT',
+  ) => {
     return request<{
       loanId: number;
       employeeId: number;
@@ -44,7 +55,28 @@ export const payrollApi = {
       utr?: string | null;
     }>('/payouts/push-loan', {
       method: 'POST',
-      body: JSON.stringify({ loanId, mode }),
+      body: JSON.stringify({ loanId, challengeId, otp, mode }),
+    });
+  },
+
+  pushReimbursementDisbursement: (
+    claimId: number,
+    challengeId: string,
+    otp: string,
+    approvedAmount?: number,
+    mode = 'NEFT',
+  ) => {
+    return request<{
+      claimId: number;
+      employeeId: number;
+      amount: number;
+      payoutId: number;
+      razorpayPayoutId: string | null;
+      status: string;
+      utr?: string | null;
+    }>('/payouts/push-reimbursement', {
+      method: 'POST',
+      body: JSON.stringify({ claimId, approvedAmount, challengeId, otp, mode }),
     });
   },
 

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { PageHero } from '../../../shared/ui/PageHero'
 import { Pagination, usePage } from '../../../shared/ui/Pagination'
+import { DeleteLeaveModal } from '../components/DeleteLeaveModal'
 import { EditApprovedLeaveModal } from '../components/EditApprovedLeaveModal'
 import { approvalsApi } from '../leave.api'
 import {
@@ -13,6 +14,7 @@ import {
 import { fmtShort } from '../../../shared/lib/date'
 
 import { CustomSelect, type CustomSelectOption } from '../../../shared/ui/CustomSelect'
+import { employeeFormApi } from '../../employees/api/employee-form.api'
 
 const STATUS_CLASS: Record<LeaveStatus, string> = {
   Approved: 'c-in',
@@ -22,20 +24,22 @@ const STATUS_CLASS: Record<LeaveStatus, string> = {
 }
 
 type Tab = 'pending' | 'balances' | 'log'
-type StatusFilter = 'all' | 'requested' | 'approved' | 'rejected'
+type StatusFilter = 'all' | 'requested' | 'approved' | 'rejected' | 'cancelled'
 
 const STATUS_OPTIONS: CustomSelectOption<StatusFilter>[] = [
   { value: 'all', label: 'All Statuses', dotColor: '#94a3b8' },
   { value: 'requested', label: 'Requested', dotColor: '#f59e0b' },
   { value: 'approved', label: 'Approved', dotColor: '#10b981' },
   { value: 'rejected', label: 'Rejected', dotColor: '#ef4444' },
+  { value: 'cancelled', label: 'Cancelled', dotColor: '#a8a29e' },
 ]
 
 export function LeaveApprovalsPage() {
   const [view, setView] = useState<ApprovalsView | null>(null)
   const [tab, setTab] = useState<Tab>('pending')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
-  const [dateFilter, setDateFilter] = useState<string>('')
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
@@ -45,6 +49,7 @@ export function LeaveApprovalsPage() {
     decision: 'Approved' | 'Rejected'
   } | null>(null)
   const [editingLeave, setEditingLeave] = useState<(LeaveRequest & { employeeName: string }) | null>(null)
+  const [deletingLeave, setDeletingLeave] = useState<(LeaveRequest & { employeeName: string }) | null>(null)
 
   const load = useCallback(async () => {
     try {
@@ -80,18 +85,121 @@ export function LeaveApprovalsPage() {
   }
 
   const [search, setSearch] = useState('')
+  const [managerFilter, setManagerFilter] = useState<string>('all')
+  const [metaManagers, setMetaManagers] = useState<string[]>([])
   const q = search.trim().toLowerCase()
 
+  useEffect(() => {
+    let active = true
+    employeeFormApi
+      .fetchMeta()
+      .then((meta) => {
+        if (active && meta?.managers) {
+          const names = meta.managers
+            .filter((m) => {
+              const des = (m.designation || '').toLowerCase()
+              return (
+                des.includes('manager') ||
+                des.includes('lead') ||
+                des.includes('head') ||
+                des.includes('director') ||
+                des.includes('vp') ||
+                des.includes('chief') ||
+                des.includes('founder')
+              )
+            })
+            .map((m) => m.name.trim())
+            .filter(Boolean)
+          setMetaManagers(names)
+        }
+      })
+      .catch(() => {})
+    return () => {
+      active = false
+    }
+  }, [])
+
+  const managerOptions = useMemo<CustomSelectOption<string>[]>(() => {
+    const set = new Set<string>()
+    let hasUnassigned = false
+
+    // 1. All managers in the company from backend approvals view
+    if (view?.allManagers) {
+      for (const m of view.allManagers) {
+        const name = (m || '').trim()
+        if (name) set.add(name)
+      }
+    }
+
+    // 2. Managers from metadata
+    for (const m of metaManagers) {
+      if (m && m.trim()) set.add(m.trim())
+    }
+
+    // 3. Managers present in pending approvals
+    if (view?.pending) {
+      for (const p of view.pending) {
+        const name = (p.directManagerName || p.managerName || '').trim()
+        if (name) {
+          set.add(name)
+        } else {
+          hasUnassigned = true
+        }
+      }
+    }
+
+    // 4. Managers present in all requests log
+    if (view?.log) {
+      for (const l of view.log) {
+        const name = (l.directManagerName || (l as any).managerName || '').trim()
+        if (name) {
+          set.add(name)
+        } else {
+          hasUnassigned = true
+        }
+      }
+    }
+
+    const sorted = Array.from(set).sort((a, b) => a.localeCompare(b))
+    const opts: CustomSelectOption<string>[] = [
+      { value: 'all', label: 'All managers' },
+      ...sorted.map((m) => ({ value: m, label: m })),
+    ]
+
+    if (hasUnassigned && set.size > 0) {
+      opts.push({ value: '__none__', label: 'No manager / Direct' })
+    }
+
+    return opts
+  }, [view?.allManagers, metaManagers, view?.pending, view?.log])
+
+  useEffect(() => {
+    if (managerFilter !== 'all' && !managerOptions.some((o) => o.value === managerFilter)) {
+      setManagerFilter('all')
+    }
+  }, [managerOptions, managerFilter])
+
   const filteredPending = useMemo(() => {
-    const list = view?.pending ?? []
+    let list = view?.pending ?? []
+    if (managerFilter !== 'all') {
+      list = list.filter((p) => {
+        const mgr = (p.directManagerName || p.managerName || '').trim()
+        if (managerFilter === '__none__') {
+          return !mgr
+        }
+        return mgr.toLowerCase() === managerFilter.toLowerCase()
+      })
+    }
     if (!q) return list
     return list.filter(
       (p) =>
         p.employeeName.toLowerCase().includes(q) ||
         p.employeeCode.toLowerCase().includes(q) ||
-        (p.designation && p.designation.toLowerCase().includes(q)),
+        (p.designation && p.designation.toLowerCase().includes(q)) ||
+        ((p.directManagerName || p.managerName) &&
+          (p.directManagerName || p.managerName)!.toLowerCase().includes(q)),
     )
-  }, [view?.pending, q])
+  }, [view?.pending, managerFilter, q])
 
   const filteredBalances = useMemo(() => {
     const list = view?.balances ?? []
@@ -106,22 +214,32 @@ export function LeaveApprovalsPage() {
 
   const filteredLog = useMemo(() => {
     let list = view?.log ?? []
+    if (managerFilter !== 'all') {
+      list = list.filter((r) => {
+        const mgr = (r.directManagerName || (r as any).managerName || '').trim()
+        if (managerFilter === '__none__') {
+          return !mgr
+        }
+        return mgr.toLowerCase() === managerFilter.toLowerCase()
+      })
+    }
     if (statusFilter !== 'all') {
       list = list.filter((r) => {
         const s = (r.status ?? '').toLowerCase()
         if (statusFilter === 'requested') return s === 'pending' || s === 'requested'
         if (statusFilter === 'approved') return s === 'approved'
         if (statusFilter === 'rejected') return s === 'rejected'
+        if (statusFilter === 'cancelled') return s === 'cancelled'
         return true
       })
     }
-    if (dateFilter) {
+    if (dateFrom || dateTo) {
       list = list.filter((r) => {
         const from = (r.fromDate ?? '').slice(0, 10)
         const to = (r.toDate ?? r.fromDate ?? '').slice(0, 10)
         const minDate = from <= to ? from : to
         const maxDate = from <= to ? to : from
-        return minDate <= dateFilter && maxDate >= dateFilter
+        return (!dateTo || minDate <= dateTo) && (!dateFrom || maxDate >= dateFrom)
       })
     }
     if (!q) return list
@@ -129,9 +247,11 @@ export function LeaveApprovalsPage() {
       (r) =>
         r.employeeName.toLowerCase().includes(q) ||
         r.ref.toLowerCase().includes(q) ||
-        (r.reason && r.reason.toLowerCase().includes(q)),
+        (r.reason && r.reason.toLowerCase().includes(q)) ||
+        ((r.directManagerName || (r as any).managerName) &&
+          (r.directManagerName || (r as any).managerName)!.toLowerCase().includes(q)),
     )
-  }, [view?.log, statusFilter, dateFilter, q])
+  }, [view?.log, managerFilter, statusFilter, dateFrom, dateTo, q])
 
   // Called before the early returns below — hooks cannot sit behind a branch.
   const pendingPage = usePage(filteredPending)
@@ -183,19 +303,67 @@ export function LeaveApprovalsPage() {
         }}
       >
         <div className="tabs" style={{ marginBottom: 0 }}>
-          <button className={`tab${tab === 'pending' ? ' on' : ''}`} onClick={() => setTab('pending')}>
-            Approvals <span className="n">{q ? filteredPending.length : pending.length}</span>
+          <button
+            className={`tab${tab === 'pending' ? ' on' : ''}`}
+            onClick={() => {
+              setTab('pending')
+              setManagerFilter('all')
+            }}
+          >
+            Approvals <span className="n">{managerFilter !== 'all' || q ? filteredPending.length : pending.length}</span>
           </button>
-          <button className={`tab${tab === 'balances' ? ' on' : ''}`} onClick={() => setTab('balances')}>
+          <button
+            className={`tab${tab === 'balances' ? ' on' : ''}`}
+            onClick={() => {
+              setTab('balances')
+              setManagerFilter('all')
+            }}
+          >
             Balances
           </button>
-          <button className={`tab${tab === 'log' ? ' on' : ''}`} onClick={() => setTab('log')}>
+          <button
+            className={`tab${tab === 'log' ? ' on' : ''}`}
+            onClick={() => {
+              setTab('log')
+              setManagerFilter('all')
+            }}
+          >
             All requests
           </button>
         </div>
 
         {/* Search & Filter Controls */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          {/* Manager Filter */}
+          {(tab === 'pending' || tab === 'log') && managerOptions.length > 1 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <label
+                htmlFor="managerFilter"
+                style={{
+                  fontSize: 13,
+                  fontWeight: 500,
+                  color: 'var(--muted2, #64748b)',
+                  margin: 0,
+                  textTransform: 'none',
+                  letterSpacing: 'normal',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                Manager:
+              </label>
+              <CustomSelect
+                id="managerFilter"
+                ariaLabel="Filter by manager"
+                value={managerFilter}
+                onChange={(val) => setManagerFilter(val)}
+                options={managerOptions}
+                variant="pill"
+                size="md"
+                minWidth={160}
+              />
+            </div>
+          )}
+
           {tab === 'log' && (
             <>
               {/* Status Filter */}
@@ -226,109 +394,21 @@ export function LeaveApprovalsPage() {
                 />
               </div>
 
-              {/* Date Filter */}
+              {/* Date range: a request shows if any of its days fall inside. */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <label
-                  htmlFor="dateFilter"
+                <span
                   style={{
                     fontSize: 13,
                     fontWeight: 500,
                     color: 'var(--muted2, #64748b)',
-                    margin: 0,
-                    textTransform: 'none',
-                    letterSpacing: 'normal',
                     whiteSpace: 'nowrap',
                   }}
                 >
                   Date:
-                </label>
-                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                  <svg
-                    width="13"
-                    height="13"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="var(--muted, #94a3b8)"
-                    strokeWidth="2.2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    style={{
-                      position: 'absolute',
-                      left: 11,
-                      pointerEvents: 'none',
-                      zIndex: 1,
-                    }}
-                  >
-                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-                    <line x1="16" y1="2" x2="16" y2="6" />
-                    <line x1="8" y1="2" x2="8" y2="6" />
-                    <line x1="3" y1="10" x2="21" y2="10" />
-                  </svg>
-                  <input
-                    id="dateFilter"
-                    type="date"
-                    value={dateFilter}
-                    onChange={(e) => setDateFilter(e.target.value)}
-                    style={{
-                      height: 34,
-                      padding: dateFilter ? '0 28px 0 30px' : '0 12px 0 30px',
-                      borderRadius: 99,
-                      border: '1px solid var(--line, #e2e8f0)',
-                      backgroundColor: '#fff',
-                      fontSize: 13,
-                      fontFamily: "'Inter', sans-serif",
-                      outline: 'none',
-                      color: dateFilter ? 'var(--ink, #0f172a)' : 'var(--muted, #94a3b8)',
-                      boxShadow: '0 1px 2px rgba(0, 0, 0, 0.03)',
-                      cursor: 'pointer',
-                      transition: 'border-color 0.15s, box-shadow 0.15s',
-                    }}
-                    onFocus={(e) => {
-                      e.currentTarget.style.borderColor = 'var(--blue, #2563eb)'
-                      e.currentTarget.style.boxShadow = '0 0 0 2px rgba(37, 99, 235, 0.15)'
-                    }}
-                    onBlur={(e) => {
-                      e.currentTarget.style.borderColor = 'var(--line, #e2e8f0)'
-                      e.currentTarget.style.boxShadow = '0 1px 2px rgba(0, 0, 0, 0.03)'
-                    }}
-                  />
-                  {dateFilter && (
-                    <button
-                      type="button"
-                      onClick={() => setDateFilter('')}
-                      aria-label="Clear date filter"
-                      title="Clear date"
-                      style={{
-                        position: 'absolute',
-                        right: 8,
-                        top: '50%',
-                        transform: 'translateY(-50%)',
-                        border: 'none',
-                        background: 'transparent',
-                        color: 'var(--muted, #94a3b8)',
-                        cursor: 'pointer',
-                        fontSize: 11,
-                        lineHeight: 1,
-                        padding: '3px 4px',
-                        borderRadius: '50%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        transition: 'background-color 0.15s, color 0.15s',
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.color = 'var(--ink, #0f172a)'
-                        e.currentTarget.style.backgroundColor = 'var(--line2, #f1f5f9)'
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.color = 'var(--muted, #94a3b8)'
-                        e.currentTarget.style.backgroundColor = 'transparent'
-                      }}
-                    >
-                      ✕
-                    </button>
-                  )}
-                </div>
+                </span>
+                <DateBox id="dateFrom" label="From date" value={dateFrom} max={dateTo || undefined} onChange={setDateFrom} />
+                <span style={{ fontSize: 13, color: 'var(--muted, #94a3b8)' }}>to</span>
+                <DateBox id="dateTo" label="To date" value={dateTo} min={dateFrom || undefined} onChange={setDateTo} />
               </div>
             </>
           )}
@@ -403,7 +483,43 @@ export function LeaveApprovalsPage() {
 
       {tab === 'pending' && (
         <div className="card">
-          <h3>Pending approvals</h3>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: 16,
+              flexWrap: 'wrap',
+              gap: 12,
+            }}
+          >
+            <h3 style={{ margin: 0 }}>
+              Pending approvals
+              {(managerFilter !== 'all' || q) && (
+                <span
+                  className="sub"
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 400,
+                    color: 'var(--muted2, #64748b)',
+                    marginLeft: 8,
+                  }}
+                >
+                  · {filteredPending.length} of {pending.length} shown
+                </span>
+              )}
+            </h3>
+            {managerFilter !== 'all' && (
+              <button
+                type="button"
+                className="btn ghost sm"
+                onClick={() => setManagerFilter('all')}
+                style={{ padding: '3px 8px', fontSize: 12 }}
+              >
+                Clear manager filter
+              </button>
+            )}
+          </div>
           <div className="scroll">
             {/* The decision buttons stay pinned to the right edge, so a manager
                 never has to scroll the table to act on a row. */}
@@ -411,6 +527,7 @@ export function LeaveApprovalsPage() {
               <thead>
                 <tr>
                   <th>Member</th>
+                  <th>Manager</th>
                   <th>Type</th>
                   <th>From</th>
                   <th>To</th>
@@ -424,11 +541,11 @@ export function LeaveApprovalsPage() {
               <tbody>
                 {filteredPending.length === 0 ? (
                   <tr>
-                    <td colSpan={9}>
+                    <td colSpan={10}>
                       <div className="empty">
-                        <b>{q ? 'No matching leave requests' : 'Nothing waiting on you'}</b>
-                        {q
-                          ? `No pending requests match "${search}". Try clearing the search.`
+                        <b>{q || managerFilter !== 'all' ? 'No matching leave requests' : 'Nothing waiting on you'}</b>
+                        {q || managerFilter !== 'all'
+                          ? `No pending requests match the current filters. Try resetting the filters or clearing the search.`
                           : 'Decided requests move to the All requests tab.'}
                       </div>
                     </td>
@@ -440,7 +557,38 @@ export function LeaveApprovalsPage() {
                         <div className="stack">
                           <b>{p.employeeName}</b>
                           <span>{p.designation ?? p.employeeCode}</span>
+                          {p.isTwoLevel && (
+                            <div style={{ marginTop: 3 }}>
+                              {p.directApproval || p.seniorApproval ? (
+                                <span
+                                  className="chip"
+                                  style={{ background: '#dbeafe', color: '#1e40af', fontSize: 11, padding: '2px 6px' }}
+                                  title={`1 of 2 approved by ${p.directApproval?.name || p.seniorApproval?.name}`}
+                                >
+                                  1/2 approved
+                                </span>
+                              ) : (
+                                <span
+                                  className="chip"
+                                  style={{ background: '#fef3c7', color: '#92400e', fontSize: 11, padding: '2px 6px' }}
+                                  title="Requires direct manager and senior manager/admin approvals"
+                                >
+                                  2-level (0/2)
+                                </span>
+                              )}
+                              <div className="hint" style={{ fontSize: 11, marginTop: 1 }}>
+                                {p.awaitingApproval === 'direct'
+                                  ? `Waiting on: Direct Mgr${p.directManagerName ? ` (${p.directManagerName})` : ''}`
+                                  : p.awaitingApproval === 'senior'
+                                  ? `Waiting on: Senior Mgr${p.grandManagerName ? ` (${p.grandManagerName})` : ''} / Admin / Rhea`
+                                  : 'Waiting on: Direct Mgr & Senior Mgr / Admin / Rhea'}
+                              </div>
+                            </div>
+                          )}
                         </div>
+                      </td>
+                      <td>
+                        <b>{p.directManagerName || p.managerName || '—'}</b>
                       </td>
                       <td>
                         <span className={`chip ${p.leaveType === 'Unpaid' ? 'c-abs' : 'c-leave'}`}>
@@ -474,20 +622,36 @@ export function LeaveApprovalsPage() {
                       </td>
                       <td>
                         <div className="row-actions">
-                          <button
-                            className="btn success sm"
-                            onClick={() => setActionConfirmation({ item: p, decision: 'Approved' })}
-                            disabled={decidingId === p.id}
-                          >
-                            {decidingId === p.id ? '…' : 'Approve'}
-                          </button>
-                          <button
-                            className="btn ghost sm"
-                            onClick={() => setActionConfirmation({ item: p, decision: 'Rejected' })}
-                            disabled={decidingId === p.id}
-                          >
-                            Reject
-                          </button>
+                          {p.hasViewerApproved ? (
+                            <div style={{ textAlign: 'center' }}>
+                              <span
+                                className="chip c-in"
+                                style={{ fontSize: 11.5, padding: '3px 8px', display: 'inline-block' }}
+                              >
+                                ✓ Approved (1/2)
+                              </span>
+                              <div className="hint" style={{ fontSize: 11, marginTop: 2 }}>
+                                Awaiting 2nd approver
+                              </div>
+                            </div>
+                          ) : (
+                            <>
+                              <button
+                                className="btn success sm"
+                                onClick={() => setActionConfirmation({ item: p, decision: 'Approved' })}
+                                disabled={decidingId === p.id}
+                              >
+                                {decidingId === p.id ? '…' : 'Approve'}
+                              </button>
+                              <button
+                                className="btn ghost sm"
+                                onClick={() => setActionConfirmation({ item: p, decision: 'Rejected' })}
+                                disabled={decidingId === p.id}
+                              >
+                                Reject
+                              </button>
+                            </>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -595,7 +759,11 @@ export function LeaveApprovalsPage() {
                 {actionConfirmation.decision === 'Approved'
                   ? actionConfirmation.item.createsLossOfPay
                     ? 'Confirm approval (costs pay)?'
-                    : 'Confirm leave approval'
+                    : actionConfirmation.item.isTwoLevel
+                      ? actionConfirmation.item.directApproval || actionConfirmation.item.seniorApproval
+                        ? 'Confirm final approval (2 of 2)'
+                        : 'Confirm 1st approval (1 of 2)'
+                      : 'Confirm leave approval'
                   : 'Confirm leave rejection'}
               </h3>
               <button
@@ -655,6 +823,21 @@ export function LeaveApprovalsPage() {
             </div>
 
             {/* Guidance & Alerts */}
+            {actionConfirmation.decision === 'Approved' && actionConfirmation.item.isTwoLevel && (
+              actionConfirmation.item.directApproval || actionConfirmation.item.seniorApproval ? (
+                <div className="notice blue" style={{ marginBottom: 10 }}>
+                  <b>Final Approval (2 of 2):</b> 1st approval was given by{' '}
+                  <b>{actionConfirmation.item.directApproval?.name || actionConfirmation.item.seniorApproval?.name}</b>.
+                  Your approval will complete the workflow and mark this leave as fully <b>Approved</b>.
+                </div>
+              ) : (
+                <div className="notice blue" style={{ marginBottom: 10 }}>
+                  <b>2-Level Approval (Sales & Operations):</b> This request requires 2 approvals (Direct Manager and Senior Manager / Admin / Rhea).
+                  Your approval will record <b>Approval 1 of 2</b>. The leave will remain pending until the 2nd approval is completed.
+                </div>
+              )
+            )}
+
             {actionConfirmation.decision === 'Approved' ? (
               actionConfirmation.item.createsLossOfPay ? (
                 <>
@@ -676,7 +859,10 @@ export function LeaveApprovalsPage() {
               )
             ) : (
               <div className="notice bad">
-                Are you sure you want to reject this leave request? The employee will be notified of the rejection.
+                Are you sure you want to reject this leave request?
+                {actionConfirmation.item.isTwoLevel
+                  ? ' Rejection by any approver rejects the request immediately.'
+                  : ' The employee will be notified of the rejection.'}
               </div>
             )}
 
@@ -698,7 +884,11 @@ export function LeaveApprovalsPage() {
                 {decidingId === actionConfirmation.item.id
                   ? 'Submitting…'
                   : actionConfirmation.decision === 'Approved'
-                    ? 'Yes, Approve'
+                    ? actionConfirmation.item.isTwoLevel
+                      ? actionConfirmation.item.directApproval || actionConfirmation.item.seniorApproval
+                        ? 'Yes, Fully Approve (2/2)'
+                        : 'Yes, Approve (1/2)'
+                      : 'Yes, Approve'
                     : 'Yes, Reject'}
               </button>
             </div>
@@ -734,6 +924,16 @@ export function LeaveApprovalsPage() {
                 </span>
               )}
             </h3>
+            {managerFilter !== 'all' && (
+              <button
+                type="button"
+                className="btn ghost sm"
+                onClick={() => setManagerFilter('all')}
+                style={{ padding: '3px 8px', fontSize: 12 }}
+              >
+                Clear manager filter
+              </button>
+            )}
           </div>
           <div className="scroll">
             <table>
@@ -741,6 +941,7 @@ export function LeaveApprovalsPage() {
                 <tr>
                   <th>Ref</th>
                   <th>Member</th>
+                  <th>Manager</th>
                   <th>Type</th>
                   <th>From</th>
                   <th>To</th>
@@ -754,11 +955,11 @@ export function LeaveApprovalsPage() {
               <tbody>
                 {filteredLog.length === 0 ? (
                   <tr>
-                    <td colSpan={view.isAdmin ? 10 : 9}>
+                    <td colSpan={view.isAdmin ? 11 : 10}>
                       <div className="empty">
-                        <b>{q || statusFilter !== 'all' || dateFilter ? 'No matching requests' : 'No requests this year.'}</b>
-                        {q || statusFilter !== 'all' || dateFilter
-                          ? `No requests match the selected filters. Try clearing the search or changing the date/status filter.`
+                        <b>{q || managerFilter !== 'all' || statusFilter !== 'all' || dateFrom || dateTo ? 'No matching requests' : 'No requests this year.'}</b>
+                        {q || managerFilter !== 'all' || statusFilter !== 'all' || dateFrom || dateTo
+                          ? `No requests match the selected filters. Try clearing the search or changing the date/status/manager filter.`
                           : 'Decided requests move to the All requests tab.'}
                       </div>
                     </td>
@@ -770,6 +971,9 @@ export function LeaveApprovalsPage() {
                         <span className="tag">{r.ref}</span>
                       </td>
                       <td>{r.employeeName}</td>
+                      <td>
+                        <b>{r.directManagerName || (r as any).managerName || '—'}</b>
+                      </td>
                       <td>{r.leaveType}</td>
                       <td>{fmtShort(r.fromDate)}</td>
                       <td>{fmtShort(r.toDate)}</td>
@@ -778,22 +982,44 @@ export function LeaveApprovalsPage() {
                       <td>
                         <span className={`chip ${STATUS_CLASS[r.status]}`}>{r.status}</span>
                       </td>
-                      <td>{r.decidedBy ?? '—'}</td>
+                      <td>
+                        <div>{r.decidedBy ?? '—'}</div>
+                        {r.isTwoLevel && (
+                          <div className="hint" style={{ fontSize: 11 }}>
+                            {r.directApproval && r.seniorApproval
+                              ? `2-level: ${r.directApproval.name} & ${r.seniorApproval.name}`
+                              : '2-level approval'}
+                          </div>
+                        )}
+                      </td>
                       {view.isAdmin && (
                         <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
-                          {r.status === 'Approved' ? (
+                          <div className="row-actions" style={{ justifyContent: 'flex-end' }}>
+                            {r.status === 'Approved' && (
+                              <button
+                                type="button"
+                                className="btn ghost sm"
+                                onClick={() => setEditingLeave(r)}
+                                style={{ padding: '4px 10px', fontSize: 12, color: 'var(--blue)' }}
+                                title="Edit approved leave dates, duration, or type"
+                              >
+                                ✏️ Edit
+                              </button>
+                            )}
                             <button
                               type="button"
                               className="btn ghost sm"
-                              onClick={() => setEditingLeave(r)}
-                              style={{ padding: '4px 10px', fontSize: 12, color: 'var(--blue)' }}
-                              title="Edit approved leave dates, duration, or type"
+                              onClick={() => setDeletingLeave(r)}
+                              style={{ padding: '4px 10px', fontSize: 12, color: 'var(--red)' }}
+                              title={
+                                r.status === 'Approved'
+                                  ? 'Delete this leave — days return to the balance and attendance is restored'
+                                  : 'Delete this request from the log'
+                              }
                             >
-                              ✏️ Edit
+                              🗑 Delete
                             </button>
-                          ) : (
-                            <span style={{ color: 'var(--muted)', fontSize: 12 }}>—</span>
-                          )}
+                          </div>
                         </td>
                       )}
                     </tr>
@@ -818,9 +1044,89 @@ export function LeaveApprovalsPage() {
           }}
         />
       )}
+
+      {/* Admin Delete Leave Modal — any status; the row is gone for good afterwards. */}
+      {deletingLeave && (
+        <DeleteLeaveModal
+          leave={deletingLeave}
+          onClose={() => setDeletingLeave(null)}
+          onSuccess={(updatedView, successMsg) => {
+            setView(updatedView)
+            setError(null)
+            setNotice(successMsg)
+            setDeletingLeave(null)
+          }}
+        />
+      )}
     </div>
   )
 }
 
 const sum = (values: number[]): number =>
   Math.round(values.reduce((total, v) => total + v, 0) * 10) / 10
+
+/** One date box of the All requests range, with its own clear button. */
+function DateBox({
+  id,
+  label,
+  value,
+  min,
+  max,
+  onChange,
+}: {
+  id: string
+  label: string
+  value: string
+  min?: string
+  max?: string
+  onChange: (next: string) => void
+}) {
+  return (
+    <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+      <input
+        id={id}
+        type="date"
+        aria-label={label}
+        value={value}
+        min={min}
+        max={max}
+        onChange={(e) => onChange(e.target.value)}
+        style={{
+          width: 'auto',
+          height: 34,
+          padding: value ? '0 28px 0 12px' : '0 12px',
+          borderRadius: 99,
+          border: '1px solid var(--line, #e2e8f0)',
+          backgroundColor: '#fff',
+          fontSize: 13,
+          fontFamily: "'Inter', sans-serif",
+          outline: 'none',
+          color: value ? 'var(--ink, #0f172a)' : 'var(--muted, #94a3b8)',
+          boxShadow: '0 1px 2px rgba(0, 0, 0, 0.03)',
+          cursor: 'pointer',
+        }}
+      />
+      {value && (
+        <button
+          type="button"
+          onClick={() => onChange('')}
+          aria-label={`Clear ${label.toLowerCase()}`}
+          title="Clear"
+          style={{
+            position: 'absolute',
+            right: 8,
+            border: 'none',
+            background: 'transparent',
+            color: 'var(--muted, #94a3b8)',
+            cursor: 'pointer',
+            fontSize: 11,
+            lineHeight: 1,
+            padding: '3px 4px',
+          }}
+        >
+          ✕
+        </button>
+      )}
+    </div>
+  )
+}

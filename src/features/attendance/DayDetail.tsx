@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
-import { STATUS_CLASS, STATUS_LABEL, type WeekBar } from './attendance.types'
+import { STATUS_CLASS, dayCodeOf, type WeekBar } from './attendance.types'
 import { fmtShort } from '../../shared/lib/date'
 import { asHours } from '../../shared/lib/format'
 import { Modal } from '../../shared/ui/Modal'
@@ -39,7 +39,7 @@ const nowHm = (): string => new Date().toTimeString().slice(0, 5)
 function figures({ bar, activities }: DayData) {
   const now = nowHm()
   const spans = bar.segments.map((s) => ({ from: s.from, to: s.to }))
-  const running = spans.some((s) => s.to === null)
+  const running = bar.isToday && spans.some((s) => s.to === null)
   const checkedIn = running ? coveredMinutes(spans, now) / 60 : bar.hours
   const extra =
     addedMinutes(
@@ -53,7 +53,7 @@ function figures({ bar, activities }: DayData) {
 }
 
 const runsLabel = (bar: WeekBar): string =>
-  bar.segments.map((r) => `${r.from} – ${r.to ?? 'still in'}`).join(', ')
+  bar.segments.map((r) => `${r.from} – ${r.to ?? (bar.isToday ? 'still in' : 'no check-out')}`).join(', ')
 
 /** The compact box shown on hover or focus, positioned over the bar. */
 export function DayPopover({ x, y, ...day }: DayData & { x: number; y: number }) {
@@ -68,7 +68,7 @@ export function DayPopover({ x, y, ...day }: DayData & { x: number; y: number })
         <b>
           {bar.dayName} {fmtShort(bar.date)}
         </b>
-        <span className={`chip ${STATUS_CLASS[bar.status]}`}>{STATUS_LABEL[bar.status] ?? bar.status}</span>
+        <span className={`chip ${STATUS_CLASS[bar.status]}`}>{dayCodeOf(bar).label}</span>
       </div>
 
       <div className="wbpop-total">{asHours(f.total)} active</div>
@@ -92,7 +92,7 @@ export function DayPopover({ x, y, ...day }: DayData & { x: number; y: number })
           )}
           {adminLine && (
             <div className="wbpop-row">
-              <span>Admin panel</span>
+              <span>Admin & panels</span>
               <b>{adminLine.value}</b>
               <em className={adminLine.live ? 'is-live' : undefined}>{adminLine.detail}</em>
             </div>
@@ -146,7 +146,7 @@ export function DayDetailModal({
         <>
           {bar.dayName} {fmtShort(bar.date)}{' '}
           <span className={`chip ${STATUS_CLASS[bar.status]}`} style={{ marginLeft: 6, verticalAlign: 'middle' }}>
-            {STATUS_LABEL[bar.status] ?? bar.status}
+            {dayCodeOf(bar).label}
           </span>
         </>
       }
@@ -160,6 +160,12 @@ export function DayDetailModal({
           <button type="button" className="btn" onClick={onEdit}>
             Edit day
           </button>
+        </div>
+      )}
+
+      {bar.note && (
+        <div className="notice blue" style={{ marginBottom: 12 }} role="note">
+          <b>Reason:</b> {bar.note}
         </div>
       )}
 
@@ -185,8 +191,13 @@ export function DayDetailModal({
             {bar.segments.map((r) => (
               <li key={r.from}>
                 <span className="dd-time">
-                  {r.from} – {r.to ?? 'still in'}
+                  {r.from} – {r.to ?? (bar.isToday ? 'still in' : 'no check-out')}
                 </span>
+                {bar.recheckInAt && (
+                  <span className="hint" style={{ color: 'var(--muted)', marginLeft: 8, fontSize: 12 }}>
+                    (Re-check-in at {bar.recheckInAt})
+                  </span>
+                )}
               </li>
             ))}
           </ul>

@@ -305,6 +305,11 @@ export function DateRangeLedgerTable({
 
                     <td>
                       <span>{row.loginAt ?? '—'}</span>
+                      {row.recheckInAt && (
+                        <span className="hint" style={{ display: 'block', fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
+                          Re-in: {row.recheckInAt}
+                        </span>
+                      )}
                     </td>
 
                     <td className="hide-sm">{row.logoutAt ?? '—'}</td>

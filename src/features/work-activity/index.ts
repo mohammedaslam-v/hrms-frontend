@@ -3,4 +3,4 @@ export { announceActivitiesChanged, useWorkActivities } from './useWorkActivitie
 export { workActivityApi } from './work-activity.api'
 export { addedMinutes, coveredMinutes } from './activity-hours'
 export { ACTIVITY_LABEL } from './work-activity.types'
-export type { WorkActivity } from './work-activity.types'
+export type { WorkActivity, WorkActivityType } from './work-activity.types'

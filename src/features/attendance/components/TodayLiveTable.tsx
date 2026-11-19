@@ -69,7 +69,10 @@ export function TodayLiveTable({ rows }: { rows: TodayBoardRow[] }) {
                       </span>
                       <div>
                         <div style={{ fontWeight: 600, color: 'var(--ink)' }}>{row.name}</div>
-                        <div style={{ fontSize: 11, color: 'var(--muted2)' }}>{row.code}</div>
+                        <div style={{ fontSize: 11, color: 'var(--muted2)' }}>
+                          {row.code}
+                          {row.managerName ? ` · Mgr: ${row.managerName}` : ''}
+                        </div>
                       </div>
                     </div>
                   </td>
@@ -96,6 +99,11 @@ export function TodayLiveTable({ rows }: { rows: TodayBoardRow[] }) {
 
                   <td>
                     <span>{row.loginAt ?? '—'}</span>
+                    {row.recheckInAt && (
+                      <span className="hint" style={{ display: 'block', fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
+                        Re-in: {row.recheckInAt}
+                      </span>
+                    )}
                     {row.status === 'Late' && row.lateByMinutes > 15 && (
                       <span className="chip c-pend" style={{ marginLeft: 6, fontSize: 11 }}>
                         +{row.lateByMinutes}m

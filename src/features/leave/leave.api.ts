@@ -2,6 +2,7 @@ import type {
   ApplyLeavePayload,
   ApprovalsView,
   DecisionResult,
+  DeleteLeaveResult,
   EditApprovedLeavePayload,
   EditApprovedResult,
   LeavePreview,
@@ -66,5 +67,12 @@ export const approvalsApi = {
     request<EditApprovedResult>(`/leave/approvals/${id}/edit`, {
       method: 'PUT',
       body: JSON.stringify(payload),
+    }),
+
+  /** Admin only. Removes the request for good; the reason goes to the audit log. */
+  deleteRequest: (id: number, note: string) =>
+    request<DeleteLeaveResult>(`/leave/approvals/${id}`, {
+      method: 'DELETE',
+      body: JSON.stringify({ note }),
     }),
 }

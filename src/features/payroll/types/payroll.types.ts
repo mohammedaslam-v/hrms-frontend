@@ -27,6 +27,8 @@ export interface PayrollEmployeeItem {
   gross: number;
   lopDays: number;
   lopAmount: number;
+  /** + arrears / − recovery for months already paid. Included in gross. */
+  arrears: number;
   employeePf: number;
   professionalTax: number;
   tds: number;

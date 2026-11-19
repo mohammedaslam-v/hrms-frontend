@@ -5,6 +5,8 @@ import { employeeFormApi } from '../../employees/api/employee-form.api'
 import type { ManagerOption } from '../../employees/types/employee-form.types'
 import { useAuth } from '../../../app/auth-context'
 import { SearchableManagerSelect } from '../../employees/components/SearchableManagerSelect'
+import { LocationFields } from './LocationFields'
+import { checkLocationChange } from './location-check'
 
 const DAYS_OF_WEEK = [
   { key: 'Mon', label: 'Mon' },
@@ -115,6 +117,16 @@ export function EditPersonalDetailsModal({
   const [emergencyContactRelation, setEmergencyContactRelation] =
     useState<string>(employee.emergencyContactRelation || '')
 
+  // Home location for the attendance geofence. The employee may save it once;
+  // after that the server reports it locked and only HR can change it.
+  const homeLocked = Boolean(employee.homeLocationLocked)
+  const showHomeSection =
+    Boolean(employee.homeLocationRequired) || Boolean(employee.homeLocation) || isAdmin
+  const initialHomeLat = employee.homeLocation ? String(employee.homeLocation.lat) : ''
+  const initialHomeLng = employee.homeLocation ? String(employee.homeLocation.lng) : ''
+  const [homeLat, setHomeLat] = useState<string>(initialHomeLat)
+  const [homeLng, setHomeLng] = useState<string>(initialHomeLng)
+
   // Manager List for searchable dropdown
   const [managers, setManagers] = useState<ManagerOption[]>([])
   const [loadingManagers, setLoadingManagers] = useState<boolean>(false)
@@ -191,6 +203,36 @@ export function EditPersonalDetailsModal({
       return
     }
 
+    // Home location: sent only when it changed, and never once it is locked.
+    const cleanHomeLat = homeLat.trim()
+    const cleanHomeLng = homeLng.trim()
+    const homeCheck = checkLocationChange(
+      'home location',
+      cleanHomeLat,
+      cleanHomeLng,
+      initialHomeLat,
+      initialHomeLng,
+      homeLocked,
+    )
+    const locationError = homeCheck.error
+    if (locationError) {
+      setError(locationError)
+      return
+    }
+    const homeChanged = homeCheck.changed
+
+    // The employee gets exactly one save, so make sure they mean it.
+    if (
+      !isAdmin &&
+      homeChanged &&
+      cleanHomeLat &&
+      !window.confirm(
+        `Save ${cleanHomeLat}, ${cleanHomeLng} as your home location?\n\nYou can set this only once. After saving, only HR can change it.`,
+      )
+    ) {
+      return
+    }
+
     if (isAdmin) {
       if (!employeeCode.trim()) {
         setError('Employee code is required.')
@@ -231,6 +273,12 @@ export function EditPersonalDetailsModal({
         emergencyContactName: emergencyContactName.trim() || null,
         emergencyContactNumber: emergencyContactNumber.trim() || null,
         emergencyContactRelation: emergencyContactRelation.trim() || null,
+      }
+
+      // An employee cannot clear it, so an empty field from them is "not now".
+      if (homeChanged && (isAdmin || cleanHomeLat)) {
+        payload.homeLat = cleanHomeLat || null
+        payload.homeLng = cleanHomeLng || null
       }
 
       if (isAdmin) {
@@ -597,6 +645,30 @@ export function EditPersonalDetailsModal({
                   <option value="Friend" />
                 </datalist>
               </div>
+
+              {/* Home location — the attendance geofence. WFH may check in only
+                  here; WFO here or at the office. One save for the employee. */}
+              {showHomeSection && (
+                <LocationFields
+                  idPrefix="home"
+                  title="📍 Home location (for check-in)"
+                  employeeHint={
+                    employee.workMode === 'WFO'
+                      ? 'An allowed check-in place besides the office — save it from home.'
+                      : 'The main place you check in and out from — save it from home.'
+                  }
+                  saved={employee.homeLocation}
+                  locked={homeLocked}
+                  isAdmin={isAdmin}
+                  lat={homeLat}
+                  lng={homeLng}
+                  onLat={setHomeLat}
+                  onLng={setHomeLng}
+                  inputStyle={inputStyle}
+                  labelStyle={labelStyle}
+                  sectionHeaderStyle={sectionHeaderStyle}
+                />
+              )}
 
               {/* SECTION 2: Role, Shift & Organization (Admin only) */}
               {isAdmin && (
