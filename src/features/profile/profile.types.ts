@@ -42,6 +42,8 @@ export interface CompensationView {
   /** Units actually held today. Computed server-side — the card never does pay arithmetic. */
   esopVestedUnits: number
   revisionNote: string | null
+  /** A dummy figure awaiting the real one from HR. Payouts refuse to pay on it. */
+  isPlaceholder: boolean
 }
 
 export interface ProfileView {
