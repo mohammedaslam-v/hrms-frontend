@@ -47,6 +47,8 @@ export function TodayCard({ employeeId, isSelf, isAdmin, employeeName }: TodayCa
   const anchor = useRef<{ minutes: number; at: number } | null>(null)
   /** Minutes since check-in. Null when the day is closed or not started. */
   const [elapsed, setElapsed] = useState<number | null>(null)
+  /** `elapsed` when the server last answered — a running break ticks from there. */
+  const [breakAnchor, setBreakAnchor] = useState(0)
 
   const apply = useCallback((next: TodayView) => {
     setView(next)
@@ -54,6 +56,7 @@ export function TodayCard({ employeeId, isSelf, isAdmin, employeeName }: TodayCa
       const minutes = minutesOf(next.serverTime) - minutesOf(next.loginAt)
       anchor.current = { minutes, at: Date.now() }
       setElapsed(minutes)
+      setBreakAnchor(minutes)
     } else {
       anchor.current = null
       setElapsed(null)
@@ -88,12 +91,27 @@ export function TodayCard({ employeeId, isSelf, isAdmin, employeeName }: TodayCa
     return () => clearInterval(id)
   }, [isRunning])
 
-  const act = async (what: 'in' | 'out'): Promise<boolean> => {
+  // A break nobody ends stops by itself at endsBy: re-read then, so the card
+  // does not keep counting a break the server has already closed.
+  const breakEndsBy = isSelf ? (view?.break?.endsBy ?? null) : null
+  const serverTime = view?.serverTime ?? null
+  useEffect(() => {
+    if (!breakEndsBy || !serverTime) return
+    const minutesLeft = (minutesOf(breakEndsBy) - minutesOf(serverTime) + 1440) % 1440
+    const id = setTimeout(() => void load(), (minutesLeft * 60 + 5) * 1000)
+    return () => clearTimeout(id)
+  }, [breakEndsBy, serverTime, load])
+
+  const act = async (what: 'in' | 'out' | 'breakStart' | 'breakEnd'): Promise<boolean> => {
     setBusy(true)
     setError(null)
     try {
       let next: TodayView
-      if (what === 'in') {
+      if (what === 'breakStart') {
+        next = await attendanceApi.startBreak(geo.fix)
+      } else if (what === 'breakEnd') {
+        next = await attendanceApi.endBreak(geo.fix)
+      } else if (what === 'in') {
         next = isSelf
           ? await attendanceApi.checkIn(geo.fix)
           : await attendanceApi.checkInFor(employeeId)
@@ -147,6 +165,26 @@ export function TodayCard({ employeeId, isSelf, isAdmin, employeeName }: TodayCa
   const checkInDisabled = busy || isCheckedIn || geoBlocked || dayBlocked
   const checkOutDisabled = busy || !isCheckedIn || geoBlocked
 
+  const brk = view.break ?? null
+  const onBreak = Boolean(brk?.runningSince)
+  const breakUsed = brk
+    ? Math.min(
+        brk.allowanceMinutes,
+        brk.usedMinutes + (onBreak && elapsed !== null ? Math.max(0, elapsed - breakAnchor) : 0),
+      )
+    : 0
+  const breakDisabled =
+    busy || geoBlocked || (onBreak ? !brk?.onThisDevice : !brk?.canStart)
+  const breakTitle = onBreak
+    ? !brk?.onThisDevice
+      ? `End your break on the device you started it on${brk?.startedOn ? ` (${brk.startedOn})` : ''}`
+      : geoBlocked && geo.message
+        ? geo.message
+        : 'End your break'
+    : geoBlocked && geo.message
+      ? geo.message
+      : (brk?.startBlockedReason ?? 'Start a break')
+
   return (
     <div className="card top-card">
       <div className="today-head">
@@ -196,6 +234,19 @@ export function TodayCard({ employeeId, isSelf, isAdmin, employeeName }: TodayCa
         <b>Check-out</b>
         <span>{view.logoutAt ?? '—'}</span>
       </div>
+      {brk && (
+        <div className="kv" style={{ padding: '5.5px 0', fontSize: 12.5 }}>
+          <b>Break</b>
+          <span>
+            {onBreak && (
+              <span className="chip c-pend" style={{ marginRight: 6 }}>
+                On break since {brk.runningSince}
+              </span>
+            )}
+            {breakUsed}m of {brk.allowanceMinutes}m used
+          </span>
+        </div>
+      )}
       <div className="kv" style={{ padding: '5.5px 0', fontSize: 12.5 }}>
         <b>Shift</b>
         <span>
@@ -291,6 +342,34 @@ export function TodayCard({ employeeId, isSelf, isAdmin, employeeName }: TodayCa
               </button>
             </span>
           </div>
+
+          {isSelf && isCheckedIn && brk && (
+            <span style={{ display: 'flex', marginTop: 8 }} title={breakTitle}>
+              <button
+                type="button"
+                className={onBreak ? 'btn primary' : 'btn ghost'}
+                onClick={() => void act(onBreak ? 'breakEnd' : 'breakStart')}
+                disabled={breakDisabled}
+                aria-describedby={geo.message ? geoMessageId : undefined}
+                style={{
+                  flex: 1,
+                  minHeight: 34,
+                  fontWeight: 600,
+                  opacity: breakDisabled ? 0.45 : 1,
+                  cursor: breakDisabled ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {busy ? 'Recording…' : onBreak ? 'End break' : 'Start break'}
+              </button>
+            </span>
+          )}
+          {isSelf && onBreak && brk && (
+            <div className={`notice mt8${brk.onThisDevice ? '' : ' bad'}`} role="status" style={{ fontSize: 12.5 }}>
+              {brk.onThisDevice
+                ? `Your break ends by itself at ${brk.endsBy} if you don't end it sooner.`
+                : `This break was started on ${brk.startedOn ?? 'another device'}. End it from that device, or it ends by itself at ${brk.endsBy}.`}
+            </div>
+          )}
 
           {dayBlocked && (
             <div className="notice mt8" role="status" style={{ fontSize: 12.5 }}>

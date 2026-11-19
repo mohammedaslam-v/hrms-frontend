@@ -43,6 +43,25 @@ export interface TodayView {
    * location again on every punch.
    */
   geofence: GeofencePolicy | null
+  /** The shift's break hour. Null until checked in for the shift. */
+  break?: BreakView | null
+}
+
+/** Today's breaks. The server holds every rule; this only shows them. */
+export interface BreakView {
+  allowanceMinutes: number
+  /** Used this shift, a running break counted up to serverTime. */
+  usedMinutes: number
+  /** 'HH:MM' while on a break. */
+  runningSince: string | null
+  /** 'HH:MM' the running break stops by itself. */
+  endsBy: string | null
+  /** "Chrome on Windows" — where the running break must be ended. */
+  startedOn: string | null
+  /** The running break was started in this browser. */
+  onThisDevice: boolean
+  canStart: boolean
+  startBlockedReason: string | null
 }
 
 export type ZoneKind = 'office' | 'home' | 'second'
