@@ -173,7 +173,12 @@ export function dayCodeOf(bar: Pick<WeekBar, 'status' | 'leaveType'>): DayCode {
         ? { code: 'LOP', tone: 'lop', label: 'Loss of pay' }
         : { code: 'EL', tone: 'leave', label: 'Leave' }
     case 'Half day':
-      return { code: 'HD', tone: 'half', label: 'Half day' }
+      // An unpaid half day (late check-in penalty, or HR's 'LOP half day')
+      // costs half a day's pay, so it says so. Any other half day is a plain
+      // HD: paid from the balance, or a late arrival that was never charged.
+      return bar.leaveType === 'Unpaid'
+        ? { code: 'HDLOP', tone: 'halflop', label: 'Half day · loss of pay' }
+        : { code: 'HD', tone: 'half', label: 'Half day' }
     case 'Absent':
       return { code: 'LOP', tone: 'lop', label: 'Not marked · LOP' }
     case 'Weekly off':

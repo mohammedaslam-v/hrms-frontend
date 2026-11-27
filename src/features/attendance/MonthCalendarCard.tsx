@@ -38,6 +38,7 @@ const LEGEND: { tone: string; label: string; abbr: string }[] = [
   { tone: 'leave', label: 'Leave', abbr: 'EL' },
   { tone: 'lop', label: 'Loss of pay', abbr: 'LOP' },
   { tone: 'half', label: 'Half day', abbr: 'HD' },
+  { tone: 'halflop', label: 'Half day LOP', abbr: 'HDLOP' },
   { tone: 'off', label: 'Weekly off', abbr: 'WO' },
 ]
 
