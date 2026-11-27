@@ -40,8 +40,13 @@ export interface LeaveLedger {
   pending: number
   adjustments: number
   balance: number
-  /** Balance minus anything still awaiting approval. */
+  /**
+   * Balance after everything already approved, including leave in months not
+   * yet arrived, minus anything still awaiting approval.
+   */
   available: number
+  /** Loss of pay already decided for months ahead; not yet in `lop`. */
+  upcomingLop: number
   rows: LedgerRow[]
   lastLeaveOn: string | null
 }
