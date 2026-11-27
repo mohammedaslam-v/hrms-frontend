@@ -11,13 +11,17 @@ import type {
   WeekBar,
 } from './attendance.types'
 import { request } from '../../shared/api/client'
+import { deviceId } from './deviceId'
+
+/** Sent with your own Today card and the break buttons — see deviceId.ts. */
+const device = () => ({ 'X-Device-Id': deviceId() })
 
 /**
  * Attendance is always your own — there is no id in any of these paths, because
  * a record only means anything if the person made it themselves.
  */
 export const attendanceApi = {
-  getToday: () => request<TodayView>('/attendance/me/today'),
+  getToday: () => request<TodayView>('/attendance/me/today', { headers: device() }),
   getWeek: () => request<WeekBar[]>('/attendance/me/week'),
 
   /**
@@ -48,6 +52,19 @@ export const attendanceApi = {
   checkOut: (location: DeviceFix | null = null) =>
     request<TodayView>('/attendance/me/check-out', {
       method: 'POST',
+      body: JSON.stringify({ location }),
+    }),
+  /** A break is ended only from the device, and place, it was started on. */
+  startBreak: (location: DeviceFix | null = null) =>
+    request<TodayView>('/attendance/me/break/start', {
+      method: 'POST',
+      headers: device(),
+      body: JSON.stringify({ location }),
+    }),
+  endBreak: (location: DeviceFix | null = null) =>
+    request<TodayView>('/attendance/me/break/end', {
+      method: 'POST',
+      headers: device(),
       body: JSON.stringify({ location }),
     }),
   checkInFor: (employeeId: number) =>

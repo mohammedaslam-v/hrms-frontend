@@ -30,13 +30,16 @@ export const PAYROLL_REPORT_TYPES: ReadonlySet<ReportType> = new Set([
 /**
  * The cells the search box looks in.
  *
- * The twenty reports call the name column four different things — `employee`,
- * `empName`, `employeeName`, `name` — so searching a single key would quietly
- * do nothing on most of them. `code` is here because people search by
- * BAM-0837 as readily as by a name, and `manager` so a lead can pull their own
- * team out of a company-wide report.
+ * Every report now starts with the same six standard columns (`std…`), so
+ * those come first: EMP Id, name, manager, department and head of department.
+ * The older per-report names stay for the few cells that still use them.
  */
 const SEARCHABLE_KEYS = [
+  'stdEmpId',
+  'stdEmpName',
+  'stdManager',
+  'stdDepartment',
+  'stdHeadOfDepartment',
   'employee',
   'empName',
   'employeeName',
@@ -79,6 +82,8 @@ const REPORT_NOTES: Partial<Record<ReportType, string>> = {
     'Every active employee with their shift start, shift end and weekly off days, as set on their profile today. The period filter does not change these.',
   productivity_lop:
     'Sales days the productivity rule marked as loss of pay: panel time plus activities came to less than 8h 06m. Active hrs is that total.',
+  breaks:
+    'Each break in its own column, oldest first, with how it ended. One hour a shift is allowed; Remaining is what was left of it that day.',
   recent_joinees: 'New workforce additions in the chosen timeframe.',
   recent_resignees: 'Departures and exit clearances in the chosen timeframe.',
 };
@@ -477,6 +482,7 @@ export const ReportsCenterPage: React.FC = () => {
                   {canViewProductivityLop && (
                     <option value="productivity_lop">Productivity auto LOP marked</option>
                   )}
+                  <option value="breaks">Breaks</option>
                 </optgroup>
                 {canViewPayroll && (
                   <optgroup label="Payroll">

@@ -151,6 +151,7 @@ function Row({
 export function OnlineNow() {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
+  const [selectedDept, setSelectedDept] = useState<string>('')
   const [tab, setTab] = useState<Tab>('active')
   // Everyone tab only: shifts opened by hand (they start closed there), and
   // shifts whose "not seen" people have been unfolded.
@@ -178,12 +179,41 @@ export function OnlineNow() {
 
   const q = query.trim().toLowerCase()
 
-  // Who each tab lists. Search ignores the tab and looks through everyone,
-  // so finding one person is always one step.
+  const departments = useMemo(() => {
+    const list = new Set<string>()
+    if (board) {
+      for (const g of board.groups) {
+        for (const p of g.people) {
+          const dept = p.department || (p.team && !p.adminId ? p.team : null)
+          if (dept) list.add(dept)
+        }
+      }
+    }
+    if (list.size > 0) return Array.from(list).sort()
+    return [
+      'Curriculum',
+      'Finance',
+      'Founding Team',
+      'Human Resource',
+      'Leadership',
+      'Marketing',
+      'Operations',
+      'Presales',
+      'Product',
+      'Sales',
+      'Tech',
+      'Tester',
+      'Training & Quality',
+      'TSM',
+    ]
+  }, [board])
+
+  // Who each tab lists. Search and department filter apply to both tabs.
   const groups = useMemo<BoardGroup[]>(() => {
     if (!board) return []
     const keep = (p: BoardPerson): boolean => {
-      if (q) return p.name.toLowerCase().includes(q)
+      if (selectedDept && (p.department || p.team) !== selectedDept) return false
+      if (q && !p.name.toLowerCase().includes(q)) return false
       if (tab === 'active') return isOnActiveTab(p)
       return true
     }
@@ -193,22 +223,25 @@ export function OnlineNow() {
         return { ...g, people, online: people.filter(isOnline).length }
       })
       .filter((g) => g.people.length > 0)
-  }, [board, q, tab])
+  }, [board, q, tab, selectedDept])
 
   const tabCounts = useMemo(() => {
     const people = board?.groups.flatMap((g) => g.people) ?? []
+    const deptPeople = selectedDept
+      ? people.filter((p) => (p.department || p.team) === selectedDept)
+      : people
     return {
-      active: people.filter(isOnActiveTab).length,
-      all: people.length,
+      active: deptPeople.filter(isOnActiveTab).length,
+      all: deptPeople.length,
     }
-  }, [board])
+  }, [board, selectedDept])
 
   // Active is short, so every shift is open. All starts
-  // closed — 600 rows under one shift buries the rest. A search opens matches.
-  const isExpanded = (g: BoardGroup) => (q || tab !== 'all' ? true : Boolean(openShifts[g.key]))
+  // closed — 600 rows under one shift buries the rest. A search or filter opens matches.
+  const isExpanded = (g: BoardGroup) => (q || selectedDept || tab !== 'all' ? true : Boolean(openShifts[g.key]))
 
   // In All, people never seen on the panel fold into one line per shift.
-  const folds = !q && tab === 'all'
+  const folds = !q && !selectedDept && tab === 'all'
 
   // Not shown until the first answer, so a refused account never sees it flash.
   // A failure is shown, not hidden: a missing pill reads as a missing feature.
@@ -269,13 +302,26 @@ export function OnlineNow() {
               onChange={(e) => setQuery(e.target.value)}
               aria-label="Search people"
             />
+            <select
+              value={selectedDept}
+              onChange={(e) => setSelectedDept(e.target.value)}
+              aria-label="Filter by department"
+              className="on-dept-select"
+            >
+              <option value="">All Departments</option>
+              {departments.map((d) => (
+                <option key={d} value={d}>
+                  {d}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div className="on-menu-body">
             {board === null ? (
               <div className="on-empty">{failed ? 'Could not load right now.' : 'Loading…'}</div>
             ) : groups.length === 0 ? (
-              <div className="on-empty">{q ? 'No one matches that name.' : EMPTY[tab]}</div>
+              <div className="on-empty">{q || selectedDept ? 'No one matches your filters.' : EMPTY[tab]}</div>
             ) : (
               groups.map((g) => {
                 const expanded = isExpanded(g)
@@ -287,9 +333,9 @@ export function OnlineNow() {
                     <button
                       type="button"
                       className="on-group-head"
-                      onClick={() => tab === 'all' && !q && setOpenShifts((o) => ({ ...o, [g.key]: !expanded }))}
+                      onClick={() => tab === 'all' && !q && !selectedDept && setOpenShifts((o) => ({ ...o, [g.key]: !expanded }))}
                       aria-expanded={expanded}
-                      disabled={tab !== 'all' || Boolean(q)}
+                      disabled={tab !== 'all' || Boolean(q) || Boolean(selectedDept)}
                     >
                       <span className="on-caret">{expanded ? '▾' : '▸'}</span>
                       <span className="on-group-label">{g.label}</span>
