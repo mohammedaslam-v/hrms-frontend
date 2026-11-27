@@ -84,7 +84,7 @@ export function MyLeavePage() {
         eyebrow={
           <>
             {!isSelf && view.employee && `${view.employee.employeeCode} · `}
-            {ledger.balance} day{ledger.balance === 1 ? '' : 's'} available ·{' '}
+            {ledger.available} day{ledger.available === 1 ? '' : 's'} available ·{' '}
             {ledger.taken} taken this year
           </>
         }
@@ -170,7 +170,14 @@ export function MyLeavePage() {
                 <div className="n" style={{ color: ledger.lop ? 'var(--red)' : undefined }}>
                   {ledger.lop}
                 </div>
-                <div className="l">Loss of pay</div>
+                <div className="l">
+                  Loss of pay
+                  {ledger.upcomingLop > 0 && (
+                    <span title="Approved leave in the months ahead that the balance will not cover">
+                      {' '}· +{ledger.upcomingLop} upcoming
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
             <button className="btn primary mt hide-sm" onClick={() => setApplying(true)}>
