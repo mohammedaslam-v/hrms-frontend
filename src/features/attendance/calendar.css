@@ -95,9 +95,9 @@
 .cal-day.lop { background: #f6dde2; }
 .cal-day.lop .cal-num { color: #8e1d3b; }
 .cal-day.lop .cal-abbr { color: #8e1d3b; }
-/* Unpaid half day: the half-day fill with the loss-of-pay ink, so it reads as
-   both at a glance. */
-.cal-day.halflop { background: var(--amber-soft); }
+/* Unpaid half day: a lighter red than a full LOP day, same ink. Half the pay
+   lost, half the colour. */
+.cal-day.halflop { background: #fbecef; }
 .cal-day.halflop .cal-num { color: #8e1d3b; }
 .cal-day.halflop .cal-abbr { color: #8e1d3b; }
 .cal-day.off { background: #efe9e0; }
@@ -134,7 +134,7 @@
 .cal-sw.leave { background: var(--red); }
 .cal-sw.half { background: var(--amber); }
 .cal-sw.lop { background: #8e1d3b; }
-.cal-sw.halflop { background: linear-gradient(135deg, var(--amber) 50%, #8e1d3b 50%); }
+.cal-sw.halflop { background: #c9637c; }
 .cal-sw.off { background: #d9d1c4; }
 .cal-total { margin-left: auto; }
 
